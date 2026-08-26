@@ -136,7 +136,7 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
 export class WhatsAppCampaignDetailComponent {
   campaignId = input<string | null>(null);
   campaignTitle = input<string>('Campaign');
-  closeEmitted = output<void>();
+  close = output<void>();
 
   wa = inject(WhatsAppCampaignsService);
   private destroyRef = inject(DestroyRef);

@@ -43,14 +43,26 @@ export class ProposalsService {
     });
   }
 
-  addProposal(proposal: Omit<Proposal, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createProposal(proposal as unknown).subscribe({
+  /**
+   * Returns an optimistic `Proposal` synchronously (with a temporary id) so callers can chain
+   * follow-up actions without waiting on the network. Reconciled with the server-assigned id
+   * once the request resolves.
+   */
+  addProposal(proposal: Omit<Proposal, 'id' | 'createdAt' | 'updatedAt'>): Proposal {
+    const localId = 'p-' + Date.now();
+    const optimistic: Proposal = { ...proposal, id: localId, createdAt: new Date().toISOString() } as Proposal;
+    this.proposals.update(proposals => [...proposals, optimistic]);
+    this.api.createProposal(proposal).subscribe({
       next: (created) => {
-        this.proposals.update(proposals => [...proposals, created]);
+        this.proposals.update(proposals => proposals.map(p => p.id === localId ? created : p));
         this.toast.show(`Proposal <strong>${created.title}</strong> created`);
       },
-      error: () => this.toast.show('Failed to create proposal', { type: 'error' })
+      error: () => {
+        this.proposals.update(proposals => proposals.filter(p => p.id !== localId));
+        this.toast.show('Failed to create proposal', { type: 'error' });
+      }
     });
+    return optimistic;
   }
 
   updateProposal(id: string, proposal: Partial<Proposal>): void {
@@ -89,7 +101,7 @@ export class ProposalsService {
   updateStatus(id: string, status: string): void {
     const proposal = this.getProposalById(id);
     if (proposal) {
-      this.updateProposal(id, { ...proposal, status: status as unknown });
+      this.updateProposal(id, { ...proposal, status: status as Proposal['status'] });
     }
   }
 }

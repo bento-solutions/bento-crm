@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { API_CONFIG, HTTP_CONFIG } from '../config/api-config';
@@ -17,7 +17,7 @@ export class BaseApiService {
   // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(protected http: HttpClient) {}
 
-  protected get<T>(endpoint: string, params?: unknown): Observable<T> {
+  protected get<T>(endpoint: string, params?: Record<string, string | number | boolean> | HttpParams): Observable<T> {
     const url = this.buildUrl(endpoint);
     return this.http.get<T>(url, { params }).pipe(
       timeout(HTTP_CONFIG.timeout),
@@ -54,7 +54,7 @@ export class BaseApiService {
     return `${this.baseUrl}${endpoint}`;
   }
 
-  protected handleError(error: unknown): Observable<never> {
+  protected handleError(error: HttpErrorResponse): Observable<never> {
     console.error('API Error:', error);
     let errorMessage = 'An error occurred';
 

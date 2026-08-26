@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { CrmStateService, Deal } from '../services/crm-state.service';
+import { CrmStateService, Deal, Meeting } from '../services/crm-state.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 
@@ -957,13 +957,13 @@ export class DealDetailComponent {
   hasEventsOnDay(deal: Deal, day: number): boolean {
     if (!deal.activityLog?.meetings) return false;
     const dateStr = '2026-06-' + String(day).padStart(2, '0');
-    return deal.activityLog.meetings.some((m: unknown) => m.date === dateStr);
+    return deal.activityLog.meetings.some((m: Meeting) => m.date === dateStr);
   }
 
-  getEventsOnDay(deal: Deal, day: number): unknown[] {
+  getEventsOnDay(deal: Deal, day: number): Meeting[] {
     if (!deal.activityLog?.meetings) return [];
     const dateStr = '2026-06-' + String(day).padStart(2, '0');
-    return deal.activityLog.meetings.filter((m: unknown) => m.date === dateStr);
+    return deal.activityLog.meetings.filter((m: Meeting) => m.date === dateStr);
   }
 
   // PO helpers
@@ -987,9 +987,9 @@ export class DealDetailComponent {
 
     if (deal.orderLines && deal.orderLines.length > 0) {
       this.poLines.set(deal.orderLines.map(l => ({
-        item: (l as unknown).product,
-        qty: (l as unknown).qty,
-        unitPrice: Math.round((l as unknown).unitPrice * 0.7),
+        item: l.product,
+        qty: l.qty,
+        unitPrice: Math.round(l.unitPrice * 0.7),
         type: 'software' as const
       })));
     } else {

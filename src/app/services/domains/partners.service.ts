@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
-import { Partner } from '../crm-state.service';
+import { Partner, CustomerCard } from '../crm-state.service';
 
 export type { Partner };
 
@@ -98,11 +98,11 @@ export class PartnersService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  saveCustomerCard(_card: unknown): void {
+  saveCustomerCard(_card: Partial<CustomerCard>): void {
     // Stub method for saving customer card
   }
 
-  customerCards(): unknown[] {
+  customerCards(): CustomerCard[] {
     // Stub method for getting customer cards
     return [];
   }

@@ -47,15 +47,27 @@ export class DealsService {
     });
   }
 
-  addDeal(deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createDeal(deal as unknown).subscribe({
+  /**
+   * Returns an optimistic `Deal` synchronously (with a temporary id) so callers can chain
+   * follow-up actions (e.g. opening an "assign task" modal) without waiting on the network.
+   * The signal is reconciled with the server-assigned id once the request resolves.
+   */
+  addDeal(deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>): Deal {
+    const localId = 'd-' + Date.now();
+    const optimistic: Deal = { ...deal, id: localId, createdAt: new Date().toISOString() } as Deal;
+    this.deals.update(deals => [...deals, optimistic]);
+    this.api.createDeal(deal).subscribe({
       next: (created) => {
-        this.deals.update(deals => [...deals, created]);
+        this.deals.update(deals => deals.map(d => d.id === localId ? created : d));
         this.toast.show(`Deal <strong>${created.title}</strong> created`);
         setTimeout(() => this.state.evaluateRules('DealCreated', created as unknown as Record<string, unknown>, `Deal: ${created.title}`), 0);
       },
-      error: () => this.toast.show('Failed to create deal', { type: 'error' })
+      error: () => {
+        this.deals.update(deals => deals.filter(d => d.id !== localId));
+        this.toast.show('Failed to create deal', { type: 'error' });
+      }
     });
+    return optimistic;
   }
 
   updateDeal(id: string, deal: Partial<Deal>): void {
@@ -101,7 +113,7 @@ export class DealsService {
   private reconcileDealActivityId(dealId: string, kind: keyof ActivityLog, localId: string, remoteId: string): void {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as unknown[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
+      const items = (d.activityLog[kind] as { id: string }[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
   }
@@ -176,7 +188,7 @@ export class DealsService {
   updateDealStage(dealId: string, stage: string): void {
     const deal = this.getDealById(dealId);
     if (deal) {
-      this.updateDeal(dealId, { ...deal, stage: stage as unknown });
+      this.updateDeal(dealId, { ...deal, stage: stage as Deal['stage'] });
     }
   }
 

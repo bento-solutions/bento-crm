@@ -540,7 +540,7 @@ export class UserProfileComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.roleError.set(null);
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.roleError.set(err.message || 'Operation failed');
       // Reset select element visual state
       event.preventDefault();
@@ -553,7 +553,7 @@ export class UserProfileComponent {
       this.showDeactivateConfirm.set(false);
       this.deactivateError.set(null);
       this.router.navigate(['/settings/users']);
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.deactivateError.set(err.message || 'Operation failed');
     }
   }

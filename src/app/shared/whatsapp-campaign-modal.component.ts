@@ -214,7 +214,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
 })
 export class WhatsAppCampaignModalComponent {
   open = input<boolean>(false);
-  closeEmitted = output<void>();
+  close = output<void>();
   created = output<string>();
 
   partnersService = inject(PartnersService);
@@ -243,7 +243,7 @@ export class WhatsAppCampaignModalComponent {
     const q = this.search().toLowerCase().trim();
     const all = this.partnersService.allPartners();
     if (!q) return all;
-    return all.filter((p: unknown) =>
+    return all.filter(p =>
       (p.name || '').toLowerCase().includes(q) ||
       (p.phone || '').toLowerCase().includes(q) ||
       (p.city || '').toLowerCase().includes(q)
@@ -251,11 +251,11 @@ export class WhatsAppCampaignModalComponent {
   });
 
   private selectedPartners = computed(() =>
-    this.partnersService.allPartners().filter((p: unknown) => this.selectedIds().has(p.id))
+    this.partnersService.allPartners().filter(p => this.selectedIds().has(p.id))
   );
 
-  selectedWithoutPhone = computed(() => this.selectedPartners().filter((p: unknown) => !p.phone).length);
-  sendableCount = computed(() => this.selectedPartners().filter((p: unknown) => !!p.phone).length);
+  selectedWithoutPhone = computed(() => this.selectedPartners().filter(p => !p.phone).length);
+  sendableCount = computed(() => this.selectedPartners().filter(p => !!p.phone).length);
 
   validationError = computed(() => {
     if (!this.wa.hasAccount()) return 'Connect a WhatsApp number first.';
@@ -280,7 +280,7 @@ export class WhatsAppCampaignModalComponent {
 
   selectAllVisible(): void {
     const next = new Set(this.selectedIds());
-    this.filteredPartners().forEach((p: unknown) => next.add(p.id));
+    this.filteredPartners().forEach(p => next.add(p.id));
     this.selectedIds.set(next);
   }
 
@@ -306,7 +306,7 @@ export class WhatsAppCampaignModalComponent {
     }, (campaignId) => {
       this.reset();
       this.created.emit(campaignId);
-      this.closeEmitted.emit();
+      this.close.emit();
     });
   }
 

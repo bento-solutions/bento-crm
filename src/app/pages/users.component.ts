@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -574,7 +574,7 @@ export class UsersComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.cancelRoleEdit();
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.roleErrorUserId.set(userId);
       this.roleErrorMessage.set(err.message || 'Operation failed');
     }
@@ -596,7 +596,7 @@ export class UsersComponent {
     try {
       this.state.deactivateUser(userId);
       this.cancelDeactivate();
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.deactivateErrorMessage.set(err.message || 'Deactivation failed');
     }
   }

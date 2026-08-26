@@ -138,6 +138,7 @@ const CATALOG: TileDef[] = [
       }
 
       <div
+        appBentoGrid
         [bentoGrid]="layout()"
         [bentoEditing]="state.isCustomizing()"
         (bentoReorder)="onReorder($event)"
@@ -145,6 +146,7 @@ const CATALOG: TileDef[] = [
       >
         @for (tile of tiles(); track tile.id) {
           <section
+            appBentoTile
             [bentoTile]="tile.id"
             [attr.data-tone]="tile.tone"
             [style]="varsFor(tile)"
@@ -212,7 +214,7 @@ const CATALOG: TileDef[] = [
                 <!-- ── Pipeline ── -->
                 @case ('pipeline') {
                   <div class="dash-figure">
-                    <span class="dash-value" [countUp]="pipelineValueNum()" [countUpFormat]="moneyFormat">0</span>
+                    <span class="dash-value" [appCountUp]="pipelineValueNum()" [appCountUpFormat]="moneyFormat">0</span>
                     @if (pipelineDelta(); as d) {
                       <span class="dash-delta" [attr.data-dir]="dirOf(d)">
                         <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
@@ -250,7 +252,7 @@ const CATALOG: TileDef[] = [
                 <!-- ── Late payers ── -->
                 @case ('late') {
                   <div class="dash-figure">
-                    <span class="dash-value" [countUp]="latePayers().count" [countUpFormat]="intFormat">0</span>
+                    <span class="dash-value" [appCountUp]="latePayers().count" [appCountUpFormat]="intFormat">0</span>
                     @if (latePayers().delta; as d) {
                       <span class="dash-delta" [attr.data-dir]="dirOf(d)">
                         <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
@@ -281,7 +283,7 @@ const CATALOG: TileDef[] = [
                       }
                     </svg>
                     <div class="donut__center">
-                      <span class="donut__total" [countUp]="d.total" [countUpFormat]="intFormat">0</span>
+                      <span class="donut__total" [appCountUp]="d.total" [appCountUpFormat]="intFormat">0</span>
                       <span class="donut__unit">{{ d.unit }}</span>
                     </div>
                   </div>
@@ -336,7 +338,7 @@ const CATALOG: TileDef[] = [
                 @case ('kpi') {
                   @let k = kpi(tile.id);
                   <div class="kpi">
-                    <span class="dash-value dash-value--kpi" [countUp]="k.raw" [countUpFormat]="k.format">0</span>
+                    <span class="dash-value dash-value--kpi" [appCountUp]="k.raw" [appCountUpFormat]="k.format">0</span>
                   </div>
                   <div class="kpi__foot">
                     @if (k.delta; as delta) {

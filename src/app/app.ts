@@ -1474,7 +1474,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'partner': {
-        if (item.tab) this.state.partnersSubTab.set(item.tab as string);
+        if (item.tab) this.state.partnersSubTab.set(item.tab as 'Customer' | 'Prospect' | 'Vendor' | 'Lead');
         this.router.navigate(['/partners']);
         return;
       }
@@ -1484,7 +1484,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'invoice': {
-        if (item.tab) this.state.financeSubTab.set(item.tab as string);
+        if (item.tab) this.state.financeSubTab.set(item.tab as 'Customer' | 'Vendor' | 'Recovery');
         this.router.navigate(['/finance']);
         return;
       }

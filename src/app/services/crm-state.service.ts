@@ -1083,7 +1083,7 @@ export class CrmStateService {
   };
 
   // Maps the backend's UserResponseDto (snake_case JSON) into a CrmUser
-  private userFromDto(dto: unknown): CrmUser {
+  private userFromDto(dto: any): CrmUser {
     const displayName = dto.display_name ?? '';
     const user: CrmUser = {
       id: dto.id,
@@ -1131,7 +1131,7 @@ export class CrmStateService {
   };
 
   // Team membership isn't stored on the backend Team entity -- it's derived from each AppUser.teamId
-  private teamFromDto(dto: unknown): CrmTeam {
+  private teamFromDto(dto: any): CrmTeam {
     return {
       id: dto.id,
       name: dto.name,
@@ -1164,7 +1164,7 @@ export class CrmStateService {
   // Maps the backend's PartnerResponse (snake_case JSON) into the thin UI-facing Partner shape
   // used for the customers/prospects/vendors lists. Lead-specific detail (leadsData signal) is
   // seeded/managed separately client-side and isn't hydrated from this endpoint.
-  private partnerFromDto(dto: unknown): Partner {
+  private partnerFromDto(dto: any): Partner {
     return {
       id: dto.id,
       name: dto.name,
@@ -1584,7 +1584,7 @@ export class CrmStateService {
         }));
         this.toast.show(`User <strong>${user?.displayName || id}</strong> deactivated`, { type: 'info' });
       },
-      error: (err: unknown) => this.toast.show(err?.error?.detail || 'Failed to deactivate user', { type: 'error' })
+      error: (err: any) => this.toast.show(err?.error?.detail || 'Failed to deactivate user', { type: 'error' })
     });
   }
 
@@ -1731,7 +1731,7 @@ export class CrmStateService {
       title: draft.title,
       description: draft.description,
       scheduledAt: draft.scheduledAt,
-      meetingLink: (draft as unknown).meetingLink,
+      meetingLink: (draft as any).meetingLink,
       attendeeUserIds: draft.attendeeUserIds
     }).subscribe({
       next: (dto) => {
@@ -2140,9 +2140,9 @@ export class CrmStateService {
   // Automation Rule Engine
   // ────────────────────────────────────────────────────────
 
-  private getNestedValue(obj: unknown, path: string): unknown {
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     if (!obj || !path) return undefined;
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    return path.split('.').reduce((acc: any, part) => acc && acc[part], obj);
   }
 
   private evaluateCondition(condition: AutomationCondition, entity: Record<string, unknown>, trigger?: AutomationTrigger): { passed: boolean, actual: unknown } {
@@ -2204,12 +2204,12 @@ export class CrmStateService {
     return { passed, actual: raw };
   }
 
-  private evaluateRule(rule: AutomationRule, entity: Record<string, unknown>): { passed: boolean, trace: unknown[] } {
-    const trace: unknown[] = [];
+  private evaluateRule(rule: AutomationRule, entity: Record<string, unknown>): { passed: boolean, trace: AutomationExecutionLog['conditionsTrace'] } {
+    const trace: AutomationExecutionLog['conditionsTrace'] = [];
     let rulePassed = false;
 
     for (const group of rule.conditionGroups) {
-      const conditionsTraceList: unknown[] = [];
+      const conditionsTraceList: { fieldKey: string; expected: unknown; actual: unknown; passed: boolean }[] = [];
       let groupPassed = true;
 
       for (const cond of group.conditions) {
@@ -2298,7 +2298,6 @@ export class CrmStateService {
 
               case 'CreateFollowUpTask':
                 this.addTask({
-                  id: 't-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
                   title: action.params.taskTitle || 'Automation Follow-Up Task',
                   description: action.params.taskDescription || 'Auto-created by workflow automation.',
                   assignedTeam: action.params.targetTeam || action.params.taskTeam || 'Sales',
@@ -2307,13 +2306,12 @@ export class CrmStateService {
                   relatedTo: entityLabel,
                   relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
                   relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
-                  relatedEntityId: entity['id']
-                } as unknown);
+                  relatedEntityId: entity['id'] as string
+                });
                 break;
 
               case 'NotifyManager':
                 this.addTask({
-                  id: 't-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
                   title: action.params.taskTitle || 'Manager Notification',
                   description: action.params.taskDescription || 'Auto-created manager notification.',
                   assignedTeam: action.params.targetTeam || action.params.taskTeam || 'Sales',
@@ -2322,13 +2320,13 @@ export class CrmStateService {
                   relatedTo: entityLabel,
                   relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
                   relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
-                  relatedEntityId: entity['id']
-                } as unknown);
+                  relatedEntityId: entity['id'] as string
+                });
                 break;
 
               case 'SendEmailLog':
                 if (trigger.startsWith('Lead')) {
-                  this.addLeadActivity(entity['id'], {
+                  this.addLeadActivity(entity['id'] as string, {
                     type: 'Email',
                     date: new Date().toISOString().split('T')[0],
                     summary: action.params.emailSubject || 'Automated Email',
@@ -2389,7 +2387,7 @@ export class CrmStateService {
                     ));
                   } else if (trigger.startsWith('Deal')) {
                     this.deals.update(list => list.map(d =>
-                      d.id === entity['id'] ? { ...d, stage: action.params.targetStage as unknown } : d
+                      d.id === entity['id'] ? { ...d, stage: action.params.targetStage as DealStage } : d
                     ));
                   }
                 }
@@ -2398,7 +2396,7 @@ export class CrmStateService {
               case 'CreateNote':
                 if (action.params.noteContent) {
                   if (trigger.startsWith('Lead')) {
-                    this.addLeadActivity(entity['id'], {
+                    this.addLeadActivity(entity['id'] as string, {
                       type: 'Note',
                       date: new Date().toISOString().split('T')[0],
                       summary: 'Automated Note',
@@ -2465,7 +2463,7 @@ export class CrmStateService {
               status: 'ok'
             });
             successCount++;
-          } catch (err: unknown) {
+          } catch (err: any) {
             actionsExecuted.push({
               actionId: action.id,
               type: action.type,
@@ -2532,8 +2530,8 @@ export class CrmStateService {
     const current = this.automationRules().find(r => r.id === ruleId);
     if (!current) return;
     const nextVersion = (current.version || 1) + 1;
-    const snapshot = { ...current };
-    delete (snapshot as unknown).changeHistory;
+    const snapshot: Partial<AutomationRule> = { ...current };
+    delete snapshot.changeHistory;
 
     const history = current.changeHistory || [];
     const newHistory = [
@@ -2704,6 +2702,14 @@ export class CrmStateService {
       }
     });
     return newLead;
+  }
+
+  /** Bulk-creates leads (e.g. from a CSV import) and returns how many were added. */
+  importLeads(leads: Parameters<CrmStateService['addLead']>[0][]): number {
+    for (const lead of leads) {
+      this.addLead(lead);
+    }
+    return leads.length;
   }
 
   deleteLead(leadId: string): void {
@@ -3002,7 +3008,7 @@ export class CrmStateService {
   notificationsLoading = signal<boolean>(false);
   notificationsError = signal<string | null>(null);
 
-  private mapNotificationDto(dto: unknown): Notification {
+  private mapNotificationDto(dto: any): Notification {
     return {
       id: dto.id,
       type: (dto.type || 'system').toLowerCase(),
@@ -3217,7 +3223,7 @@ export class CrmStateService {
       city: lead.company?.city || 'Casablanca',
       comments: lead.notes || '',
       score: lead.score,
-      source: lead.campaigns?.[0]?.source || 'Website form' as unknown,
+      source: (lead.campaigns?.[0]?.source || 'Website form') as Partner['source'],
       assignedTo: lead.assignedSalesperson || ''
     });
     const prevStatus = lead.status;
@@ -3264,7 +3270,7 @@ export class CrmStateService {
     };
   }
 
-  private customerCardFromDto(dto: unknown, id: string): CustomerCard {
+  private customerCardFromDto(dto: any, id: string): CustomerCard {
     return {
       id,
       partnerId: dto.partner_id,
@@ -3478,8 +3484,8 @@ export class CrmStateService {
     const current = this.tasks().find(t => t.id === taskId);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: unknown = { status };
-    if (assignedTo !== undefined) payload.assignedTo = assignedTo;
+    const payload: Record<string, unknown> = { status };
+    if (assignedTo !== undefined) payload['assignedTo'] = assignedTo;
     this.api.updateTask(taskId, payload).subscribe({
       next: (dto) => {
         this.tasks.update(tasks => tasks.map(t => t.id === taskId ? dto : t));
@@ -3639,7 +3645,7 @@ export class CrmStateService {
   private reconcileDealActivityId(dealId: string, kind: keyof NonNullable<Deal['activityLog']>, localId: string, remoteId: string) {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as unknown[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
+      const items = (d.activityLog[kind] as { id: string }[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
   }
@@ -3806,7 +3812,7 @@ export class CrmStateService {
   deleteDealActivityItem(dealId: string, kind: keyof NonNullable<Deal['activityLog']>, itemId: string) {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as unknown[]).filter(item => item.id !== itemId);
+      const items = (d.activityLog[kind] as { id: string }[]).filter(item => item.id !== itemId);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
     this.api.deleteDealActivity(dealId, itemId).subscribe({
@@ -3835,8 +3841,8 @@ export class CrmStateService {
     const current = this.purchaseOrders().find(po => po.id === poId);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: unknown = { status };
-    if (deliveryDate) payload.deliveryDate = deliveryDate;
+    const payload: Record<string, unknown> = { status };
+    if (deliveryDate) payload['deliveryDate'] = deliveryDate;
     this.api.updatePurchaseOrder(poId, payload).subscribe({
       next: (dto) => {
         this.purchaseOrders.update(pos => pos.map(p => p.id === poId ? dto : p));

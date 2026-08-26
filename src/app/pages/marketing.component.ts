@@ -244,7 +244,7 @@ export class MarketingComponent {
    * `type: 'WhatsApp'`. Matching on both keeps real and legacy rows visible in the
    * same table.
    */
-  private channelOf = (c: unknown): string => {
+  private channelOf = (c: Campaign & { channel?: string }): string => {
     const raw = c.channel ?? c.type ?? '';
     switch (String(raw).toUpperCase()) {
       case 'WHATSAPP': return 'WhatsApp';
@@ -255,22 +255,22 @@ export class MarketingComponent {
   };
 
   filteredCampaigns = () =>
-    this.campaignsService.allCampaigns().filter((c: unknown) => this.channelOf(c) === this.activeTab());
+    this.campaignsService.allCampaigns().filter((c: Campaign) => this.channelOf(c) === this.activeTab());
 
   filteredByType = (type: string) =>
-    this.campaignsService.allCampaigns().filter((c: unknown) => this.channelOf(c) === type);
+    this.campaignsService.allCampaigns().filter((c: Campaign) => this.channelOf(c) === type);
 
-  isWhatsApp = (c: unknown) => this.channelOf(c) === 'WhatsApp';
+  isWhatsApp = (c: Campaign) => this.channelOf(c) === 'WhatsApp';
 
-  audienceLabel = (c: unknown) =>
+  audienceLabel = (c: Campaign) =>
     c.targetAudience ?? (this.isWhatsApp(c) ? 'Selected contacts' : '—');
 
   activeCount = computed(() =>
-    this.filteredCampaigns().filter((c: unknown) =>
+    this.filteredCampaigns().filter((c: Campaign) =>
       ['ACTIVE', 'SENDING', 'Active'].includes(String(c.status))).length);
 
   messagesSent = computed(() =>
-    this.filteredCampaigns().reduce((sum: number, c: unknown) => sum + Number(c.sentCount ?? 0), 0));
+    this.filteredCampaigns().reduce((sum: number, c: Campaign) => sum + Number(c.sentCount ?? 0), 0));
 
   campaignCount = computed(() => this.filteredCampaigns().length);
 
@@ -341,7 +341,7 @@ export class MarketingComponent {
     this.campaignsService.load();
   }
 
-  openDetail(campaign: unknown): void {
+  openDetail(campaign: Campaign): void {
     if (!this.isWhatsApp(campaign)) return;
     this.detailCampaignTitle.set(campaign.title);
     this.detailCampaignId.set(campaign.id);

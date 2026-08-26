@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
 import { Task } from '../crm-state.service';
+import { EntityLink, isLinked } from '../../shared/related-entity.model';
 
 export type { Task };
 
@@ -44,7 +45,7 @@ export class TasksService {
   }
 
   addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createTask(task as unknown).subscribe({
+    this.api.createTask(task).subscribe({
       next: (created) => {
         this.tasks.update(tasks => [...tasks, created]);
         this.toast.show(`Task <strong>${created.title}</strong> created`);
@@ -54,7 +55,7 @@ export class TasksService {
   }
 
   updateTask(id: string, task: Partial<Task>): void {
-    this.api.updateTask(id, task as unknown).subscribe({
+    this.api.updateTask(id, task).subscribe({
       next: (updated) => {
         this.tasks.update(tasks =>
           tasks.map(t => t.id === id ? updated : t)
@@ -69,8 +70,8 @@ export class TasksService {
     const current = this.tasks().find(t => t.id === id);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: unknown = { status };
-    if (assignedTo !== undefined) payload.assignedTo = assignedTo;
+    const payload: Record<string, unknown> = { status };
+    if (assignedTo !== undefined) payload['assignedTo'] = assignedTo;
     this.api.updateTask(id, payload).subscribe({
       next: (dto) => {
         this.tasks.update(tasks => tasks.map(t => t.id === id ? dto : t));
@@ -105,5 +106,20 @@ export class TasksService {
 
   getTaskById(id: string): Task | undefined {
     return this.tasks().find(t => t.id === id);
+  }
+
+  /** Tasks linked to the given record, from the already-loaded list. */
+  relatedTo(link: EntityLink): Task[] {
+    if (!isLinked(link)) return [];
+    return this.tasks().filter(t => t.relatedEntityId === link.relatedEntityId);
+  }
+
+  /**
+   * Ensures the tasks for one record are present. The current API only exposes the
+   * unfiltered/paginated list, so this simply guarantees the shared store is loaded;
+   * `relatedTo` then filters from it.
+   */
+  loadRelatedTo(_link: EntityLink): void {
+    this.load();
   }
 }

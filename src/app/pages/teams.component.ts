@@ -478,7 +478,7 @@ export class TeamsComponent {
     try {
       this.state.updateTeam(teamId, { leadUserId: selectedUserId });
       this.cancelTransferLead();
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.leadTransferError.set(err.message || 'Lead transfer failed.');
     }
   }
@@ -495,7 +495,7 @@ export class TeamsComponent {
       this.state.removeTeamMember(teamId, userId);
       this.memberErrorTeamId.set(null);
       this.memberErrorMessage.set(null);
-    } catch (err: unknown) {
+    } catch (err: any) {
       this.memberErrorTeamId.set(teamId);
       this.memberErrorMessage.set(err.message || 'Failed to remove member.');
     }

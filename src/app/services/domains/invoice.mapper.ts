@@ -25,7 +25,7 @@ interface InvoiceResponse {
   customerName?: string;
   deliveryAddress?: string;
   vatNumber?: string;
-  lines?: unknown;
+  lines?: Invoice['lines'];
 }
 
 const TYPE_FROM_API: Record<string, 'Customer' | 'Vendor'> = {
@@ -64,11 +64,11 @@ export function invoiceFromApi(dto: InvoiceResponse): Invoice {
     partnerId: dto.partnerId,
     amount: Number(dto.total ?? 0),
     status: STATUS_FROM_API[dto.status] ?? dto.status,
-    dueDate: dto.dueDate,
+    dueDate: dto.dueDate ?? '',
     dealId: dto.dealId ?? undefined,
     purchaseOrderId: dto.purchaseOrderId ?? undefined,
     createdBy: dto.createdBy ?? undefined,
-    createdAt: dto.createdAt,
+    createdAt: dto.createdAt ?? new Date().toISOString(),
     invoiceNumber: dto.invoiceNumber ?? undefined,
     customerAccount: dto.customerAccount ?? undefined,
     customerName: dto.customerName ?? undefined,

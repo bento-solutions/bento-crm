@@ -89,9 +89,9 @@ export class PurchaseOrdersService {
   updateStatus(id: string, status: string, deliveryDate?: string): void {
     const po = this.getPurchaseOrderById(id);
     if (po) {
-      const updates: unknown = { status: status as unknown };
+      const updates: Record<string, unknown> = { status: status as PurchaseOrder['status'] };
       if (deliveryDate) {
-        updates.deliveryDate = deliveryDate;
+        updates['deliveryDate'] = deliveryDate;
       }
       this.updatePurchaseOrder(id, { ...po, ...updates });
     }

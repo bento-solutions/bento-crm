@@ -907,7 +907,7 @@ export class PartnersComponent {
     return this.state.hasAuthority('PARTNERS_WRITE');
   }
 
-  deletePartner(partner: unknown) {
+  deletePartner(partner: { id: string; name: string }) {
     if (!this.state.hasAuthority('PARTNERS_DELETE')) return;
     if (confirm(`Delete "${partner.name}"? This cannot be undone.`)) {
       this.state.deletePartner(partner.id);
@@ -1215,7 +1215,7 @@ export class PartnersComponent {
   toggleSelectAllPartners(event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
     if (checked) {
-      this.selectedPartnerIds.set(new Set(this.paginatedPartners().map((p: unknown) => p.id)));
+      this.selectedPartnerIds.set(new Set(this.paginatedPartners().map(p => p.id)));
     } else {
       this.selectedPartnerIds.set(new Set());
     }
@@ -1286,7 +1286,7 @@ export class PartnersComponent {
           city: this.newPartner.city,
           comments: this.newPartner.comments,
           status: 'active'
-        } as unknown);
+        } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>);
       }
 
       this.activeTab.set(this.newPartner.type);

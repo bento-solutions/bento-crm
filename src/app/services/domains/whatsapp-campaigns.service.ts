@@ -179,7 +179,7 @@ export class WhatsAppCampaignsService {
    * almost always actionable ("no WhatsApp number connected", "no template
    * selected"), so replacing them with a generic string would hide the fix.
    */
-  private readError(err: unknown, fallback: string): string {
+  private readError(err: any, fallback: string): string {
     return err?.error?.message || err?.error?.error || fallback;
   }
 }

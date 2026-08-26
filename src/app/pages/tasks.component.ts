@@ -636,7 +636,7 @@ export class TasksComponent {
       relatedModule: relatedModule as Task['relatedModule'],
       relatedSubModule,
       relatedEntityId
-    } as unknown);
+    });
     this.taskModalOpen.set(false);
   }
 

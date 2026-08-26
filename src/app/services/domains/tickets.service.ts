@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
 import { Ticket } from '../crm-state.service';
+import { EntityLink, isLinked } from '../../shared/related-entity.model';
 
 export type { Ticket };
 
@@ -44,7 +45,7 @@ export class TicketsService {
   }
 
   addTicket(ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createTicket(ticket as unknown).subscribe({
+    this.api.createTicket(ticket).subscribe({
       next: (created) => {
         this.tickets.update(tickets => [...tickets, created]);
         this.toast.show(`Ticket <strong>${created.title}</strong> created`);
@@ -54,7 +55,7 @@ export class TicketsService {
   }
 
   updateTicket(id: string, ticket: Partial<Ticket>): void {
-    this.api.updateTicket(id, ticket as unknown).subscribe({
+    this.api.updateTicket(id, ticket).subscribe({
       next: (updated) => {
         this.tickets.update(tickets =>
           tickets.map(t => t.id === id ? updated : t)
@@ -84,5 +85,23 @@ export class TicketsService {
 
   getTicketById(id: string): Ticket | undefined {
     return this.tickets().find(t => t.id === id);
+  }
+
+  /** Tickets linked to the given record, from the already-loaded list. */
+  relatedTo(link: EntityLink): Ticket[] {
+    if (!isLinked(link)) return [];
+    if (link.relatedEntityType === 'PARTNER') {
+      return this.tickets().filter(t => t.relatedPartnerId === link.relatedEntityId || t.partnerId === link.relatedEntityId);
+    }
+    return [];
+  }
+
+  /**
+   * Ensures the tickets for one record are present. The current API only exposes the
+   * unfiltered/paginated list, so this simply guarantees the shared store is loaded;
+   * `relatedTo` then filters from it.
+   */
+  loadRelatedTo(_link: EntityLink): void {
+    this.load();
   }
 }

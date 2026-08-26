@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../services/api.service';
 
-interface StoredFileDto {
+export interface StoredFileDto {
   id: string;
   fileName: string;
   sizeBytes?: number;

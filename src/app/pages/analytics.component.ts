@@ -5,7 +5,7 @@ import { CrmStateService } from '../services/crm-state.service';
 import { CommonModule } from '@angular/common';
 import { Customer360Component } from './customer-360-card.component';
 
-declare let Chart: unknown;
+declare let Chart: any;
 
 @Component({
   selector: 'app-analytics',
@@ -422,8 +422,8 @@ export class AnalyticsComponent implements AfterViewInit {
   @ViewChild('forecastChart') forecastCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('regionChart') regionCanvas!: ElementRef<HTMLCanvasElement>;
 
-  forecastChartInstance: unknown;
-  regionChartInstance: unknown;
+  forecastChartInstance: any;
+  regionChartInstance: any;
 
   constructor() {
     // Auto-select first customer for immediate richness
