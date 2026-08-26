@@ -2989,18 +2989,7 @@ export class CrmStateService {
   // ────────────────────────────────────────────────────────
   // Notifications data
   // ────────────────────────────────────────────────────────
-  notifications = signal<Notification[]>([
-    { id: 'notif-1', type: 'deal', title: 'New Deal Created', message: 'Atlas Digital Cloud Migration Deal worth 13,500 MAD has been created.', timestamp: '2026-07-11T09:30:00', read: false, relatedId: 'd1' },
-    { id: 'notif-2', type: 'task', title: 'Task Assigned', message: 'You have been assigned "Follow up with ABC Technologies" task.', timestamp: '2026-07-11T08:15:00', read: false, relatedId: 't3' },
-    { id: 'notif-3', type: 'ticket', title: 'Ticket Updated', message: 'Ticket #TK-0891 "Problème accès console Cloud" status changed to In Progress.', timestamp: '2026-07-10T16:45:00', read: false, relatedId: 'tk1' },
-    { id: 'notif-4', type: 'system', title: 'System Update', message: 'CRM system will undergo maintenance on Saturday, July 15th at 2:00 AM.', timestamp: '2026-07-10T14:00:00', read: false },
-    { id: 'notif-5', type: 'mention', title: 'Mentioned in Comment', message: 'Youssef El Alami mentioned you in a comment on Deal #d-p5-1.', timestamp: '2026-07-10T11:20:00', read: false, relatedId: 'd-p5-1' },
-    { id: 'notif-6', type: 'deal', title: 'Deal Stage Changed', message: 'ABC Technologies Cloud ERP Migration moved to Confirmed stage.', timestamp: '2026-07-09T15:00:00', read: true, relatedId: 'd-p5-1' },
-    { id: 'notif-7', type: 'ticket', title: 'New Ticket Created', message: 'Ticket "ERP Login Issue" has been opened by ABC Technologies.', timestamp: '2026-07-09T10:30:00', read: true, relatedId: 'tk-p5-1' },
-    { id: 'notif-8', type: 'task', title: 'Task Completed', message: 'Fatima Chraibi completed "Prepare monthly sales report" task.', timestamp: '2026-07-08T17:00:00', read: true, relatedId: 't5' },
-    { id: 'notif-9', type: 'system', title: 'Integration Sync Complete', message: 'WhatsApp integration sync completed successfully. 15 new messages processed.', timestamp: '2026-07-08T09:00:00', read: true },
-    { id: 'notif-10', type: 'mention', title: 'Mentioned in Meeting', message: 'Ahmed Bennani added you as attendee to "Q3 Pipeline Review" meeting.', timestamp: '2026-07-07T14:30:00', read: true },
-  ]);
+  notifications = signal<Notification[]>([]);
 
   unreadNotificationsCount = computed(() => this.notifications().filter(n => !n.read).length);
 
@@ -3058,15 +3047,7 @@ export class CrmStateService {
   // ────────────────────────────────────────────────────────
   // Inbox messages data
   // ────────────────────────────────────────────────────────
-  inboxMessages = signal<InboxMessage[]>([
-    { id: 'msg-1', sender: 'Karim Atlas', senderEmail: 'k.atlas@atlasdigital.ma', subject: 'Re: Cloud Migration Proposal', preview: 'Thank you for the detailed proposal. We have reviewed it and would like to schedule a follow-up meeting to discuss the next steps.', timestamp: '2026-07-11T10:15:00', read: false, hasAttachments: false },
-    { id: 'msg-2', sender: 'Samira Benjelloun', senderEmail: 's.benjelloun@acg.ma', subject: 'Invoice #i1 - Payment Reminder', preview: 'This is a reminder that invoice #i1 for Atlas Digital Cloud Migration is now overdue. Please follow up with the client.', timestamp: '2026-07-11T09:00:00', read: false, hasAttachments: true },
-    { id: 'msg-3', sender: 'Mohammed Alaoui', senderEmail: 'ceo@abctech.ma', subject: 'ERP Implementation Timeline', preview: 'We need to discuss the revised timeline for the ERP implementation. Our IT team has raised some concerns about the current schedule.', timestamp: '2026-07-10T16:30:00', read: false, hasAttachments: false },
-    { id: 'msg-4', sender: 'System Notification', senderEmail: 'noreply@acg.ma', subject: 'Automation Rule Triggered: High-Value Deal Alert', preview: 'Rule "Notify Manager – Deal > 100k" was triggered for deal Maroc Telecom Systems Network Upgrade (120,000 MAD).', timestamp: '2026-07-10T14:00:00', read: true, hasAttachments: false },
-    { id: 'msg-5', sender: 'Fatima Zahra El Idrissi', senderEmail: 'fz.elidrissi@acg.ma', subject: 'Q3 Pipeline Review Meeting', preview: 'Hi everyone, I\'ve scheduled the Q3 pipeline review for next Monday at 10:00 AM. Please confirm your availability.', timestamp: '2026-07-09T11:45:00', read: true, hasAttachments: true },
-    { id: 'msg-6', sender: 'Youssef Alami', senderEmail: 'y.alami@acg.ma', subject: 'Delivery Status - Atlas Digital Servers', preview: 'The servers for Atlas Digital have been shipped and are expected to arrive by July 5th. Tracking number is attached.', timestamp: '2026-07-08T15:20:00', read: true, hasAttachments: true },
-    { id: 'msg-7', sender: 'Zineb Tahiri', senderEmail: 'z.tahiri@acg.ma', subject: 'Ticket #TK-0891 Update', preview: 'We have identified the root cause of the Cloud console access issue. It is related to a recent SSO configuration change.', timestamp: '2026-07-08T10:00:00', read: true, hasAttachments: false },
-  ]);
+  inboxMessages = signal<InboxMessage[]>([]);
 
   unreadInboxCount = computed(() => this.inboxMessages().filter(m => !m.read).length);
 
