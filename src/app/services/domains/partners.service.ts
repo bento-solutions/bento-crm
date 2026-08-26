@@ -5,6 +5,46 @@ import { Partner, CustomerCard } from '../crm-state.service';
 
 export type { Partner };
 
+// Backend Partner.type/source are Java enums matched by exact name (see api.service.ts's
+// Proposal translation for the general pattern); this service posts/patches Partner objects
+// directly, so it needs its own copy of the same casing translation CrmStateService applies
+// via partnerToApiPayload/partnerFromDto for its own partner-writing paths.
+const PARTNER_TYPE_TO_BACKEND: Record<string, string> = {
+  Lead: 'LEAD', Prospect: 'PROSPECT', Customer: 'CUSTOMER', Vendor: 'VENDOR'
+};
+const PARTNER_TYPE_FROM_BACKEND: Record<string, string> = {
+  LEAD: 'Lead', PROSPECT: 'Prospect', CUSTOMER: 'Customer', VENDOR: 'Vendor'
+};
+const PARTNER_SOURCE_TO_BACKEND: Record<string, string> = {
+  'Website form': 'WEBSITE', 'Trade show': 'TRADE_SHOW', 'LinkedIn': 'LINKEDIN',
+  'Marketing campaign': 'CAMPAIGN', 'Referral': 'REFERRAL'
+};
+const PARTNER_SOURCE_FROM_BACKEND: Record<string, string> = {
+  WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn',
+  CAMPAIGN: 'Marketing campaign', REFERRAL: 'Referral'
+};
+
+function toBackendPartner(partner: unknown): unknown {
+  const payload = { ...(partner as Record<string, unknown>) };
+  if (typeof payload['type'] === 'string') {
+    payload['type'] = PARTNER_TYPE_TO_BACKEND[payload['type'] as string] ?? payload['type'];
+  }
+  if (typeof payload['source'] === 'string') {
+    payload['source'] = PARTNER_SOURCE_TO_BACKEND[payload['source'] as string] ?? payload['source'];
+  }
+  return payload;
+}
+
+function fromBackendPartner(partner: Partner): Partner {
+  const type = partner.type as unknown as string;
+  const source = partner.source as unknown as string | undefined;
+  return {
+    ...partner,
+    type: (PARTNER_TYPE_FROM_BACKEND[type] ?? type) as Partner['type'],
+    source: source ? (PARTNER_SOURCE_FROM_BACKEND[source] ?? source) as Partner['source'] : partner.source
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -29,7 +69,7 @@ export class PartnersService {
     this.api.getPartners().subscribe({
       next: (partners) => {
         if (partners && partners.length > 0) {
-          this.partners.set(partners);
+          this.partners.set(partners.map(fromBackendPartner));
         }
         this.isLoaded.set(true);
         this.isLoading.set(false);
@@ -44,20 +84,22 @@ export class PartnersService {
   }
 
   addPartner(partner: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createPartner(partner as unknown).subscribe({
+    this.api.createPartner(toBackendPartner(partner)).subscribe({
       next: (created) => {
-        this.partners.update(partners => [...partners, created]);
-        this.toast.show(`Partner <strong>${created.name}</strong> created`);
+        const partner = fromBackendPartner(created);
+        this.partners.update(partners => [...partners, partner]);
+        this.toast.show(`Partner <strong>${partner.name}</strong> created`);
       },
       error: () => this.toast.show('Failed to create partner', { type: 'error' })
     });
   }
 
   updatePartner(id: string, partner: Partial<Partner>): void {
-    this.api.updatePartner(id, partner as unknown).subscribe({
+    this.api.updatePartner(id, toBackendPartner(partner)).subscribe({
       next: (updated) => {
+        const partner = fromBackendPartner(updated);
         this.partners.update(partners =>
-          partners.map(p => p.id === id ? updated : p)
+          partners.map(p => p.id === id ? partner : p)
         );
         this.toast.show(`Partner updated`);
       },

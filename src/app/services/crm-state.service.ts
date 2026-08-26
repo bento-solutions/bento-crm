@@ -641,7 +641,7 @@ export interface Proposal {
   title: string;
   partnerId: string;
   amount: number;
-  status: 'Draft' | 'Sent' | 'Confirmed' | 'Rejected';
+  status: 'Draft' | 'Sent' | 'Confirmed' | 'Rejected' | 'Expired';
   templateId?: string;
   lines: ProposalLine[];
   createdBy?: string;
@@ -776,7 +776,7 @@ export interface PurchaseOrder {
   dealId: string;
   vendorId: string;
   amount: number;
-  status: 'Draft' | 'Sent' | 'Delivered' | 'Invoiced';
+  status: 'Draft' | 'Sent' | 'Confirmed' | 'Delivered' | 'Invoiced';
   deliveryDate?: string;
   lines: { product: string; description?: string; qty: number; cost: number; type?: 'software' | 'hardware' | 'service' }[];
   sentVia?: string;
@@ -1174,7 +1174,7 @@ export class CrmStateService {
       comments: dto.comments,
       city: dto.city,
       score: dto.score,
-      source: dto.source,
+      source: dto.source ? CrmStateService.PARTNER_SOURCE_FROM_BACKEND[dto.source] : undefined,
       assignedTo: dto.assigned_to_user_id,
       createdBy: dto.created_by,
       createdAt: dto.created_at ? new Date(dto.created_at).toISOString().split('T')[0] : ''
@@ -1193,7 +1193,7 @@ export class CrmStateService {
       comments: partner.comments,
       city: partner.city,
       score: partner.score,
-      source: partner.source,
+      source: this.leadSourceToPartnerSource(partner.source),
       assigned_to_user_id: partner.assignedTo || undefined
     };
   }
@@ -2631,6 +2631,11 @@ export class CrmStateService {
     return source ? map[source] : undefined;
   }
 
+  private static readonly PARTNER_SOURCE_FROM_BACKEND: Record<string, Partner['source']> = {
+    WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn',
+    CAMPAIGN: 'Marketing campaign', REFERRAL: 'Referral'
+  };
+
   private leadToPartnerPayload(lead: Partial<Lead> & { name: string }): unknown {
     return {
       type: 'LEAD',
@@ -3541,7 +3546,7 @@ export class CrmStateService {
     return newProp;
   }
 
-  updateProposalStatus(propId: string, status: 'Draft' | 'Sent' | 'Confirmed' | 'Rejected') {
+  updateProposalStatus(propId: string, status: 'Draft' | 'Sent' | 'Confirmed' | 'Rejected' | 'Expired') {
     const current = this.proposals().find(p => p.id === propId);
     if (!current) return;
     const prevStatus = current.status;

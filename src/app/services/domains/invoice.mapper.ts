@@ -9,7 +9,7 @@ import { Invoice, InvoiceStatus } from '../crm-state.service';
  * every component and out of the raw HTTP layer.
  */
 
-interface InvoiceResponse {
+export interface InvoiceResponse {
   id: string;
   type: string;
   partnerId: string;
