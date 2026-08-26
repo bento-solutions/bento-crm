@@ -66,19 +66,26 @@ export class TasksService {
     });
   }
 
-  updateStatus(id: string, status: Task['status'], assignedTo?: string): void {
+  /**
+   * The backend's PATCH /tasks/{id} re-validates the whole task (title, assignedByUserId, etc.
+   * are all @NotNull on the shared create/update DTO), so a request carrying only `{ status }`
+   * fails validation. Sending the full current task with the status (and optionally assignee)
+   * overridden keeps every required field populated regardless of what actually changed.
+   */
+  updateStatus(id: string, status: Task['status'], assignedToUserId?: string): void {
     const current = this.tasks().find(t => t.id === id);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: Record<string, unknown> = { status };
-    if (assignedTo !== undefined) payload['assignedTo'] = assignedTo;
+    const prevAssignee = current.assignedToUserId;
+    const payload: Task = { ...current, status };
+    if (assignedToUserId !== undefined) payload.assignedToUserId = assignedToUserId;
     this.api.updateTask(id, payload).subscribe({
       next: (dto) => {
         this.tasks.update(tasks => tasks.map(t => t.id === id ? dto : t));
         this.toast.show(`Task status updated`, {
           undo: () => {
             this.tasks.update(tasks =>
-              tasks.map(t => t.id === id ? { ...t, status: prevStatus } : t)
+              tasks.map(t => t.id === id ? { ...t, status: prevStatus, assignedToUserId: prevAssignee } : t)
             );
           }
         });

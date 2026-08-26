@@ -6,6 +6,7 @@ import { TranslationService } from './translation.service';
 import { TasksService } from './domains/tasks.service';
 import { TicketsService } from './domains/tickets.service';
 import { isSupportedLanguage } from '../core/i18n/language';
+import { RelatedEntityType } from '../shared/related-entity.model';
 
 export interface Organization {
   id: string;
@@ -614,14 +615,13 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  assignedTeam?: 'Sales' | 'Operations' | 'Finance' | 'Support';
-  assignedTo?: string;
+  assignedTeamId?: string;
+  assignedToUserId?: string;
+  assignedByUserId?: string;
   status: TaskStatus;
   priority?: 'Urgent' | 'Medium' | 'Low';
-  deadline?: string;
-  relatedTo?: string; // display label of the related entity
-  relatedModule?: 'Sales' | 'Finance' | 'Partners' | 'Support' | 'Marketing';
-  relatedSubModule?: string; // entity type: Deal, Proposal, PurchaseOrder, Lead, Customer, Prospect, Vendor, Ticket, Campaign, Invoice, Recovery
+  dueDate?: string;
+  relatedEntityType?: RelatedEntityType;
   relatedEntityId?: string; // id of the related entity
   createdBy?: string;
   createdAt: string;
@@ -2300,12 +2300,11 @@ export class CrmStateService {
                 this.addTask({
                   title: action.params.taskTitle || 'Automation Follow-Up Task',
                   description: action.params.taskDescription || 'Auto-created by workflow automation.',
-                  assignedTeam: action.params.targetTeam || action.params.taskTeam || 'Sales',
-                  assignedTo: action.params.assignee || '',
+                  assignedTeamId: this.resolveTeamIdByName(action.params.targetTeam || action.params.taskTeam),
+                  assignedToUserId: this.resolveUserIdByName(action.params.assignee),
+                  assignedByUserId: this.currentUserId(),
                   status: 'Pending',
-                  relatedTo: entityLabel,
-                  relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
-                  relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
+                  relatedEntityType: entityType === 'Lead' ? 'PARTNER' : entityType === 'Deal' ? 'DEAL' : 'TICKET',
                   relatedEntityId: entity['id'] as string
                 });
                 break;
@@ -2314,12 +2313,11 @@ export class CrmStateService {
                 this.addTask({
                   title: action.params.taskTitle || 'Manager Notification',
                   description: action.params.taskDescription || 'Auto-created manager notification.',
-                  assignedTeam: action.params.targetTeam || action.params.taskTeam || 'Sales',
-                  assignedTo: action.params.assignee || 'Achraf (Manager)',
+                  assignedTeamId: this.resolveTeamIdByName(action.params.targetTeam || action.params.taskTeam),
+                  assignedToUserId: this.resolveUserIdByName(action.params.assignee),
+                  assignedByUserId: this.currentUserId(),
                   status: 'Pending',
-                  relatedTo: entityLabel,
-                  relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
-                  relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
+                  relatedEntityType: entityType === 'Lead' ? 'PARTNER' : entityType === 'Deal' ? 'DEAL' : 'TICKET',
                   relatedEntityId: entity['id'] as string
                 });
                 break;
@@ -2612,6 +2610,17 @@ export class CrmStateService {
       'Disqualified': 'DISQUALIFIED'
     };
     return map[status] || 'NEW';
+  }
+
+  /** Automation rules configure the assignee/team as free text; resolve it to a real id where possible. */
+  private resolveUserIdByName(name?: string): string | undefined {
+    if (!name) return undefined;
+    return this.users().find(u => u.displayName === name)?.id;
+  }
+
+  private resolveTeamIdByName(name?: string): string | undefined {
+    if (!name) return undefined;
+    return this.teams().find(t => t.name === name || t.department === name)?.id;
   }
 
   private leadSourceToPartnerSource(source?: string): string | undefined {
@@ -3466,59 +3475,29 @@ export class CrmStateService {
     });
   }
 
-  updateTaskStatus(taskId: string, status: TaskStatus, assignedTo?: string) {
+  // The backend re-validates the whole task on PATCH (title, assignedByUserId, etc. are all
+  // @NotNull on the shared create/update DTO), so `{ status }` alone fails validation — send the
+  // full current task with just the status (and optionally assignee) overridden.
+  updateTaskStatus(taskId: string, status: TaskStatus, assignedToUserId?: string) {
     const current = this.tasks().find(t => t.id === taskId);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: Record<string, unknown> = { status };
-    if (assignedTo !== undefined) payload['assignedTo'] = assignedTo;
+    const prevAssignee = current.assignedToUserId;
+    const payload: Task = { ...current, status };
+    if (assignedToUserId !== undefined) payload.assignedToUserId = assignedToUserId;
     this.api.updateTask(taskId, payload).subscribe({
       next: (dto) => {
         this.tasks.update(tasks => tasks.map(t => t.id === taskId ? dto : t));
         this.toast.show(`Task status updated`, {
           undo: () => {
             this.tasks.update(tasks =>
-              tasks.map(t => t.id === taskId ? { ...t, status: prevStatus } : t)
+              tasks.map(t => t.id === taskId ? { ...t, status: prevStatus, assignedToUserId: prevAssignee } : t)
             );
           }
         });
       },
       error: () => this.toast.show('Failed to update task status', { type: 'error' })
     });
-  }
-
-  getRelatedEntities(module: string, subModule: string): { id: string; label: string }[] {
-    switch (module) {
-      case 'Sales':
-        switch (subModule) {
-          case 'Deal': return this.deals().map(d => ({ id: d.id, label: d.title }));
-          case 'Proposal': return this.proposals().map(p => ({ id: p.id, label: p.title }));
-          case 'PurchaseOrder': return this.purchaseOrders().map(po => ({ id: po.id, label: `PO #${po.id}` }));
-        }
-        break;
-      case 'Finance':
-        switch (subModule) {
-          case 'CustomerInvoice': return this.invoices().filter(i => i.type === 'Customer').map(i => ({ id: i.id, label: `Invoice #${i.id} - ${i.customerName || i.id}` }));
-          case 'VendorInvoice': return this.invoices().filter(i => i.type === 'Vendor').map(i => ({ id: i.id, label: `Invoice #${i.id}` }));
-          case 'Recovery': return this.invoices().filter(i => i.status === 'Overdue' || i.status === 'Pending').map(i => ({ id: i.id, label: `Invoice #${i.id} - ${i.customerName || i.id} (${i.status})` }));
-        }
-        break;
-      case 'Partners':
-        switch (subModule) {
-          case 'Lead': return this.partners().filter(p => p.type === 'Lead').map(p => ({ id: p.id, label: p.name }));
-          case 'Customer': return this.partners().filter(p => p.type === 'Customer').map(p => ({ id: p.id, label: p.name }));
-          case 'Prospect': return this.partners().filter(p => p.type === 'Prospect').map(p => ({ id: p.id, label: p.name }));
-          case 'Vendor': return this.partners().filter(p => p.type === 'Vendor').map(p => ({ id: p.id, label: p.name }));
-        }
-        break;
-      case 'Support':
-        if (subModule === 'Ticket') return this.tickets().map(t => ({ id: t.id, label: t.title }));
-        break;
-      case 'Marketing':
-        if (subModule === 'Campaign') return this.campaigns().map(c => ({ id: c.id, label: c.title }));
-        break;
-    }
-    return [];
   }
 
   addProposal(proposal: Omit<Proposal, 'id' | 'createdBy' | 'createdAt'> & { createdBy?: string; createdAt?: string }) {

@@ -11,33 +11,15 @@ import { DataStatusBannerComponent } from '../shared/data-status-banner.componen
 import { PaginatorComponent } from '../shared/paginator.component';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
-
-const MODULE_SUB_MODULES: Record<string, string[]> = {
-  Sales: ['Deal', 'Proposal', 'PurchaseOrder'],
-  Finance: ['CustomerInvoice', 'VendorInvoice', 'Recovery'],
-  Partners: ['Lead', 'Customer', 'Prospect', 'Vendor'],
-  Support: ['Ticket'],
-  Marketing: ['Campaign'],
-};
-
-const SUB_MODULE_LABELS: Record<string, string> = {
-  Deal: 'Deal',
-  Proposal: 'Proposal',
-  PurchaseOrder: 'Purchase Order',
-  CustomerInvoice: 'Customer Invoice',
-  VendorInvoice: 'Vendor Invoice',
-  Recovery: 'Recovery',
-  Lead: 'Lead',
-  Customer: 'Customer',
-  Prospect: 'Prospect',
-  Vendor: 'Vendor',
-  Ticket: 'Ticket',
-  Campaign: 'Campaign',
-};
+import { RelatedEntityPickerComponent } from '../shared/related-entity-picker.component';
+import { UserPickerComponent } from '../shared/user-picker.component';
+import { UserAvatarComponent } from '../shared/user-avatar.component';
+import { RelatedEntityService } from '../services/related-entity.service';
+import { EntityLink } from '../shared/related-entity.model';
 
 @Component({
   selector: 'app-tasks',
-  imports: [MatIconModule, CommonModule, FormsModule, DragDropModule, CreatedByBadgeComponent, RouterModule, DataStatusBannerComponent, PaginatorComponent, TranslatePipe],
+  imports: [MatIconModule, CommonModule, FormsModule, DragDropModule, CreatedByBadgeComponent, RouterModule, DataStatusBannerComponent, PaginatorComponent, TranslatePipe, RelatedEntityPickerComponent, UserPickerComponent, UserAvatarComponent],
   styles: [`
     .kanban-column.cdk-drop-list-dragging .kanban-card:not(.cdk-drag-placeholder) {
       transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
@@ -131,10 +113,10 @@ const SUB_MODULE_LABELS: Record<string, string> = {
                 <h4 class="text-zinc-900 font-semibold text-base mb-1">{{task.title}}</h4>
                 <p class="text-xs text-zinc-500 mb-3">{{task.description}}</p>
 
-                @if (task.relatedTo) {
+                @if (getRelatedLabel(task); as label) {
                   <div class="text-xs text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg p-1.5 px-2 mb-4 inline-flex items-center gap-1 font-medium">
                     <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">link</mat-icon>
-                    {{task.relatedTo}}
+                    {{label}}
                   </div>
                 }
               </div>
@@ -146,11 +128,18 @@ const SUB_MODULE_LABELS: Record<string, string> = {
                 </div>
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-zinc-400 font-medium">Assigned Team:</span>
-                  <span class="font-bold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded">{{task.assignedTeam || 'Sales'}}</span>
+                  <span class="font-bold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded">{{getTeamName(task.assignedTeamId)}}</span>
                 </div>
                 <div class="flex justify-between items-center text-xs">
                   <span class="text-zinc-400 font-medium">Assigned Person:</span>
-                  <span class="font-bold text-zinc-700">{{ task.assignedTo || ('leads.unassigned' | translate) }}</span>
+                  <span class="flex items-center gap-1.5 font-bold text-zinc-700">
+                    @if (task.assignedToUserId) {
+                      <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
+                      {{ getAssigneeName(task.assignedToUserId) }}
+                    } @else {
+                      {{ 'leads.unassigned' | translate }}
+                    }
+                  </span>
                 </div>
 
                 <div class="flex gap-2 pt-2 border-t border-zinc-50">
@@ -226,17 +215,22 @@ const SUB_MODULE_LABELS: Record<string, string> = {
                     </div>
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
-                  @if (task.relatedTo) {
+                  @if (getRelatedLabel(task); as label) {
                     <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
                       <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{task.relatedTo}}</span>
+                      <span class="truncate max-w-[180px]">{{label}}</span>
                     </div>
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
-                    <span class="font-medium truncate">{{ task.assignedTo || ('leads.unassigned' | translate) }}</span>
-                    @if (task.assignedTeam) {
-                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{task.assignedTeam}}</span>
+                    @if (task.assignedToUserId) {
+                      <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
+                      <span class="font-medium truncate">{{ getAssigneeName(task.assignedToUserId) }}</span>
+                    } @else {
+                      <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
+                      <span class="font-medium truncate">{{ 'leads.unassigned' | translate }}</span>
+                    }
+                    @if (task.assignedTeamId) {
+                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{getTeamName(task.assignedTeamId)}}</span>
                     }
                   </div>
                   <div class="mt-2 pt-2 border-t border-zinc-50 flex items-center gap-2 text-meta text-zinc-400">
@@ -275,17 +269,22 @@ const SUB_MODULE_LABELS: Record<string, string> = {
                     </div>
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
-                  @if (task.relatedTo) {
+                  @if (getRelatedLabel(task); as label) {
                     <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
                       <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{task.relatedTo}}</span>
+                      <span class="truncate max-w-[180px]">{{label}}</span>
                     </div>
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
-                    <span class="font-medium truncate">{{ task.assignedTo || ('leads.unassigned' | translate) }}</span>
-                    @if (task.assignedTeam) {
-                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{task.assignedTeam}}</span>
+                    @if (task.assignedToUserId) {
+                      <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
+                      <span class="font-medium truncate">{{ getAssigneeName(task.assignedToUserId) }}</span>
+                    } @else {
+                      <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
+                      <span class="font-medium truncate">{{ 'leads.unassigned' | translate }}</span>
+                    }
+                    @if (task.assignedTeamId) {
+                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{getTeamName(task.assignedTeamId)}}</span>
                     }
                   </div>
                   <div class="mt-2 pt-2 border-t border-zinc-50 flex items-center gap-2 text-meta text-zinc-400">
@@ -324,17 +323,22 @@ const SUB_MODULE_LABELS: Record<string, string> = {
                     </div>
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
-                  @if (task.relatedTo) {
+                  @if (getRelatedLabel(task); as label) {
                     <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
                       <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{task.relatedTo}}</span>
+                      <span class="truncate max-w-[180px]">{{label}}</span>
                     </div>
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
-                    <span class="font-medium truncate">{{ task.assignedTo || ('leads.unassigned' | translate) }}</span>
-                    @if (task.assignedTeam) {
-                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{task.assignedTeam}}</span>
+                    @if (task.assignedToUserId) {
+                      <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
+                      <span class="font-medium truncate">{{ getAssigneeName(task.assignedToUserId) }}</span>
+                    } @else {
+                      <mat-icon class="text-[14px] w-3.5 h-3.5">person</mat-icon>
+                      <span class="font-medium truncate">{{ 'leads.unassigned' | translate }}</span>
+                    }
+                    @if (task.assignedTeamId) {
+                      <span class="ml-auto text-meta font-semibold text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">{{getTeamName(task.assignedTeamId)}}</span>
                     }
                   </div>
                   <div class="mt-2 pt-2 border-t border-zinc-50 flex items-center gap-2 text-meta text-zinc-400">
@@ -374,57 +378,34 @@ const SUB_MODULE_LABELS: Record<string, string> = {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label for="assigned_team" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Team</label>
-                <select id="assigned_team" [(ngModel)]="newTaskData.assignedTeam" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                  <option value="Sales">Sales</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Support">Support</option>
+                <select id="assigned_team" [(ngModel)]="newTaskData.assignedTeamId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <option value="">{{ 'leads.unassigned' | translate }}</option>
+                  @for (team of state.teams(); track team.id) {
+                    <option [value]="team.id">{{team.name}}</option>
+                  }
                 </select>
               </div>
               <div>
-                <label for="assigned_person" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Person</label>
-                <select id="assigned_person" [(ngModel)]="newTaskData.assignedTo" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                  <option value="">{{ 'leads.unassigned' | translate }}</option>
-                  @for (user of state.users(); track user.name) {
-                    <option [value]="user.name">{{user.name}}</option>
-                  }
+                <label for="priority" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Priority</label>
+                <select id="priority" [(ngModel)]="newTaskData.priority" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Urgent">Urgent</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label for="module" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Module</label>
-              <select id="module" [(ngModel)]="selectedModule" (ngModelChange)="onModuleChange()" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                <option value="">None</option>
-                @for (mod of moduleList; track mod) {
-                  <option [value]="mod">{{mod}}</option>
-                }
-              </select>
+              <label for="due_date" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Due Date</label>
+              <input id="due_date" [(ngModel)]="newTaskData.dueDate" type="date" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
             </div>
 
-            @if (selectedModule()) {
-              <div>
-                <label for="sub_module" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Sub-module</label>
-                <select id="sub_module" [(ngModel)]="selectedSubModule" (ngModelChange)="onSubModuleChange()" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                  <option value="">Select...</option>
-                  @for (sub of subModules(); track sub) {
-                    <option [value]="sub">{{subModuleLabel(sub)}}</option>
-                  }
-                </select>
-              </div>
-            }
+            <div>
+              <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Person</span>
+              <app-user-picker [(value)]="newTaskData.assignedToUserId" />
+            </div>
 
-            @if (selectedModule() && selectedSubModule()) {
-              <div>
-                <label for="submodulelabel_selec" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">{{subModuleLabel(selectedSubModule())}}</label>
-                <select id="submodulelabel_selec" [(ngModel)]="newTaskData.relatedEntityId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                  <option value="">Select...</option>
-                  @for (entity of relatedEntities(); track entity.id) {
-                    <option [value]="entity.id">{{entity.label}}</option>
-                  }
-                </select>
-              </div>
-            }
+            <app-related-entity-picker [(link)]="newTaskData.link" label="Related To" />
           </div>
 
           <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100">
@@ -441,12 +422,8 @@ const SUB_MODULE_LABELS: Record<string, string> = {
         <div class="bg-white shadow-xl rounded-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
           <h3 class="text-lg font-bold text-zinc-950">Assign Task: {{selectedTask()?.title}}</h3>
           <div>
-            <label for="select_assignee" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Assignee</label>
-            <select id="select_assignee" [(ngModel)]="reassignedUser" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-              @for (user of state.users(); track user.name) {
-                <option [value]="user.name">{{user.name}} ({{user.role}})</option>
-              }
-            </select>
+            <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Assignee</span>
+            <app-user-picker [(value)]="reassignedUser" />
           </div>
           <div class="flex justify-end gap-2 pt-2">
             <button (click)="assignModalOpen.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
@@ -461,12 +438,11 @@ export class TasksComponent {
   state = inject(CrmStateService);
   tasksService = inject(TasksService);
   translation = inject(TranslationService);
+  private related = inject(RelatedEntityService);
 
   canCreate(): boolean { return this.state.hasAuthority('TASKS_CREATE'); }
   canWrite(): boolean { return this.state.hasAuthority('TASKS_WRITE'); }
   canDelete(): boolean { return this.state.hasAuthority('TASKS_DELETE'); }
-
-  moduleList = Object.keys(MODULE_SUB_MODULES);
 
   activeView = signal<'list' | 'kanban'>('list');
   activePriorityFilter = signal<'Urgent' | 'Medium' | 'Low' | null>(null);
@@ -506,22 +482,22 @@ export class TasksComponent {
   selectedTask = signal<Task | null>(null);
   reassignedUser = '';
 
-  selectedModule = signal('');
-  selectedSubModule = signal('');
-  subModules = computed(() => this.selectedModule() ? MODULE_SUB_MODULES[this.selectedModule()] || [] : []);
-  relatedEntities = computed(() => {
-    const mod = this.selectedModule();
-    const sub = this.selectedSubModule();
-    if (!mod || !sub) return [];
-    return this.state.getRelatedEntities(mod, sub);
-  });
-
-  newTaskData = {
+  newTaskData: {
+    title: string;
+    description: string;
+    assignedTeamId: string;
+    assignedToUserId: string;
+    priority: 'Urgent' | 'Medium' | 'Low';
+    dueDate: string;
+    link: EntityLink;
+  } = {
     title: '',
     description: '',
-    assignedTeam: 'Sales' as 'Sales' | 'Operations' | 'Finance' | 'Support',
-    assignedTo: '',
-    relatedEntityId: ''
+    assignedTeamId: '',
+    assignedToUserId: '',
+    priority: 'Medium',
+    dueDate: '',
+    link: {}
   };
 
   constructor() {
@@ -538,17 +514,21 @@ export class TasksComponent {
     }
   }
 
-  subModuleLabel(sub: string): string {
-    return SUB_MODULE_LABELS[sub] || sub;
+  getRelatedLabel(task: Task): string {
+    return this.related.labelOfLink({
+      relatedEntityType: task.relatedEntityType,
+      relatedEntityId: task.relatedEntityId
+    }) || '';
   }
 
-  getRelatedLabel(task: Task): string {
-    if (task.relatedTo) return task.relatedTo;
-    if (task.relatedModule && task.relatedSubModule) {
-      const subLabel = this.subModuleLabel(task.relatedSubModule);
-      return `${subLabel} (${task.relatedModule})`;
-    }
-    return '';
+  getTeamName(teamId?: string): string {
+    if (!teamId) return '—';
+    return this.state.teams().find(t => t.id === teamId)?.name || 'Unknown team';
+  }
+
+  getAssigneeName(userId?: string): string {
+    if (!userId) return '';
+    return this.state.users().find(u => u.id === userId)?.displayName || 'Unknown';
   }
 
   getStatusColor(status: string) {
@@ -580,26 +560,17 @@ export class TasksComponent {
     this.tasksService.updateStatus(task.id, targetStatus);
   }
 
-  onModuleChange() {
-    this.selectedSubModule.set('');
-    this.newTaskData.relatedEntityId = '';
-  }
-
-  onSubModuleChange() {
-    this.newTaskData.relatedEntityId = '';
-  }
-
   openCreateTaskModal() {
     if (!this.canCreate()) return;
     this.newTaskData = {
       title: '',
       description: '',
-      assignedTeam: 'Sales',
-      assignedTo: '',
-      relatedEntityId: ''
+      assignedTeamId: '',
+      assignedToUserId: '',
+      priority: 'Medium',
+      dueDate: '',
+      link: {}
     };
-    this.selectedModule.set('');
-    this.selectedSubModule.set('');
     this.taskModalOpen.set(true);
   }
 
@@ -609,33 +580,17 @@ export class TasksComponent {
 
   saveTask() {
     if (!this.canCreate()) return;
-    const mod = this.selectedModule();
-    const sub = this.selectedSubModule();
-    const entityId = this.newTaskData.relatedEntityId;
-    let relatedTo: string | undefined;
-    let relatedModule: string | undefined;
-    let relatedSubModule: string | undefined;
-    let relatedEntityId: string | undefined;
-
-    if (mod && sub && entityId) {
-      relatedModule = mod;
-      relatedSubModule = sub;
-      relatedEntityId = entityId;
-      const entities = this.state.getRelatedEntities(mod, sub);
-      const found = entities.find(e => e.id === entityId);
-      relatedTo = found ? found.label : entityId;
-    }
-
     this.tasksService.addTask({
       title: this.newTaskData.title,
       description: this.newTaskData.description,
-      assignedTeam: this.newTaskData.assignedTeam,
-      assignedTo: this.newTaskData.assignedTo || undefined,
+      assignedTeamId: this.newTaskData.assignedTeamId || undefined,
+      assignedToUserId: this.newTaskData.assignedToUserId || undefined,
+      assignedByUserId: this.state.currentUserId(),
       status: 'Pending',
-      relatedTo,
-      relatedModule: relatedModule as Task['relatedModule'],
-      relatedSubModule,
-      relatedEntityId
+      priority: this.newTaskData.priority,
+      dueDate: this.newTaskData.dueDate || undefined,
+      relatedEntityType: this.newTaskData.link.relatedEntityType ?? undefined,
+      relatedEntityId: this.newTaskData.link.relatedEntityId ?? undefined
     });
     this.taskModalOpen.set(false);
   }
@@ -643,7 +598,7 @@ export class TasksComponent {
   openAssignModal(task: Task) {
     if (!this.canWrite()) return;
     this.selectedTask.set(task);
-    this.reassignedUser = task.assignedTo || '';
+    this.reassignedUser = task.assignedToUserId || '';
     this.assignModalOpen.set(true);
   }
 

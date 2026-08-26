@@ -17,12 +17,13 @@ import { TasksService } from '../services/domains/tasks.service';
 import { CrmStateService } from '../services/crm-state.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
+import { UserPickerComponent } from '../shared/user-picker.component';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
 @Component({
   selector: 'app-sales',
-  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe],
+  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent],
   template: `
     <div class="space-y-8">
       @if (activeTab() !== 'deals') {
@@ -1500,29 +1501,24 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
             <div>
               <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Team</label>
-              <select [(ngModel)]="assignTaskData.assignedTeam" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                <option value="Sales">Sales</option>
-                <option value="Operations">Operations</option>
-                <option value="Finance">Finance</option>
-                <option value="Support">Support</option>
+              <select [(ngModel)]="assignTaskData.assignedTeamId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <option value="">Unassigned</option>
+                @for (team of state.teams(); track team.id) {
+                  <option [value]="team.id">{{ team.name }}</option>
+                }
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Person</label>
-              <select [(ngModel)]="assignTaskData.assignedTo" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                <option value="">-- Select --</option>
-                @for (user of users(); track user.name) {
-                  <option [value]="user.name">{{ user.name }} ({{ user.team }})</option>
-                }
-              </select>
+              <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Person</span>
+              <app-user-picker [(value)]="assignTaskData.assignedToUserId" placeholder="-- Select --" />
             </div>
           </div>
 
           <div class="flex justify-between gap-2 pt-2 border-t border-zinc-100">
             <button (click)="assignTaskModalOpen.set(null)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50 transition-colors">Cancel</button>
             <button (click)="saveAssignTask()"
-              [disabled]="!assignTaskData.title.trim() || !assignTaskData.assignedTo"
+              [disabled]="!assignTaskData.title.trim() || !assignTaskData.assignedToUserId"
               class="px-5 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
               <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon>
               Create &amp; Assign Task
@@ -2591,8 +2587,8 @@ export class SalesComponent {
   assignTaskData = {
     title: '',
     description: '',
-    assignedTeam: 'Sales' as 'Sales' | 'Operations' | 'Finance' | 'Support',
-    assignedTo: ''
+    assignedTeamId: '',
+    assignedToUserId: ''
   };
 
   // Modal data properties
@@ -3148,8 +3144,8 @@ export class SalesComponent {
     this.assignTaskData = {
       title: '',
       description: '',
-      assignedTeam: 'Sales',
-      assignedTo: ''
+      assignedTeamId: '',
+      assignedToUserId: ''
     };
     this.assignTaskModalOpen.set({ entityType, entityId, entityTitle });
   }
@@ -3157,19 +3153,19 @@ export class SalesComponent {
   saveAssignTask() {
     if (!this.canCreateTask()) return;
     const ctx = this.assignTaskModalOpen();
-    if (!ctx || !this.assignTaskData.title.trim() || !this.assignTaskData.assignedTo) return;
+    if (!ctx || !this.assignTaskData.title.trim() || !this.assignTaskData.assignedToUserId) return;
 
-    const moduleMap: Record<string, string> = { deal: 'Sales', proposal: 'Sales', po: 'Sales' };
-    const subModuleMap: Record<string, string> = { deal: 'Deal', proposal: 'Proposal', po: 'PurchaseOrder' };
+    const relatedEntityTypeMap: Record<string, Task['relatedEntityType']> = {
+      deal: 'DEAL', proposal: 'PROPOSAL', po: 'PURCHASE_ORDER'
+    };
     this.tasksService.addTask({
       title: this.assignTaskData.title.trim(),
       description: this.assignTaskData.description.trim() || undefined,
-      assignedTeam: this.assignTaskData.assignedTeam,
-      assignedTo: this.assignTaskData.assignedTo,
+      assignedTeamId: this.assignTaskData.assignedTeamId || undefined,
+      assignedToUserId: this.assignTaskData.assignedToUserId,
+      assignedByUserId: this.state.currentUserId(),
       status: 'Pending',
-      relatedTo: ctx.entityTitle,
-      relatedModule: moduleMap[ctx.entityType] as Task['relatedModule'],
-      relatedSubModule: subModuleMap[ctx.entityType],
+      relatedEntityType: relatedEntityTypeMap[ctx.entityType],
       relatedEntityId: ctx.entityId
     });
 

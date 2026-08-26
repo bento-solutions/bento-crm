@@ -334,11 +334,10 @@ export class Customer360Component {
 
   scheduleItems = computed(() => {
     const partnerId = this.view().partner.id;
-    const partnerName = this.view().partner.name;
     const items: { id: string; title: string; dateLabel: string; type: 'task' | 'meeting'; status?: string }[] = [];
 
     for (const t of this.state.tasks()) {
-      if (t.relatedEntityId === partnerId || (t.relatedTo && t.relatedTo.includes(partnerName))) {
+      if (t.relatedEntityId === partnerId) {
         items.push({ id: t.id, title: t.title, dateLabel: t.createdAt, type: 'task', status: t.status });
       }
     }

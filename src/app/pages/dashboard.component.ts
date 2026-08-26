@@ -614,15 +614,15 @@ export class DashboardComponent {
     staleCutoff.setDate(staleCutoff.getDate() - 14);
 
     const overdueTasks: TodayItem[] = this.state.tasks()
-      .filter(t => t.status !== 'Completed' && t.deadline && t.deadline < todayStr)
-      .sort((a, b) => (a.deadline || '').localeCompare(b.deadline || ''))
+      .filter(t => t.status !== 'Completed' && t.dueDate && t.dueDate < todayStr)
+      .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
       .map(t => ({
         kind: 'task' as const,
         id: t.id,
         icon: 'assignment_late',
         tone: 'rose' as Tone,
         title: t.title,
-        meta: `Overdue since ${this.formatDate(t.deadline)}`,
+        meta: `Overdue since ${this.formatDate(t.dueDate)}`,
         actionLabel: 'Done',
         action: () => this.state.updateTaskStatus(t.id, 'Completed' as TaskStatus)
       }));
@@ -776,7 +776,7 @@ export class DashboardComponent {
   private taskQueue = computed(() => {
     const pending = this.state.tasks().filter(t => t.status === 'Pending');
     const byDeadline = (a: Task, b: Task) =>
-      !a.deadline ? 1 : !b.deadline ? -1 : a.deadline.localeCompare(b.deadline);
+      !a.dueDate ? 1 : !b.dueDate ? -1 : a.dueDate.localeCompare(b.dueDate);
 
     const sections: QueueSection[] = ([
       ['Urgent', 'Urgent', 'rose'],
@@ -790,7 +790,7 @@ export class DashboardComponent {
         rows: pending
           .filter(t => (t.priority ?? 'Medium') === key)
           .sort(byDeadline)
-          .map(t => this.queueRow(t.id, t.title, t.assignedTo || 'Unassigned', t.deadline))
+          .map(t => this.queueRow(t.id, t.title, this.assigneeName(t.assignedToUserId), t.dueDate))
       }))
       .filter(s => s.rows.length > 0);
 
@@ -984,6 +984,11 @@ export class DashboardComponent {
     if (!date) return '';
     const d = this.parseDate(date);
     return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  }
+
+  private assigneeName(userId?: string): string {
+    if (!userId) return 'Unassigned';
+    return this.state.users().find(u => u.id === userId)?.displayName || 'Unassigned';
   }
 
   private money(value: number): string {

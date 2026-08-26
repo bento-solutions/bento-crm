@@ -187,8 +187,9 @@ export class PartnerScheduleCalendarComponent {
     const membersSet = new Set<string>();
 
     for (const task of this.state.tasks()) {
-      if (task.deadline === dateStr && task.assignedTo) {
-        membersSet.add(task.assignedTo);
+      if (task.dueDate === dateStr && task.assignedToUserId) {
+        const name = this.state.users().find(u => u.id === task.assignedToUserId)?.displayName;
+        if (name) membersSet.add(name);
       }
     }
 

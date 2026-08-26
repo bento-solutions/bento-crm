@@ -6,10 +6,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Deal, Meeting } from '../services/crm-state.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
+import { UserPickerComponent } from '../shared/user-picker.component';
 
 @Component({
   selector: 'app-deal-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent, UserPickerComponent],
   template: `
     <div class="space-y-6 font-sans max-w-5xl mx-auto">
       <a routerLink="/sales" class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors">
@@ -770,21 +771,16 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             </div>
             <div>
               <label for="assigned_team" class="block text-xs font-semibold text-zinc-500 mb-1">Assigned Team</label>
-              <select id="assigned_team" [(ngModel)]="assignTaskData.assignedTeam" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                <option value="Sales">Sales</option>
-                <option value="Operations">Operations</option>
-                <option value="Finance">Finance</option>
-                <option value="Support">Support</option>
+              <select id="assigned_team" [(ngModel)]="assignTaskData.assignedTeamId" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <option value="">Unassigned</option>
+                @for (team of state.teams(); track team.id) {
+                  <option [value]="team.id">{{ team.name }}</option>
+                }
               </select>
             </div>
             <div>
-              <label for="assigned_to" class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</label>
-              <select id="assigned_to" [(ngModel)]="assignTaskData.assignedTo" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                <option value="">— Select —</option>
-                @for (u of state.users(); track u.id) {
-                  <option [value]="u.name">{{ u.name }}</option>
-                }
-              </select>
+              <span class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</span>
+              <app-user-picker [(value)]="assignTaskData.assignedToUserId" placeholder="— Select —" />
             </div>
           </div>
 
@@ -846,8 +842,8 @@ export class DealDetailComponent {
   assignTaskData = {
     title: '',
     description: '',
-    assignedTeam: 'Sales' as 'Sales' | 'Operations' | 'Finance' | 'Support',
-    assignedTo: ''
+    assignedTeamId: '',
+    assignedToUserId: ''
   };
 
   // PO Modal
@@ -1100,8 +1096,8 @@ export class DealDetailComponent {
     this.assignTaskData = {
       title: '',
       description: '',
-      assignedTeam: 'Sales',
-      assignedTo: ''
+      assignedTeamId: '',
+      assignedToUserId: ''
     };
     this.assignTaskModalOpen.set({ entityType: 'deal', entityId, entityTitle });
   }
@@ -1109,17 +1105,16 @@ export class DealDetailComponent {
   saveAssignTask() {
     if (!this.canCreateTask()) return;
     const ctx = this.assignTaskModalOpen();
-    if (!ctx || !this.assignTaskData.title.trim() || !this.assignTaskData.assignedTo) return;
+    if (!ctx || !this.assignTaskData.title.trim() || !this.assignTaskData.assignedToUserId) return;
 
     this.state.addTask({
       title: this.assignTaskData.title.trim(),
       description: this.assignTaskData.description.trim() || undefined,
-      assignedTeam: this.assignTaskData.assignedTeam,
-      assignedTo: this.assignTaskData.assignedTo,
+      assignedTeamId: this.assignTaskData.assignedTeamId || undefined,
+      assignedToUserId: this.assignTaskData.assignedToUserId,
+      assignedByUserId: this.state.currentUserId(),
       status: 'Pending',
-      relatedTo: ctx.entityTitle,
-      relatedModule: 'Sales',
-      relatedSubModule: 'Deal',
+      relatedEntityType: 'DEAL',
       relatedEntityId: ctx.entityId
     });
 
