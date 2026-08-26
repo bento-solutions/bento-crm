@@ -44,7 +44,7 @@ export class PartnersService {
   }
 
   addPartner(partner: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createPartner(partner as any).subscribe({
+    this.api.createPartner(partner as unknown).subscribe({
       next: (created) => {
         this.partners.update(partners => [...partners, created]);
         this.toast.show(`Partner <strong>${created.name}</strong> created`);
@@ -54,7 +54,7 @@ export class PartnersService {
   }
 
   updatePartner(id: string, partner: Partial<Partner>): void {
-    this.api.updatePartner(id, partner as any).subscribe({
+    this.api.updatePartner(id, partner as unknown).subscribe({
       next: (updated) => {
         this.partners.update(partners =>
           partners.map(p => p.id === id ? updated : p)
@@ -97,11 +97,12 @@ export class PartnersService {
     return 'ACC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
 
-  saveCustomerCard(card: any): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  saveCustomerCard(_card: unknown): void {
     // Stub method for saving customer card
   }
 
-  customerCards(): any[] {
+  customerCards(): unknown[] {
     // Stub method for getting customer cards
     return [];
   }
@@ -114,11 +115,13 @@ export class PartnersService {
     return this.partners().filter((p: Partner) => p.type === 'Vendor');
   }
 
-  createPartnerAwaitingId(partialPartner: any, onCreated?: (id: string) => void): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  createPartnerAwaitingId(_partialPartner: unknown, _onCreated?: (id: string) => void): void {
     // Stub method for creating a partner awaiting ID assignment
   }
 
-  convertLeadToProspect(leadId: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  convertLeadToProspect(_leadId: string): void {
     // Stub method for converting lead to prospect
   }
 }

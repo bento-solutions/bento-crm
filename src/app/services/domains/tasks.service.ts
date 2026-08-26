@@ -44,7 +44,7 @@ export class TasksService {
   }
 
   addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createTask(task as any).subscribe({
+    this.api.createTask(task as unknown).subscribe({
       next: (created) => {
         this.tasks.update(tasks => [...tasks, created]);
         this.toast.show(`Task <strong>${created.title}</strong> created`);
@@ -54,7 +54,7 @@ export class TasksService {
   }
 
   updateTask(id: string, task: Partial<Task>): void {
-    this.api.updateTask(id, task as any).subscribe({
+    this.api.updateTask(id, task as unknown).subscribe({
       next: (updated) => {
         this.tasks.update(tasks =>
           tasks.map(t => t.id === id ? updated : t)
@@ -69,7 +69,7 @@ export class TasksService {
     const current = this.tasks().find(t => t.id === id);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: any = { status };
+    const payload: unknown = { status };
     if (assignedTo !== undefined) payload.assignedTo = assignedTo;
     this.api.updateTask(id, payload).subscribe({
       next: (dto) => {

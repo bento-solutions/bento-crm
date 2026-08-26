@@ -44,7 +44,7 @@ export class PurchaseOrdersService {
   }
 
   addPurchaseOrder(po: Omit<PurchaseOrder, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createPurchaseOrder(po as any).subscribe({
+    this.api.createPurchaseOrder(po as unknown).subscribe({
       next: (created) => {
         this.purchaseOrders.update(pos => [...pos, created]);
         this.toast.show(`Purchase order <strong>${created.orderNumber}</strong> created`);
@@ -54,7 +54,7 @@ export class PurchaseOrdersService {
   }
 
   updatePurchaseOrder(id: string, po: Partial<PurchaseOrder>): void {
-    this.api.updatePurchaseOrder(id, po as any).subscribe({
+    this.api.updatePurchaseOrder(id, po as unknown).subscribe({
       next: (updated) => {
         this.purchaseOrders.update(pos =>
           pos.map(p => p.id === id ? updated : p)
@@ -89,7 +89,7 @@ export class PurchaseOrdersService {
   updateStatus(id: string, status: string, deliveryDate?: string): void {
     const po = this.getPurchaseOrderById(id);
     if (po) {
-      const updates: any = { status: status as any };
+      const updates: unknown = { status: status as unknown };
       if (deliveryDate) {
         updates.deliveryDate = deliveryDate;
       }

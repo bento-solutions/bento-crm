@@ -28,8 +28,8 @@ import { UserAvatarComponent } from './user-avatar.component';
 })
 export class AvatarStackComponent {
   @Input() userIds: string[] = [];
-  @Input() maxVisible: number = 4;
-  @Input() size: number = 28;
+  @Input() maxVisible = 4;
+  @Input() size = 28;
 
   getVisibleUserIds(): string[] {
     return this.userIds.slice(0, this.maxVisible);

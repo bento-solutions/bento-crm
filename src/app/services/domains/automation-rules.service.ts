@@ -44,7 +44,7 @@ export class AutomationRulesService {
   }
 
   addRule(rule: Omit<AutomationRule, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createAutomationRule(rule as any).subscribe({
+    this.api.createAutomationRule(rule as unknown).subscribe({
       next: (created) => {
         this.automationRules.update(rules => [...rules, created]);
         this.toast.show(`Automation rule <strong>${created.name}</strong> created`);
@@ -54,7 +54,7 @@ export class AutomationRulesService {
   }
 
   updateRule(id: string, rule: Partial<AutomationRule>): void {
-    this.api.updateAutomationRule(id, rule as any).subscribe({
+    this.api.updateAutomationRule(id, rule as unknown).subscribe({
       next: (updated) => {
         this.automationRules.update(rules =>
           rules.map(r => r.id === id ? updated : r)

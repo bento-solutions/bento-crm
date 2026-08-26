@@ -35,6 +35,7 @@ export interface CurrentUser {
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService extends BaseApiService {
+  // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(http: HttpClient) {
     super(http);
   }
@@ -43,8 +44,8 @@ export class AuthApiService extends BaseApiService {
     return this.post<LoginResponse>(API_CONFIG.endpoints.auth.login, credentials);
   }
 
-  logout(): Observable<any> {
-    return this.post<any>(API_CONFIG.endpoints.auth.logout, {});
+  logout(): Observable<unknown> {
+    return this.post<unknown>(API_CONFIG.endpoints.auth.logout, {});
   }
 
   refresh(refreshToken: string): Observable<LoginResponse> {

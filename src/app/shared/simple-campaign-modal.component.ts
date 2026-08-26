@@ -33,20 +33,20 @@ import { CampaignsService, Campaign } from '../services/domains';
             }
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Campaign title</label>
-              <input [(ngModel)]="title" type="text" placeholder="Q3 newsletter"
+              <label for="campaign_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Campaign title</label>
+              <input id="campaign_title" [(ngModel)]="title" type="text" placeholder="Q3 newsletter"
                      class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Target audience</label>
-              <input [(ngModel)]="targetAudience" type="text" placeholder="All active customers"
+              <label for="target_audience" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Target audience</label>
+              <input id="target_audience" [(ngModel)]="targetAudience" type="text" placeholder="All active customers"
                      class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Status</label>
-              <select [(ngModel)]="status"
+              <label for="status" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Status</label>
+              <select id="status" [(ngModel)]="status"
                       class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all">
                 <option value="Draft">Draft</option>
                 <option value="Active">Active</option>
@@ -75,7 +75,7 @@ export class SimpleCampaignModalComponent {
   open = input<boolean>(false);
   channel = input<'Email' | 'SMS'>('Email');
   campaign = input<Campaign | null>(null);
-  close = output<void>();
+  closeEmitted = output<void>();
   saved = output<void>();
 
   title = '';
@@ -93,7 +93,7 @@ export class SimpleCampaignModalComponent {
   }
 
   onClose(): void {
-    this.close.emit();
+    this.closeEmitted.emit();
   }
 
   save(): void {
@@ -115,6 +115,6 @@ export class SimpleCampaignModalComponent {
       });
     }
     this.saved.emit();
-    this.close.emit();
+    this.closeEmitted.emit();
   }
 }

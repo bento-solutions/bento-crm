@@ -1,9 +1,8 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CrmStateService, CrmTeam, CrmUser, RoleId } from '../services/crm-state.service';
+import { CrmStateService, CrmTeam, CrmUser } from '../services/crm-state.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
-import { RoleBadgeComponent } from '../shared/role-badge.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -46,8 +45,8 @@ import { MatIconModule } from '@angular/material/icon';
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Name -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Name *</label>
-              <input
+              <label for="team_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Name *</label>
+              <input id="team_name"
                 [(ngModel)]="newTeamName"
                 type="text"
                 placeholder="e.g. Casablanca Sales"
@@ -57,8 +56,8 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Department -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Department</label>
-              <select
+              <label for="department" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Department</label>
+              <select id="department"
                 [(ngModel)]="newTeamDept"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
               >
@@ -72,8 +71,8 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Team Lead -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Lead *</label>
-              <select
+              <label for="team_lead" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Lead *</label>
+              <select id="team_lead"
                 [(ngModel)]="newTeamLeadId"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
               >
@@ -86,7 +85,7 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Color Swatches -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-2">Team Badge Accent Color</label>
+              <label for="team_badge_accent_co" class="block text-xs font-semibold text-zinc-500 uppercase mb-2">Team Badge Accent Color</label>
               <div class="flex items-center gap-3">
                 @for (c of presetColors; track c) {
                   <button
@@ -94,6 +93,7 @@ import { MatIconModule } from '@angular/material/icon';
                     (click)="selectedColor.set(c)"
                     [style.background-color]="c"
                     [class.ring-2]="selectedColor() === c"
+                    [attr.aria-label]="'Select color ' + c"
                     class="w-6 h-6 rounded-full cursor-pointer ring-offset-2 ring-zinc-900 transition-all"
                   ></button>
                 }
@@ -102,8 +102,8 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Description -->
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description (Optional)</label>
-              <textarea
+              <label for="description_optional" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description (Optional)</label>
+              <textarea id="description_optional"
                 [(ngModel)]="newTeamDesc"
                 rows="2"
                 placeholder="Brief summary of the team responsibilities..."
@@ -245,7 +245,7 @@ import { MatIconModule } from '@angular/material/icon';
                 <!-- Inline lead transfer panel -->
                 @if (transferLeadTeamId() === team.id) {
                   <div class="bg-zinc-100/50 border border-zinc-200 rounded-xl p-3 space-y-2">
-                    <label class="block text-meta font-bold text-zinc-950 uppercase">Transfer Lead to:</label>
+                    <label for="transfer_lead_to" class="block text-meta font-bold text-zinc-950 uppercase">Transfer Lead to:</label>
                     <div class="flex items-center gap-2">
                       <select
                         (change)="executeLeadTransfer(team.id, $event)"
@@ -359,7 +359,7 @@ export class TeamsComponent {
   newTeamLeadId = '';
   newTeamDesc = '';
 
-  expandedTeamIds = signal<{ [key: string]: boolean }>({});
+  expandedTeamIds = signal<Record<string, boolean>>({});
   transferLeadTeamId = signal<string | null>(null);
   leadTransferError = signal<string | null>(null);
 
@@ -478,7 +478,7 @@ export class TeamsComponent {
     try {
       this.state.updateTeam(teamId, { leadUserId: selectedUserId });
       this.cancelTransferLead();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.leadTransferError.set(err.message || 'Lead transfer failed.');
     }
   }
@@ -495,7 +495,7 @@ export class TeamsComponent {
       this.state.removeTeamMember(teamId, userId);
       this.memberErrorTeamId.set(null);
       this.memberErrorMessage.set(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.memberErrorTeamId.set(teamId);
       this.memberErrorMessage.set(err.message || 'Failed to remove member.');
     }

@@ -79,10 +79,10 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Feature / Page Selector (like global search) -->
             <div class="feature-search-wrap">
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Which feature has a problem?</label>
+              <label for="which_feature_has_a_" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Which feature has a problem?</label>
               <div class="relative">
                 <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[18px] w-4.5 h-4.5 pointer-events-none">search</mat-icon>
-                <input
+                <input id="which_feature_has_a_"
                   [ngModel]="featureSearch()"
                   (ngModelChange)="onFeatureSearch($event)"
                   (focus)="showFeatureDropdown.set(true)"
@@ -128,7 +128,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Contact Method -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Contact via</label>
+              <label for="contact_via" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Contact via</label>
               <div class="flex gap-2">
                 <button
                   (click)="contactMethod.set('email')"
@@ -161,8 +161,8 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Description -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Describe the bug or request</label>
-              <textarea
+              <label for="describe_the_bug_or_" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Describe the bug or request</label>
+              <textarea id="describe_the_bug_or_"
                 [(ngModel)]="description"
                 rows="4"
                 placeholder="Please describe what happened, what you expected, and any steps to reproduce..."
@@ -172,7 +172,8 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Drag & Drop File Upload -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Attachments <span class="font-normal normal-case text-zinc-400">(screenshots, recordings, documents)</span></label>
+              <label for="attachments" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Attachments <span class="font-normal normal-case text-zinc-400">(screenshots, recordings, documents)</span></label>
+              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
               <div
                 class="drop-zone border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all"
                 [class.dragging]="isDragging()"

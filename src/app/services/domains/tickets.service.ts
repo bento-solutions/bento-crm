@@ -44,7 +44,7 @@ export class TicketsService {
   }
 
   addTicket(ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createTicket(ticket as any).subscribe({
+    this.api.createTicket(ticket as unknown).subscribe({
       next: (created) => {
         this.tickets.update(tickets => [...tickets, created]);
         this.toast.show(`Ticket <strong>${created.title}</strong> created`);
@@ -54,7 +54,7 @@ export class TicketsService {
   }
 
   updateTicket(id: string, ticket: Partial<Ticket>): void {
-    this.api.updateTicket(id, ticket as any).subscribe({
+    this.api.updateTicket(id, ticket as unknown).subscribe({
       next: (updated) => {
         this.tickets.update(tickets =>
           tickets.map(t => t.id === id ? updated : t)

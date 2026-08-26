@@ -10,6 +10,7 @@ import { NotificationInboxDrawerComponent } from './shared/notification-inbox-dr
 import { ToastContainerComponent } from './shared/toast.component';
 import { LoginComponent } from './pages/login.component';
 import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { DealsService } from './services/domains/deals.service';
 import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
@@ -896,6 +897,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
         <!-- Mobile overlay -->
         @if (mobileMenuOpen()) {
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
           <div class="mobile-overlay" (click)="mobileMenuOpen.set(false)"></div>
         }
 
@@ -903,6 +905,7 @@ const SEARCH_ITEMS: SearchItem[] = [
         <aside class="app-sidebar" [class.mobile-open]="mobileMenuOpen()" [class.collapsed]="sidebarCollapsed()">
 
           <!-- Logo + collapse toggle -->
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
           <div class="sidebar-logo" (click)="onLogoClick()">
             <img src="logo.webp" alt="Bento Logo" />
             <span>Bento</span>
@@ -1030,6 +1033,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                     @if ($first || filteredSearchItems()[$index - 1].groupLabel !== item.groupLabel) {
                       <div class="search-group-label">{{ item.groupLabel }}</div>
                     }
+                    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
                     <div
                       class="search-result-item"
                       [class.selected]="selectedSearchIndex() === $index"
@@ -1115,6 +1119,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
       <!-- Quick Actions FAB -->
       @if (quickActionsOpen()) {
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
         <div class="fab-backdrop" (click)="quickActionsOpen.set(false)"></div>
       }
       <div class="quick-actions-fab">
@@ -1469,7 +1474,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'partner': {
-        if (item.tab) this.state.partnersSubTab.set(item.tab as any);
+        if (item.tab) this.state.partnersSubTab.set(item.tab as string);
         this.router.navigate(['/partners']);
         return;
       }
@@ -1479,7 +1484,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'invoice': {
-        if (item.tab) this.state.financeSubTab.set(item.tab as any);
+        if (item.tab) this.state.financeSubTab.set(item.tab as string);
         this.router.navigate(['/finance']);
         return;
       }
@@ -1499,14 +1504,14 @@ export class App implements OnInit, OnDestroy {
   /** Tracks which primary route is currently active */
   activeRoute = signal<string>('/');
 
-  private routerSub: any;
+  private routerSub: Subscription | null = null;
 
   ngOnInit() {
     this.activeRoute.set(this.router.url.split('?')[0]);
 
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e: any) => {
+      .subscribe((e: NavigationEnd) => {
         const newRoute = e.urlAfterRedirects.split('?')[0];
         this.activeRoute.set(newRoute);
         this.state.breadcrumbLabel.set(null);
@@ -1560,5 +1565,6 @@ export class App implements OnInit, OnDestroy {
     if (this.routerSub) this.routerSub.unsubscribe();
   }
 
+  // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(private elementRef: ElementRef) {}
 }

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -52,8 +52,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
 
           <form (ngSubmit)="goToStep2()" class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Full name</label>
-              <input
+              <label for="full_name" class="block text-xs font-semibold text-zinc-700 mb-1.5">Full name</label>
+              <input id="full_name"
                 [(ngModel)]="adminName"
                 name="adminName"
                 type="text"
@@ -65,8 +65,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Work email</label>
-              <input
+              <label for="work_email" class="block text-xs font-semibold text-zinc-700 mb-1.5">Work email</label>
+              <input id="work_email"
                 [(ngModel)]="adminEmail"
                 name="adminEmail"
                 type="email"
@@ -78,8 +78,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Password</label>
-              <input
+              <label for="password" class="block text-xs font-semibold text-zinc-700 mb-1.5">Password</label>
+              <input id="password"
                 [(ngModel)]="adminPassword"
                 name="adminPassword"
                 type="password"
@@ -92,8 +92,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Confirm password</label>
-              <input
+              <label for="confirm_password" class="block text-xs font-semibold text-zinc-700 mb-1.5">Confirm password</label>
+              <input id="confirm_password"
                 [(ngModel)]="confirmPassword"
                 name="confirmPassword"
                 type="password"
@@ -122,8 +122,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
 
           <form (ngSubmit)="submit()" class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Organization name</label>
-              <input
+              <label for="organization_name" class="block text-xs font-semibold text-zinc-700 mb-1.5">Organization name</label>
+              <input id="organization_name"
                 [(ngModel)]="orgName"
                 name="orgName"
                 type="text"
@@ -135,8 +135,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Industry</label>
-              <select
+              <label for="industry" class="block text-xs font-semibold text-zinc-700 mb-1.5">Industry</label>
+              <select id="industry"
                 [(ngModel)]="orgIndustry"
                 name="orgIndustry"
                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 cursor-pointer"
@@ -149,8 +149,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Timezone</label>
-                <input
+                <label for="timezone" class="block text-xs font-semibold text-zinc-700 mb-1.5">Timezone</label>
+                <input id="timezone"
                   [(ngModel)]="orgTimezone"
                   name="orgTimezone"
                   type="text"
@@ -159,8 +159,8 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
                 />
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Currency</label>
-                <select
+                <label for="currency" class="block text-xs font-semibold text-zinc-700 mb-1.5">Currency</label>
+                <select id="currency"
                   [(ngModel)]="orgCurrency"
                   name="orgCurrency"
                   class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 cursor-pointer"

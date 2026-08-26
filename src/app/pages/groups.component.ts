@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, inject, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -6,7 +6,6 @@ import { CrmStateService, CrmGroup, GroupMessage, GroupMeeting, CrmUser } from '
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslationService } from '../services/translation.service';
 
 @Component({
   selector: 'app-groups',
@@ -128,6 +127,7 @@ import { TranslationService } from '../services/translation.service';
         <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
           @for (grp of state.groups(); track grp.id) {
             @let lastMsg = getGroupLastMessage(grp.id);
+            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
             <div
               (click)="selectGroup(grp.id)"
               [class.bg-zinc-50]="selectedGroupId() === grp.id"
@@ -337,8 +337,8 @@ import { TranslationService } from '../services/translation.service';
                   
                   <div class="space-y-3">
                     <div>
-                      <label class="block text-meta font-bold text-zinc-400 uppercase mb-1">Title *</label>
-                      <input
+                      <label for="title" class="block text-meta font-bold text-zinc-400 uppercase mb-1">Title *</label>
+                      <input id="title"
                         [(ngModel)]="meetTitle"
                         placeholder="e.g. Post-Mortem Briefing"
                         class="w-full input-field rounded-xl px-3 py-1.5 text-xs focus:outline-blue-600 text-zinc-800"
@@ -346,8 +346,8 @@ import { TranslationService } from '../services/translation.service';
                     </div>
 
                     <div>
-                      <label class="block text-meta font-bold text-zinc-400 uppercase mb-1">Date & Time *</label>
-                      <input
+                      <label for="date_time" class="block text-meta font-bold text-zinc-400 uppercase mb-1">Date & Time *</label>
+                      <input id="date_time"
                         [(ngModel)]="meetDateStr"
                         type="datetime-local"
                         class="w-full input-field rounded-xl px-3 py-1.5 text-xs focus:outline-blue-600 text-zinc-800 font-mono"
@@ -356,8 +356,8 @@ import { TranslationService } from '../services/translation.service';
 
                     <div class="grid grid-cols-2 gap-3">
                       <div>
-                        <label class="block text-meta font-bold text-zinc-400 uppercase mb-1">Duration (minutes)</label>
-                        <select
+                        <label for="duration_minutes" class="block text-meta font-bold text-zinc-400 uppercase mb-1">Duration (minutes)</label>
+                        <select id="duration_minutes"
                           [(ngModel)]="meetDuration"
                           class="w-full input-field rounded-xl px-3 py-1.5 text-xs focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
                         >
@@ -369,8 +369,8 @@ import { TranslationService } from '../services/translation.service';
                       </div>
 
                       <div>
-                        <label class="block text-meta font-bold text-zinc-400 uppercase mb-1">Description</label>
-                        <input
+                        <label for="description" class="block text-meta font-bold text-zinc-400 uppercase mb-1">Description</label>
+                        <input id="description"
                           [(ngModel)]="meetDesc"
                           placeholder="Agenda details..."
                           class="w-full input-field rounded-xl px-3 py-1.5 text-xs focus:outline-blue-600 text-zinc-800"
@@ -380,11 +380,11 @@ import { TranslationService } from '../services/translation.service';
 
                     <!-- Attendees checkboxes with avatars -->
                     <div>
-                      <label class="block text-meta font-bold text-zinc-400 uppercase mb-2">Group Attendees</label>
+                      <label for="group_attendees" class="block text-meta font-bold text-zinc-400 uppercase mb-2">Group Attendees</label>
                       <div class="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto border border-zinc-100 rounded-xl p-3 bg-zinc-50/20">
                         @for (uid of grp.memberUserIds; track uid) {
-                          <label class="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-zinc-50/80 select-none">
-                            <input
+                          <label for="label_5" class="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-zinc-50/80 select-none">
+                            <input id="label_5"
                               type="checkbox"
                               [checked]="meetAttendeeIds().includes(uid)"
                               (change)="toggleMeetingAttendee(uid)"
@@ -677,7 +677,7 @@ export class GroupsComponent implements AfterViewChecked {
     setTimeout(() => this.scrollChatToBottom(true), 50);
   }
 
-  scrollChatToBottom(force: boolean = false) {
+  scrollChatToBottom(force = false) {
     if (this.messageThreadEl) {
       const el = this.messageThreadEl.nativeElement;
       // Scroll if forced or already close to bottom

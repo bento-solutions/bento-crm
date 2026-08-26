@@ -7,7 +7,7 @@ import { AutomationRulesService, AutomationRule } from '../services/domains/auto
 import { DataStatusBannerComponent } from '../shared/data-status-banner.component';
 import { PaginatorComponent } from '../shared/paginator.component';
 
-const RULE_TEMPLATES: any[] = [
+const RULE_TEMPLATES: unknown[] = [
   {
     name: 'High-Value Deal Alert',
     description: 'When a deal exceeding 50,000 MAD is created, notify the manager.',
@@ -311,7 +311,7 @@ export class AutomationComponent {
     this.ruleActions.update(actions => actions.filter((_, i) => i !== index));
   }
 
-  cloneTemplate(tpl: any) {
+  cloneTemplate(tpl: unknown) {
     if (!this.canCreate()) return;
     this.resetBuilder();
     this.ruleName.set(`Clone: ${tpl.name}`);
@@ -391,10 +391,10 @@ export class AutomationComponent {
       name: `${rule.name} (Copy)`,
       executionCount: 0
     };
-    delete (copy as any).id;
-    delete (copy as any).createdAt;
-    delete (copy as any).updatedAt;
-    delete (copy as any).changeHistory;
+    delete (copy as unknown).id;
+    delete (copy as unknown).createdAt;
+    delete (copy as unknown).updatedAt;
+    delete (copy as unknown).changeHistory;
 
     this.automationRulesService.addRule(copy);
   }
@@ -428,7 +428,7 @@ export class AutomationComponent {
   updateSandboxPayload() {
     const type = this.sandboxEntityType();
     const id = this.sandboxEntityId();
-    let entity: any = null;
+    let entity: unknown = null;
 
     if (type === 'Lead') {
       entity = this.state.leadsData().find(l => l.id === id);
@@ -464,7 +464,7 @@ export class AutomationComponent {
         const results = await this.state.evaluateRules(trigger, entity, label, ruleId || undefined);
         this.sandboxLogs.set(results);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       alert('Failed to parse JSON payload or run simulation: ' + e?.message);
     } finally {
       this.sandboxLoading.set(false);

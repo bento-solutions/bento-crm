@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { CrmStateService, Deal, Invoice } from '../services/crm-state.service';
+import { CrmStateService, Invoice } from '../services/crm-state.service';
 import { InvoicesService } from '../services/domains/invoices.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -13,13 +13,13 @@ import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 
 // ── Local type alias for invoice line items ────────────────────────────────
-type InvoiceLine = {
+interface InvoiceLine {
   item: string;
   description?: string;
   qty: number;
   unitPrice: number;
   type: 'software' | 'hardware' | 'service';
-};
+}
 
 @Component({
   selector: 'app-finance',
@@ -213,7 +213,7 @@ type InvoiceLine = {
 
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Channel</label>
+                    <label for="select_channel" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Channel</label>
                     <div class="grid grid-cols-3 gap-2">
                       <button type="button" (click)="reminderChannel.set('WhatsApp')"
                         [class]="reminderChannel() === 'WhatsApp' ? 'bg-zinc-100 text-zinc-950 border-zinc-400 font-bold' : 'bg-zinc-50 text-zinc-600 border-zinc-200'"
@@ -237,16 +237,16 @@ type InvoiceLine = {
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Template Language</label>
-                    <select [(ngModel)]="reminderLanguage" (change)="updateReminderTemplate()" class="w-full input-field rounded-lg p-2 text-xs">
+                    <label for="template_language" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Template Language</label>
+                    <select id="template_language" [(ngModel)]="reminderLanguage" (change)="updateReminderTemplate()" class="w-full input-field rounded-lg p-2 text-xs">
                       <option value="ar">Moroccan Darija / العربية</option>
                       <option value="fr">French / Français</option>
                     </select>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Message Preview</label>
-                    <textarea [(ngModel)]="reminderMessage" rows="5" class="w-full input-field rounded-lg p-2.5 text-xs text-zinc-700 focus:outline-blue-600 leading-relaxed"></textarea>
+                    <label for="message_preview" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Message Preview</label>
+                    <textarea id="message_preview" [(ngModel)]="reminderMessage" rows="5" class="w-full input-field rounded-lg p-2.5 text-xs text-zinc-700 focus:outline-blue-600 leading-relaxed"></textarea>
                   </div>
 
                   @if (successMessage()) {
@@ -273,6 +273,7 @@ type InvoiceLine = {
          CREATE INVOICE MODAL
          ═══════════════════════════════════════════════════════════════════════ -->
     @if (invoiceModalOpen()) {
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
       <div class="fixed inset-0 z-50 bg-zinc-900/50 backdrop-blur-sm flex items-center justify-center p-4" (click)="onBackdropClick($event)">
         <div class="bg-white shadow-xl rounded-2xl w-full max-w-3xl flex flex-col max-h-[92vh]">
 
@@ -302,7 +303,7 @@ type InvoiceLine = {
 
             <!-- ① Invoice Modality Toggle -->
             <div>
-              <label class="block text-meta font-bold text-zinc-400 uppercase tracking-widest mb-2">Invoice Pathway</label>
+              <label for="invoice_pathway" class="block text-meta font-bold text-zinc-400 uppercase tracking-widest mb-2">Invoice Pathway</label>
               <div class="grid grid-cols-2 gap-2">
                 <button type="button" id="invoice-type-manual"
                   (click)="setInvoiceType('Manual')"
@@ -415,7 +416,7 @@ type InvoiceLine = {
 
               <!-- VAT Number -->
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_4" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   VAT Number
                   @if (autoFilledFields().has('vatNumber')) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Auto-filled</span>
@@ -429,7 +430,7 @@ type InvoiceLine = {
 
               <!-- Customer Account -->
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_5" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   Customer Account
                   @if (invoiceType() === 'Deal' || autoFilledFields().has('customerAccount')) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Auto-filled</span>
@@ -445,7 +446,7 @@ type InvoiceLine = {
 
               <!-- Customer Name -->
               <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_6" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   Customer Name
                   @if (invoiceType() === 'Deal' || autoFilledFields().has('customerName')) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Auto-filled</span>
@@ -461,7 +462,7 @@ type InvoiceLine = {
 
               <!-- Billing Address -->
               <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_7" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   Billing Address
                   @if (invoiceType() === 'Deal' || autoFilledFields().has('billingAddress')) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Auto-filled</span>
@@ -477,7 +478,7 @@ type InvoiceLine = {
 
               <!-- Delivery Address -->
               <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_8" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   Delivery Address
                   @if (invoiceType() === 'Deal' || autoFilledFields().has('deliveryAddress')) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Auto-filled</span>
@@ -493,14 +494,14 @@ type InvoiceLine = {
 
               <!-- Due Date -->
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Due Date</label>
-                <input [(ngModel)]="newInvoiceData.dueDate" type="date"
+                <label for="due_date" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Due Date</label>
+                <input id="due_date" [(ngModel)]="newInvoiceData.dueDate" type="date"
                   class="w-full input-field rounded-lg p-2 text-sm font-sans focus:outline-blue-600">
               </div>
 
               <!-- Computed Total (read-only) -->
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                <label for="label_10" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
                   Total Amount (MAD)
                   @if (invoiceLines().length > 0) {
                     <span class="ml-1 text-meta bg-zinc-200 text-zinc-950 border border-zinc-300 px-1.5 py-0.5 rounded-full font-bold">Computed from lines</span>

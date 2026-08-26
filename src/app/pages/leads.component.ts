@@ -223,6 +223,7 @@ import { TranslationService } from '../services/translation.service';
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
         <div class="absolute inset-0 overflow-hidden">
           <!-- Backdrop -->
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
           <div (click)="closeDetails()" class="absolute inset-0 bg-transparent"></div>
 
           <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
@@ -440,7 +441,7 @@ import { TranslationService } from '../services/translation.service';
 
                     <!-- Free text Notes -->
                     <div class="space-y-2">
-                      <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Notes & Comments</label>
+                      <label for="notes_comments" class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Notes & Comments</label>
                       <div class="bg-zinc-100/50 border border-zinc-300/60 rounded-xl p-4 text-sm text-zinc-700 leading-relaxed font-sans shadow-xs whitespace-pre-line">
                         {{ lead.notes || 'No notes added for this lead yet.' }}
                       </div>
@@ -451,8 +452,8 @@ import { TranslationService } from '../services/translation.service';
                       <h3 class="text-xs font-bold text-zinc-700 uppercase">Log New Activity</h3>
                       <div class="grid grid-cols-2 gap-3">
                         <div>
-                          <label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
-                          <select [(ngModel)]="newActivity.type" class="w-full border border-zinc-200 rounded-lg p-2 text-xs bg-white focus:outline-blue-600">
+                          <label for="type" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
+                          <select id="type" [(ngModel)]="newActivity.type" class="w-full border border-zinc-200 rounded-lg p-2 text-xs bg-white focus:outline-blue-600">
                             <option value="Call">Call</option>
                             <option value="Email">Email</option>
                             <option value="Meeting">Meeting</option>
@@ -461,17 +462,17 @@ import { TranslationService } from '../services/translation.service';
                           </select>
                         </div>
                         <div>
-                          <label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
-                          <input [(ngModel)]="newActivity.date" type="date" class="w-full border border-zinc-200 rounded-lg p-1.5 text-xs focus:outline-blue-600">
+                          <label for="date" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
+                          <input id="date" [(ngModel)]="newActivity.date" type="date" class="w-full border border-zinc-200 rounded-lg p-1.5 text-xs focus:outline-blue-600">
                         </div>
                       </div>
                       <div>
-                        <label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
-                        <input [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full border border-zinc-200 rounded-lg p-2 text-xs focus:outline-blue-600">
+                        <label for="summary" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
+                        <input id="summary" [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full border border-zinc-200 rounded-lg p-2 text-xs focus:outline-blue-600">
                       </div>
                       <div>
-                        <label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details (Optional)</label>
-                        <textarea [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full border border-zinc-200 rounded-lg p-2 text-xs focus:outline-blue-600"></textarea>
+                        <label for="details_optional" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details (Optional)</label>
+                        <textarea id="details_optional" [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full border border-zinc-200 rounded-lg p-2 text-xs focus:outline-blue-600"></textarea>
                       </div>
                       <div class="flex justify-end pt-2">
                         <button (click)="submitActivity(lead.id)" class="bg-zinc-800 hover:bg-zinc-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs">
@@ -600,20 +601,20 @@ import { TranslationService } from '../services/translation.service';
               <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">1. Basic Information</h4>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Lead Name*</label>
-                  <input [(ngModel)]="newLead.name" type="text" placeholder="e.g. John Doe" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="lead_name" class="block font-semibold text-zinc-500 mb-1">Lead Name*</label>
+                  <input id="lead_name" [(ngModel)]="newLead.name" type="text" placeholder="e.g. John Doe" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Company Name*</label>
-                  <input [(ngModel)]="newLead.companyName" type="text" placeholder="e.g. Acmo Group" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="company_name" class="block font-semibold text-zinc-500 mb-1">Company Name*</label>
+                  <input id="company_name" [(ngModel)]="newLead.companyName" type="text" placeholder="e.g. Acmo Group" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Email</label>
-                  <input [(ngModel)]="newLead.email" type="email" placeholder="e.g. email@acmo.com" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="email" class="block font-semibold text-zinc-500 mb-1">Email</label>
+                  <input id="email" [(ngModel)]="newLead.email" type="email" placeholder="e.g. email@acmo.com" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Phone</label>
-                  <input [(ngModel)]="newLead.phone" type="text" placeholder="e.g. +212-6..." class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="phone" class="block font-semibold text-zinc-500 mb-1">Phone</label>
+                  <input id="phone" [(ngModel)]="newLead.phone" type="text" placeholder="e.g. +212-6..." class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
               </div>
             </div>
@@ -623,20 +624,20 @@ import { TranslationService } from '../services/translation.service';
               <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">2. Company Information</h4>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Industry</label>
-                  <input [(ngModel)]="newLead.industry" type="text" placeholder="e.g. Healthcare" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="industry" class="block font-semibold text-zinc-500 mb-1">Industry</label>
+                  <input id="industry" [(ngModel)]="newLead.industry" type="text" placeholder="e.g. Healthcare" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Company Size</label>
-                  <input [(ngModel)]="newLead.companySize" type="text" placeholder="e.g. 200 employees" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="company_size" class="block font-semibold text-zinc-500 mb-1">Company Size</label>
+                  <input id="company_size" [(ngModel)]="newLead.companySize" type="text" placeholder="e.g. 200 employees" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">City</label>
-                  <input [(ngModel)]="newLead.city" type="text" placeholder="Casablanca" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="city" class="block font-semibold text-zinc-500 mb-1">City</label>
+                  <input id="city" [(ngModel)]="newLead.city" type="text" placeholder="Casablanca" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Country</label>
-                  <input [(ngModel)]="newLead.country" type="text" placeholder="Morocco" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="country" class="block font-semibold text-zinc-500 mb-1">Country</label>
+                  <input id="country" [(ngModel)]="newLead.country" type="text" placeholder="Morocco" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
               </div>
             </div>
@@ -646,8 +647,8 @@ import { TranslationService } from '../services/translation.service';
               <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">3. Qualification & Source</h4>
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Status</label>
-                  <select [(ngModel)]="newLead.status" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
+                  <label for="status" class="block font-semibold text-zinc-500 mb-1">Status</label>
+                  <select id="status" [(ngModel)]="newLead.status" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
                     <option value="New">New</option>
                     <option value="Contacted">Contacted</option>
                     <option value="Attempted Contact">Attempted Contact</option>
@@ -660,16 +661,16 @@ import { TranslationService } from '../services/translation.service';
                   </select>
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Priority</label>
-                  <select [(ngModel)]="newLead.priority" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
+                  <label for="priority" class="block font-semibold text-zinc-500 mb-1">Priority</label>
+                  <select id="priority" [(ngModel)]="newLead.priority" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Temperature</label>
-                  <select [(ngModel)]="newLead.temperature" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
+                  <label for="temperature" class="block font-semibold text-zinc-500 mb-1">Temperature</label>
+                  <select id="temperature" [(ngModel)]="newLead.temperature" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
                     <option value="Cold">Cold</option>
                     <option value="Warm">Warm</option>
                     <option value="Hot">Hot</option>
@@ -678,8 +679,8 @@ import { TranslationService } from '../services/translation.service';
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Origin</label>
-                  <select [(ngModel)]="newLead.origin" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
+                  <label for="origin" class="block font-semibold text-zinc-500 mb-1">Origin</label>
+                  <select id="origin" [(ngModel)]="newLead.origin" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
                     <option value="Landing Page">Landing Page</option>
                     <option value="Marketing Campaign">Marketing Campaign</option>
                     <option value="Email">Email</option>
@@ -689,12 +690,12 @@ import { TranslationService } from '../services/translation.service';
                   </select>
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Product Interest</label>
-                  <input [(ngModel)]="newLead.interestedProduct" type="text" placeholder="e.g. Cloud Hosting" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
+                  <label for="product_interest" class="block font-semibold text-zinc-500 mb-1">Product Interest</label>
+                  <input id="product_interest" [(ngModel)]="newLead.interestedProduct" type="text" placeholder="e.g. Cloud Hosting" class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block font-semibold text-zinc-500 mb-1">Assigned Salesperson</label>
-                  <select [(ngModel)]="newLead.assignedSalesperson" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
+                  <label for="assigned_salesperson" class="block font-semibold text-zinc-500 mb-1">Assigned Salesperson</label>
+                  <select id="assigned_salesperson" [(ngModel)]="newLead.assignedSalesperson" class="w-full border border-zinc-200 rounded-lg p-2 bg-white focus:outline-blue-600">
                     <option value="">-- Unassigned --</option>
                     @for (user of state.users(); track user.name) {
                       <option [value]="user.name">{{ user.name }} ({{ user.role }})</option>
@@ -706,8 +707,8 @@ import { TranslationService } from '../services/translation.service';
 
             <!-- Notes -->
             <div>
-              <label class="block font-semibold text-zinc-500 mb-1">Notes</label>
-              <textarea [(ngModel)]="newLead.notes" rows="3" placeholder="Evaluate legacy systems, downtime concerns, etc." class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600"></textarea>
+              <label for="notes" class="block font-semibold text-zinc-500 mb-1">Notes</label>
+              <textarea id="notes" [(ngModel)]="newLead.notes" rows="3" placeholder="Evaluate legacy systems, downtime concerns, etc." class="w-full border border-zinc-200 rounded-lg p-2 focus:outline-blue-600"></textarea>
             </div>
           </div>
 
@@ -976,7 +977,7 @@ export class LeadsComponent {
   deleteAttachment(leadId: string, file: LeadAttachment) {
     this.state.removeLeadAttachment(leadId, file.id);
     if (file.fileId) {
-      this.api.deleteFile(file.fileId).subscribe({ error: () => {} });
+      this.api.deleteFile(file.fileId).subscribe({ error: () => { /* handle error */ } });
     }
     const updated = this.state.leadsData().find(l => l.id === leadId);
     if (updated) {

@@ -48,15 +48,15 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
           <div class="flex-1 overflow-y-auto p-6 space-y-5">
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Campaign title</label>
-              <input [(ngModel)]="title" type="text" placeholder="Relance devis Q3"
+              <label for="campaign_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Campaign title</label>
+              <input id="campaign_title" [(ngModel)]="title" type="text" placeholder="Relance devis Q3"
                      class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
             </div>
 
             <!-- Contact picker -->
             <div>
               <div class="flex items-center justify-between mb-1.5">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase">
+                <label for="label_1" class="block text-xs font-semibold text-zinc-500 uppercase">
                   Recipients
                   <span class="text-emerald-600">({{ selectedIds().size }} selected)</span>
                 </label>
@@ -111,13 +111,13 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
             <!-- Template -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Approved template name</label>
-                <input [(ngModel)]="templateName" type="text" placeholder="first_contact_fr"
+                <label for="approved_template_na" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Approved template name</label>
+                <input id="approved_template_na" [(ngModel)]="templateName" type="text" placeholder="first_contact_fr"
                        class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Language</label>
-                <select [(ngModel)]="templateLang"
+                <label for="language" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Language</label>
+                <select id="language" [(ngModel)]="templateLang"
                         class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all">
                   <option value="fr">fr</option>
                   <option value="ar">ar</option>
@@ -127,7 +127,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">
+              <label for="label_4" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">
                 Template variables
                 <span class="normal-case font-normal text-zinc-400">— comma separated, fills {{ '{{1}}' }}, {{ '{{2}}' }} …</span>
               </label>
@@ -136,7 +136,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">
+              <label for="label_5" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">
                 Message preview
                 <span class="normal-case font-normal text-zinc-400">— shown in the CRM timeline only</span>
               </label>
@@ -146,21 +146,21 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
 
             <!-- Relance -->
             <div class="rounded-xl border border-zinc-200 p-4 space-y-3">
-              <label class="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" [(ngModel)]="followupEnabled" class="w-4 h-4 rounded border-zinc-300 accent-emerald-600" />
+              <label for="label_6" class="flex items-center gap-2.5 cursor-pointer">
+                <input id="label_6" type="checkbox" [(ngModel)]="followupEnabled" class="w-4 h-4 rounded border-zinc-300 accent-emerald-600" />
                 <span class="text-sm font-medium text-zinc-900">Send a relance if the contact does not reply</span>
               </label>
 
               @if (followupEnabled()) {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6.5">
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Delay (days)</label>
-                    <input [(ngModel)]="followupDelayDays" type="number" min="1"
+                    <label for="delay_days" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Delay (days)</label>
+                    <input id="delay_days" [(ngModel)]="followupDelayDays" type="number" min="1"
                            class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all" />
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Relance template</label>
-                    <input [(ngModel)]="followupTemplateName" type="text" placeholder="relance_j3_fr"
+                    <label for="relance_template" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Relance template</label>
+                    <input id="relance_template" [(ngModel)]="followupTemplateName" type="text" placeholder="relance_j3_fr"
                            class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
                   </div>
                 </div>
@@ -168,8 +168,8 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
                 <!-- Turns a three-day test cycle into a three-minute one. -->
                 @if (wa.isMock()) {
                   <div class="pl-6.5">
-                    <label class="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" [(ngModel)]="testMode" class="w-4 h-4 rounded border-zinc-300 accent-amber-600" />
+                    <label for="label_9" class="flex items-center gap-2.5 cursor-pointer">
+                      <input id="label_9" type="checkbox" [(ngModel)]="testMode" class="w-4 h-4 rounded border-zinc-300 accent-amber-600" />
                       <span class="text-xs text-amber-800">
                         Test mode — send the relance after
                         <input [(ngModel)]="followupDelayMinutes" type="number" min="1"
@@ -214,7 +214,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
 })
 export class WhatsAppCampaignModalComponent {
   open = input<boolean>(false);
-  close = output<void>();
+  closeEmitted = output<void>();
   created = output<string>();
 
   partnersService = inject(PartnersService);
@@ -243,7 +243,7 @@ export class WhatsAppCampaignModalComponent {
     const q = this.search().toLowerCase().trim();
     const all = this.partnersService.allPartners();
     if (!q) return all;
-    return all.filter((p: any) =>
+    return all.filter((p: unknown) =>
       (p.name || '').toLowerCase().includes(q) ||
       (p.phone || '').toLowerCase().includes(q) ||
       (p.city || '').toLowerCase().includes(q)
@@ -251,11 +251,11 @@ export class WhatsAppCampaignModalComponent {
   });
 
   private selectedPartners = computed(() =>
-    this.partnersService.allPartners().filter((p: any) => this.selectedIds().has(p.id))
+    this.partnersService.allPartners().filter((p: unknown) => this.selectedIds().has(p.id))
   );
 
-  selectedWithoutPhone = computed(() => this.selectedPartners().filter((p: any) => !p.phone).length);
-  sendableCount = computed(() => this.selectedPartners().filter((p: any) => !!p.phone).length);
+  selectedWithoutPhone = computed(() => this.selectedPartners().filter((p: unknown) => !p.phone).length);
+  sendableCount = computed(() => this.selectedPartners().filter((p: unknown) => !!p.phone).length);
 
   validationError = computed(() => {
     if (!this.wa.hasAccount()) return 'Connect a WhatsApp number first.';
@@ -270,13 +270,17 @@ export class WhatsAppCampaignModalComponent {
     // Signals compare by reference, so mutating the existing Set would not trigger
     // recomputation of the derived counts.
     const next = new Set(this.selectedIds());
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
     this.selectedIds.set(next);
   }
 
   selectAllVisible(): void {
     const next = new Set(this.selectedIds());
-    this.filteredPartners().forEach((p: any) => next.add(p.id));
+    this.filteredPartners().forEach((p: unknown) => next.add(p.id));
     this.selectedIds.set(next);
   }
 
@@ -302,7 +306,7 @@ export class WhatsAppCampaignModalComponent {
     }, (campaignId) => {
       this.reset();
       this.created.emit(campaignId);
-      this.close.emit();
+      this.closeEmitted.emit();
     });
   }
 

@@ -1,7 +1,7 @@
 import { Component, input, output, computed, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
-import { CrmStateService, Notification, InboxMessage } from '../services/crm-state.service';
+import { CrmStateService } from '../services/crm-state.service';
 
 @Component({
   selector: 'app-notification-inbox-drawer',
@@ -9,6 +9,7 @@ import { CrmStateService, Notification, InboxMessage } from '../services/crm-sta
   template: `
     @if (open()) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="drawer-title" role="dialog" aria-modal="true">
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
         <div (click)="closeDrawer()" class="absolute inset-0 bg-transparent"></div>
 
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">

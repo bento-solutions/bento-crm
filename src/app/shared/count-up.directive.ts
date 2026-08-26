@@ -6,15 +6,15 @@ import { Directive, ElementRef, inject, input, effect } from '@angular/core';
  * zero on first render so KPI tiles count up on initial load instead of popping in.
  */
 @Directive({
-  selector: '[countUp]',
+  selector: '[appCountUp]',
   standalone: true
 })
 export class CountUpDirective {
   private el = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
 
-  value = input.required<number>({ alias: 'countUp' });
-  format = input<(v: number) => string>(v => `${Math.round(v)}`, { alias: 'countUpFormat' });
-  duration = input(800, { alias: 'countUpDuration' });
+  appCountUp = input.required<number>();
+  appCountUpFormat = input<(v: number) => string>(v => `${Math.round(v)}`);
+  appCountUpDuration = input(800);
 
   private current = 0;
   private frame: number | null = null;
@@ -24,8 +24,8 @@ export class CountUpDirective {
 
   constructor() {
     effect(() => {
-      const target = this.value();
-      const fmt = this.format();
+      const target = this.appCountUp();
+      const fmt = this.appCountUpFormat();
 
       if (this.reduceMotion) {
         this.current = target;
@@ -41,7 +41,7 @@ export class CountUpDirective {
 
       if (this.frame !== null) cancelAnimationFrame(this.frame);
       const start = performance.now();
-      const dur = this.duration();
+      const dur = this.appCountUpDuration();
 
       const tick = (now: number) => {
         const t = Math.min(1, (now - start) / dur);

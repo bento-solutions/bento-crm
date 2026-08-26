@@ -44,7 +44,7 @@ export class ProposalsService {
   }
 
   addProposal(proposal: Omit<Proposal, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createProposal(proposal as any).subscribe({
+    this.api.createProposal(proposal as unknown).subscribe({
       next: (created) => {
         this.proposals.update(proposals => [...proposals, created]);
         this.toast.show(`Proposal <strong>${created.title}</strong> created`);
@@ -54,7 +54,7 @@ export class ProposalsService {
   }
 
   updateProposal(id: string, proposal: Partial<Proposal>): void {
-    this.api.updateProposal(id, proposal as any).subscribe({
+    this.api.updateProposal(id, proposal as unknown).subscribe({
       next: (updated) => {
         this.proposals.update(proposals =>
           proposals.map(p => p.id === id ? updated : p)
@@ -89,7 +89,7 @@ export class ProposalsService {
   updateStatus(id: string, status: string): void {
     const proposal = this.getProposalById(id);
     if (proposal) {
-      this.updateProposal(id, { ...proposal, status: status as any });
+      this.updateProposal(id, { ...proposal, status: status as unknown });
     }
   }
 }

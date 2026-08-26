@@ -103,6 +103,14 @@
 }
 
 /* ═══════════════════════════════════════════
+   Light Theme
+   ═══════════════════════════════════════════ */
+:root[data-theme="light"],
+:root:not([data-theme]) {
+  /* Light theme is default, so no changes needed */
+}
+
+/* ═══════════════════════════════════════════
    Dark Theme
    ═══════════════════════════════════════════ */
 @media (prefers-color-scheme: dark) {

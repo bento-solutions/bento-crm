@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -49,8 +49,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Display Name -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Display Name *</label>
-              <input
+              <label for="display_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Display Name *</label>
+              <input id="display_name"
                 [(ngModel)]="formDisplayName"
                 type="text"
                 placeholder="e.g. Amina Alaoui"
@@ -60,8 +60,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Email -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Email address *</label>
-              <input
+              <label for="email_address" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Email address *</label>
+              <input id="email_address"
                 [(ngModel)]="formEmail"
                 [disabled]="!!editingUser()"
                 type="email"
@@ -72,8 +72,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Job Title -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Job Title</label>
-              <input
+              <label for="job_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Job Title</label>
+              <input id="job_title"
                 [(ngModel)]="formJobTitle"
                 type="text"
                 placeholder="e.g. Accountant Specialist"
@@ -83,8 +83,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Phone -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Phone number</label>
-              <input
+              <label for="phone_number" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Phone number</label>
+              <input id="phone_number"
                 [(ngModel)]="formPhone"
                 type="text"
                 placeholder="e.g. +212-661-234567"
@@ -94,8 +94,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Role Dropdown -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">System Role</label>
-              <select
+              <label for="system_role" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">System Role</label>
+              <select id="system_role"
                 [(ngModel)]="formRoleId"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 cursor-pointer font-semibold"
               >
@@ -109,8 +109,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Team Dropdown -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Assignment</label>
-              <select
+              <label for="team_assignment" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Assignment</label>
+              <select id="team_assignment"
                 [(ngModel)]="formTeamId"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 cursor-pointer font-semibold"
               >
@@ -183,8 +183,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
         </div>
 
         <!-- Status Toggle toggleInactive -->
-        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-          <input
+        <label for="label_6" class="inline-flex items-center gap-2 cursor-pointer select-none">
+          <input id="label_6"
             type="checkbox"
             [(ngModel)]="showInactive"
             class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
@@ -240,7 +240,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                         (blur)="cancelRoleEdit()"
                         (keydown.esc)="cancelRoleEdit()"
                         class="border border-zinc-200 rounded-lg px-2 py-1 text-xs bg-white text-zinc-700 focus:outline-blue-600 focus:ring-1 focus:ring-zinc-700"
-                        autofocus
+                       
                       >
                         <option value="admin">Admin</option>
                         <option value="manager">Manager</option>
@@ -531,7 +531,9 @@ export class UsersComponent {
         if (oldTeamId) {
           try {
             this.state.removeTeamMember(oldTeamId, editMode.id);
-          } catch (e) {}
+          } catch {
+            /* ignore removal errors */
+          }
         }
         if (newTeamId) {
           this.state.addTeamMember(newTeamId, editMode.id);
@@ -572,7 +574,7 @@ export class UsersComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.cancelRoleEdit();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.roleErrorUserId.set(userId);
       this.roleErrorMessage.set(err.message || 'Operation failed');
     }
@@ -594,7 +596,7 @@ export class UsersComponent {
     try {
       this.state.deactivateUser(userId);
       this.cancelDeactivate();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.deactivateErrorMessage.set(err.message || 'Deactivation failed');
     }
   }

@@ -44,7 +44,7 @@ export class CampaignsService {
   }
 
   addCampaign(campaign: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createCampaign(campaign as any).subscribe({
+    this.api.createCampaign(campaign as unknown).subscribe({
       next: (created) => {
         this.campaigns.update(campaigns => [...campaigns, created]);
         this.toast.show(`Campaign <strong>${created.title}</strong> created`);
@@ -54,7 +54,7 @@ export class CampaignsService {
   }
 
   updateCampaign(id: string, campaign: Partial<Campaign>): void {
-    this.api.updateCampaign(id, campaign as any).subscribe({
+    this.api.updateCampaign(id, campaign as unknown).subscribe({
       next: (updated) => {
         this.campaigns.update(campaigns =>
           campaigns.map(c => c.id === id ? updated : c)

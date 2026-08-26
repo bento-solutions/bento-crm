@@ -108,7 +108,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <thead class="bg-zinc-50">
               <tr>
                 <th scope="col" class="px-6 py-3 text-left">
-                  <input type="checkbox" [checked]="paginatedDeals().length > 0 && paginatedDeals().every(d => isDealSelected(d.id))" (click)="toggleSelectAllDeals($event)" (change)="$event.stopPropagation()" class="cursor-pointer" />
+                  <input type="checkbox" [checked]="allDealsSelected()" (click)="toggleSelectAllDeals($event)" (change)="$event.stopPropagation()" class="cursor-pointer" />
                 </th>
                 <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Deal Title</th>
                 <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Client</th>
@@ -2405,11 +2405,16 @@ export class SalesComponent {
     event.stopPropagation();
     this.selectedDealIds.update(s => {
       const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
   isDealSelected(id: string) { return this.selectedDealIds().has(id); }
+  allDealsSelected = computed(() => {
+    const all = this.paginatedDeals();
+    return all.length > 0 && all.every(d => this.selectedDealIds().has(d.id));
+  });
   toggleSelectAllDeals(event: Event) {
     event.stopPropagation();
     const all = this.paginatedDeals();
@@ -2424,9 +2429,9 @@ export class SalesComponent {
     (event.target as HTMLSelectElement).value = '';
   }
   bulkChangeDealStage(event: Event) {
-    const stage = (event.target as HTMLSelectElement).value;
+    const stage = (event.target as HTMLSelectElement).value as Deal['stage'];
     if (!stage) return;
-    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { stage: stage as any }));
+    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { stage }));
     (event.target as HTMLSelectElement).value = '';
   }
   bulkExportDeals() {
@@ -2718,7 +2723,7 @@ export class SalesComponent {
     }
   }
 
-  expandedDeals = signal<{ [key: string]: boolean }>({});
+  expandedDeals = signal<Record<string, boolean>>({});
 
   toggleDealDetails(dealId: string) {
     this.expandedDeals.update(val => ({ ...val, [dealId]: !val[dealId] }));
@@ -2728,8 +2733,8 @@ export class SalesComponent {
     const partner = this.partnersService.allPartners().find(p => p.id === this.newDeal.partnerId);
     if (partner) {
       this.newDeal.customerAccount = 'ACC-' + partner.name.substring(0, 5).toUpperCase().replace(/[^A-Z]/g, '') + '-' + partner.id.toUpperCase();
-      
-      let baseCity = partner.city || 'Casablanca';
+
+      const baseCity = partner.city || 'Casablanca';
       this.newDeal.billingAddress = `N° 45 Boulevard de la Résistance, ${baseCity}, Morocco`;
       this.newDeal.deliveryAddress = `Zone Industrielle, ${baseCity}, Morocco`;
       this.newDeal.contactPerson = partner.name.includes(' ') ? partner.name.split(' ')[0] + ' Sefrioui' : 'Karim ' + partner.name;
@@ -2837,7 +2842,7 @@ export class SalesComponent {
 
     // First check org contacts (CustomerCard.personnel)
     const orgContacts = this.proposalOrgContacts();
-    const personnel = orgContacts.find((p: any) => p.id === personnelId);
+    const personnel = orgContacts.find(p => p.id === personnelId);
     if (personnel) {
       // Avoid duplicates
       const alreadyAdded = this.recipients().some(r => r.name === personnel.fullName);
@@ -3000,7 +3005,7 @@ export class SalesComponent {
       const template = this.state.proposalTemplates().find(t => t.id === this.selectedTemplateId);
       if (template) {
         this.newProposal.title = template.name;
-        this.newProposal.lines = template.lines.map((l: any) => ({ ...l, vendor: l.vendor || '' }));
+        this.newProposal.lines = template.lines.map(l => ({ ...l, vendor: l.vendor || '' }));
       }
     }
   }
@@ -3013,7 +3018,7 @@ export class SalesComponent {
     this.newProposal.lines.splice(index, 1);
   }
 
-  recalcLine(line: any) {
+  recalcLine(line: { qty: number; unitPrice: number; total?: number }) {
     line.total = line.qty * line.unitPrice;
   }
 
@@ -3050,7 +3055,7 @@ export class SalesComponent {
         this.openAssignTaskModal('proposal', propId, payload.title);
       }
     } else {
-      const newProp: any = this.proposalsService.addProposal({
+      const newProp = this.proposalsService.addProposal({
         ...payload,
         status: 'Draft'
       });
@@ -3126,7 +3131,7 @@ export class SalesComponent {
     this.recalcDealTotal();
   }
 
-  recalcDealLine(line: any) {
+  recalcDealLine(line: { qty: number; unitPrice: number; total?: number }) {
     line.total = line.qty * line.unitPrice;
     this.recalcDealTotal();
   }
@@ -3174,7 +3179,7 @@ export class SalesComponent {
   saveDeal(andAssignTask = false) {
     if (!this.canCreateDeal()) return;
     const finalAmount = this.newDeal.amount - (this.newDeal.amount * (this.newDeal.discount / 100));
-    const newDeal: any = this.dealsService.addDeal({
+    const newDeal = this.dealsService.addDeal({
       title: this.newDeal.title || 'New Deal',
       partnerId: this.newDeal.partnerId,
       amount: finalAmount,
@@ -3477,7 +3482,7 @@ export class SalesComponent {
     return deal.activityLog.meetings.some(m => m.date === dateStr);
   }
 
-  getEventsOnDay(deal: Deal, day: number): any[] {
+  getEventsOnDay(deal: Deal, day: number) {
     if (!deal.activityLog || !deal.activityLog.meetings) return [];
     const dateStr = `2026-06-${String(day).padStart(2, '0')}`;
     return deal.activityLog.meetings.filter(m => m.date === dateStr);
@@ -3625,7 +3630,7 @@ export class SalesComponent {
         phone: this.newLeadData.phone,
         city: this.newLeadData.city,
         score: this.newLeadData.score,
-        source: this.newLeadData.source as any,
+        source: this.newLeadData.source as Partner['source'],
         assignedTo: this.newLeadData.assignedTo || undefined
       });
       this.leadModalOpen.set(false);

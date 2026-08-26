@@ -140,10 +140,10 @@ import { TranslationService } from '../services/translation.service';
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <!-- Role -->
             <div class="space-y-2">
-              <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">System Role</label>
+              <label for="system_role" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">System Role</label>
               @if (isAdmin()) {
                 <div class="space-y-1">
-                  <select
+                  <select id="system_role"
                     [value]="u.roleId"
                     (change)="updateUserRole(u.id, $event)"
                     class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 focus:outline-blue-600 focus:ring-zinc-700 font-semibold cursor-pointer w-full max-w-xs"
@@ -167,7 +167,7 @@ import { TranslationService } from '../services/translation.service';
 
             <!-- Team -->
             <div class="space-y-2">
-              <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Team Link</label>
+              <label for="team_link" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Team Link</label>
               <div>
                 @if (u.teamId) {
                   <a
@@ -193,7 +193,7 @@ import { TranslationService } from '../services/translation.service';
 
           <div class="space-y-3 max-w-md">
             <!-- Toggle 1 -->
-            <label class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_2" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
               <div>
                 <span class="text-xs font-bold text-zinc-800 block">Notify on lead assignment</span>
                 <span class="text-meta text-zinc-400 block mt-0.5">Send alerts when a lead is assigned to you</span>
@@ -207,7 +207,7 @@ import { TranslationService } from '../services/translation.service';
             </label>
 
             <!-- Toggle 2 -->
-            <label class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_3" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
               <div>
                 <span class="text-xs font-bold text-zinc-800 block">Notify on deal updates</span>
                 <span class="text-meta text-zinc-400 block mt-0.5">Receive updates when status/stage changes on your deals</span>
@@ -221,7 +221,7 @@ import { TranslationService } from '../services/translation.service';
             </label>
 
             <!-- Toggle 3 -->
-            <label class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_4" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
               <div>
                 <span class="text-xs font-bold text-zinc-800 block">Notify on mentions</span>
                 <span class="text-meta text-zinc-400 block mt-0.5">Get notified immediately when mentioned in group chats</span>
@@ -236,8 +236,8 @@ import { TranslationService } from '../services/translation.service';
           </div>
 
           <div class="pt-4 border-t border-zinc-100 space-y-2">
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Appearance</label>
-            <select
+            <label for="appearance" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Appearance</label>
+            <select id="appearance"
               [value]="u.preferences.theme"
               (change)="changeTheme(u, $event)"
               class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 font-semibold cursor-pointer w-full max-w-xs focus:outline-blue-600 focus:ring-zinc-700"
@@ -249,8 +249,8 @@ import { TranslationService } from '../services/translation.service';
           </div>
 
           <div class="pt-4 border-t border-zinc-100 space-y-2">
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Interface Language</label>
-            <select
+            <label for="interface_language" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Interface Language</label>
+            <select id="interface_language"
               [value]="u.preferences.language"
               (change)="changeLanguage(u, $event)"
               class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 font-semibold cursor-pointer w-full max-w-xs focus:outline-blue-600 focus:ring-zinc-700"
@@ -540,7 +540,7 @@ export class UserProfileComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.roleError.set(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.roleError.set(err.message || 'Operation failed');
       // Reset select element visual state
       event.preventDefault();
@@ -553,7 +553,7 @@ export class UserProfileComponent {
       this.showDeactivateConfirm.set(false);
       this.deactivateError.set(null);
       this.router.navigate(['/settings/users']);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.deactivateError.set(err.message || 'Operation failed');
     }
   }

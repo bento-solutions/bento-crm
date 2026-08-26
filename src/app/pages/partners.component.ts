@@ -336,6 +336,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
           @if (selectedLead(); as lead) {
             <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
               <div class="absolute inset-0 overflow-hidden">
+                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
                 <div (click)="closeDetails()" class="absolute inset-0 bg-transparent"></div>
                 <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                   <div class="pointer-events-auto w-screen max-w-2xl transform bg-white shadow-xl flex flex-col h-full">
@@ -455,7 +456,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                             </div>
                           </div>
                           <div class="space-y-2">
-                            <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Notes & Comments</label>
+                            <label for="notes_comments" class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Notes & Comments</label>
                             <div class="bg-white border border-zinc-200 rounded-xl p-4 text-sm text-zinc-700 leading-relaxed whitespace-pre-line">
                               {{ lead.notes || 'No notes added for this lead yet.' }}
                             </div>
@@ -463,17 +464,17 @@ import { PaginatorComponent } from '../shared/paginator.component';
                           <div class="card rounded-xl p-4 space-y-3">
                             <h3 class="text-xs font-bold text-zinc-700 uppercase">Log New Activity</h3>
                             <div class="grid grid-cols-2 gap-3">
-                              <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
-                                <select [(ngModel)]="newActivity.type" class="w-full input-field rounded-lg p-2 text-xs outline-none bg-transparent">
+                              <div><label for="type" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
+                                <select id="type" [(ngModel)]="newActivity.type" class="w-full input-field rounded-lg p-2 text-xs outline-none bg-transparent">
                                   <option value="Call">Call</option><option value="Email">Email</option><option value="Meeting">Meeting</option><option value="Note">Note</option><option value="Task">Task</option>
                                 </select></div>
-                              <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
-                                <input [(ngModel)]="newActivity.date" type="date" class="w-full input-field rounded-lg p-1.5 text-xs outline-none"></div>
+                              <div><label for="date" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
+                                <input id="date" [(ngModel)]="newActivity.date" type="date" class="w-full input-field rounded-lg p-1.5 text-xs outline-none"></div>
                             </div>
-                            <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
-                              <input [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full input-field rounded-lg p-2 text-xs outline-none"></div>
-                            <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details (Optional)</label>
-                              <textarea [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full input-field rounded-lg p-2 text-xs outline-none"></textarea></div>
+                            <div><label for="summary" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
+                              <input id="summary" [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full input-field rounded-lg p-2 text-xs outline-none"></div>
+                            <div><label for="details_optional" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details (Optional)</label>
+                              <textarea id="details_optional" [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full input-field rounded-lg p-2 text-xs outline-none"></textarea></div>
                             <div class="flex justify-end pt-2">
                               <button (click)="submitActivity(lead.id)" class="bg-zinc-800/80 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm">Log Activity</button>
                             </div>
@@ -575,42 +576,42 @@ import { PaginatorComponent } from '../shared/paginator.component';
                   <div class="space-y-2.5">
                     <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">1. Basic Information</h4>
                     <div class="grid grid-cols-2 gap-3">
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Lead Name*</label><input [(ngModel)]="newLead.name" type="text" placeholder="e.g. John Doe" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Company Name*</label><input [(ngModel)]="newLead.companyName" type="text" placeholder="e.g. Acmo Group" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Email</label><input [(ngModel)]="newLead.email" type="email" placeholder="e.g. email@acmo.com" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Phone</label><input [(ngModel)]="newLead.phone" type="text" placeholder="e.g. +212-6..." class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="lead_name" class="block font-semibold text-zinc-500 mb-1">Lead Name*</label><input [(ngModel)]="newLead.name" type="text" placeholder="e.g. John Doe" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="company_name" class="block font-semibold text-zinc-500 mb-1">Company Name*</label><input id="lead_name" [(ngModel)]="newLead.companyName" type="text" placeholder="e.g. Acmo Group" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="email" class="block font-semibold text-zinc-500 mb-1">Email</label><input id="company_name" [(ngModel)]="newLead.email" type="email" placeholder="e.g. email@acmo.com" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="phone" class="block font-semibold text-zinc-500 mb-1">Phone</label><input id="email" [(ngModel)]="newLead.phone" type="text" placeholder="e.g. +212-6..." class="w-full input-field rounded-lg p-2 outline-none"></div>
                     </div>
                   </div>
                   <div class="space-y-2.5">
                     <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">2. Company Information</h4>
                     <div class="grid grid-cols-2 gap-3">
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Industry</label><input [(ngModel)]="newLead.industry" type="text" placeholder="e.g. Healthcare" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Company Size</label><input [(ngModel)]="newLead.companySize" type="text" placeholder="e.g. 200 employees" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">City</label><input [(ngModel)]="newLead.city" type="text" placeholder="Casablanca" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Country</label><input [(ngModel)]="newLead.country" type="text" placeholder="Morocco" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="industry" class="block font-semibold text-zinc-500 mb-1">Industry</label><input [(ngModel)]="newLead.industry" type="text" placeholder="e.g. Healthcare" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="company_size" class="block font-semibold text-zinc-500 mb-1">Company Size</label><input id="industry" [(ngModel)]="newLead.companySize" type="text" placeholder="e.g. 200 employees" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="city" class="block font-semibold text-zinc-500 mb-1">City</label><input id="company_size" [(ngModel)]="newLead.city" type="text" placeholder="Casablanca" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="country" class="block font-semibold text-zinc-500 mb-1">Country</label><input id="city" [(ngModel)]="newLead.country" type="text" placeholder="Morocco" class="w-full input-field rounded-lg p-2 outline-none"></div>
                     </div>
                   </div>
                   <div class="space-y-2.5">
                     <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">3. Qualification & Source</h4>
                     <div class="grid grid-cols-3 gap-3">
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Status</label>
-                        <select [(ngModel)]="newLead.status" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                      <div><label for="status" class="block font-semibold text-zinc-500 mb-1">Status</label>
+                        <select id="status" [(ngModel)]="newLead.status" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="New">New</option><option value="Contacted">Contacted</option><option value="Attempted Contact">Attempted Contact</option>
                           <option value="Meeting Scheduled">Meeting Scheduled</option><option value="Qualified">Qualified</option><option value="Proposal Requested">Proposal Requested</option>
                           <option value="Converted">Converted</option><option value="Lost">Lost</option><option value="Disqualified">Disqualified</option>
                         </select></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Priority</label>
-                        <select [(ngModel)]="newLead.priority" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                      <div><label for="priority" class="block font-semibold text-zinc-500 mb-1">Priority</label>
+                        <select id="priority" [(ngModel)]="newLead.priority" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option>
                         </select></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Temperature</label>
-                        <select [(ngModel)]="newLead.temperature" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                      <div><label for="temperature" class="block font-semibold text-zinc-500 mb-1">Temperature</label>
+                        <select id="temperature" [(ngModel)]="newLead.temperature" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="Cold">Cold</option><option value="Warm">Warm</option><option value="Hot">Hot</option>
                         </select></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Origin</label>
-                        <select [(ngModel)]="newLead.origin" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                      <div><label for="origin" class="block font-semibold text-zinc-500 mb-1">Origin</label>
+                        <select id="origin" [(ngModel)]="newLead.origin" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="Landing Page">Landing Page</option>
                           <option value="Marketing Campaign">Marketing Campaign</option>
                           <option value="Email">Email</option>
@@ -619,9 +620,9 @@ import { PaginatorComponent } from '../shared/paginator.component';
                           <option value="Other">Other</option>
                         </select>
                       </div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Product Interest</label><input [(ngModel)]="newLead.interestedProduct" type="text" placeholder="e.g. Cloud Hosting" class="w-full input-field rounded-lg p-2 outline-none"></div>
-                      <div><label class="block font-semibold text-zinc-500 mb-1">Assigned Salesperson</label>
-                        <select [(ngModel)]="newLead.assignedSalesperson" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                      <div><label for="product_interest" class="block font-semibold text-zinc-500 mb-1">Product Interest</label><input [(ngModel)]="newLead.interestedProduct" type="text" placeholder="e.g. Cloud Hosting" class="w-full input-field rounded-lg p-2 outline-none"></div>
+                      <div><label for="assigned_salesperson" class="block font-semibold text-zinc-500 mb-1">Assigned Salesperson</label>
+                        <select id="assigned_salesperson" [(ngModel)]="newLead.assignedSalesperson" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="">-- Unassigned --</option>
                           @for (user of state.users(); track user.name) {
                             <option [value]="user.name">{{ user.name }} ({{ user.role }})</option>
@@ -629,8 +630,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
                         </select></div>
                     </div>
                   </div>
-                  <div><label class="block font-semibold text-zinc-500 mb-1">Notes</label>
-                    <textarea [(ngModel)]="newLead.notes" rows="3" placeholder="Evaluate legacy systems, downtime concerns, etc." class="w-full input-field rounded-lg p-2 outline-none"></textarea></div>
+                  <div><label for="notes" class="block font-semibold text-zinc-500 mb-1">Notes</label>
+                    <textarea id="notes" [(ngModel)]="newLead.notes" rows="3" placeholder="Evaluate legacy systems, downtime concerns, etc." class="w-full input-field rounded-lg p-2 outline-none"></textarea></div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-white/20 text-xs">
                   <button (click)="addLeadModalOpen.set(false)" class="px-4 py-2 btn-secondary rounded-lg text-zinc-600 font-semibold">Cancel</button>
@@ -644,8 +645,9 @@ import { PaginatorComponent } from '../shared/paginator.component';
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             @for (partner of paginatedPartners(); track partner.id) {
               <div class="card rounded-2xl p-6 relative flex flex-col justify-between">
-                <label class="absolute top-3 left-3 z-10" (click)="$event.stopPropagation()">
-                  <input type="checkbox" [checked]="isPartnerSelected(partner.id)" (change)="togglePartnerSelect(partner.id, $event)" class="w-4 h-4 rounded border-zinc-300 cursor-pointer" />
+                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+                <label for="label_20" class="absolute top-3 left-3 z-10" (click)="$event.stopPropagation()">
+                  <input id="label_20" type="checkbox" [checked]="isPartnerSelected(partner.id)" (change)="togglePartnerSelect(partner.id, $event)" class="w-4 h-4 rounded border-zinc-300 cursor-pointer" />
                 </label>
                 <div>
                   <div class="flex items-start justify-between mb-4">
@@ -793,8 +795,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
                 
                 <form (ngSubmit)="savePartner()" class="space-y-4">
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Partner Type</label>
-                    <select [(ngModel)]="newPartner.type" name="type" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+                    <label for="partner_type" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Partner Type</label>
+                    <select id="partner_type" [(ngModel)]="newPartner.type" name="type" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
                       <option value="Lead">Lead</option>
                       <option value="Prospect">Prospect</option>
                       <option value="Customer">Customer</option>
@@ -803,23 +805,23 @@ import { PaginatorComponent } from '../shared/paginator.component';
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Company / Contact Name</label>
-                    <input [(ngModel)]="newPartner.name" name="name" type="text" placeholder="e.g. Casablanca Technologies" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+                    <label for="company_contact_name" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Company / Contact Name</label>
+                    <input id="company_contact_name" [(ngModel)]="newPartner.name" name="name" type="text" placeholder="e.g. Casablanca Technologies" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Email</label>
-                    <input [(ngModel)]="newPartner.email" name="email" type="email" placeholder="e.g. contact@domain.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+                    <label for="email" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Email</label>
+                    <input id="email" [(ngModel)]="newPartner.email" name="email" type="email" placeholder="e.g. contact@domain.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Phone</label>
-                    <input [(ngModel)]="newPartner.phone" name="phone" type="text" placeholder="e.g. +212-522-XXXXXX" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+                    <label for="phone" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Phone</label>
+                    <input id="phone" [(ngModel)]="newPartner.phone" name="phone" type="text" placeholder="e.g. +212-522-XXXXXX" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
                   </div>
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">City</label>
-                    <select [(ngModel)]="newPartner.city" name="city" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+                    <label for="city" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">City</label>
+                    <select id="city" [(ngModel)]="newPartner.city" name="city" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
                       <option value="Casablanca">Casablanca</option>
                       <option value="Rabat">Rabat</option>
                       <option value="Marrakech">Marrakech</option>
@@ -830,27 +832,27 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
                   @if (newPartner.type === 'Customer') {
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ICE (15 digits) *</label>
-                      <input [(ngModel)]="newPartner.ICE" name="ICE" type="text" maxlength="15" placeholder="e.g. 123456789012345" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
+                      <label for="ice_15_digits" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ICE (15 digits) *</label>
+                      <input id="ice_15_digits" [(ngModel)]="newPartner.ICE" name="ICE" type="text" maxlength="15" placeholder="e.g. 123456789012345" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Identifiant Fiscal (IF) *</label>
-                      <input [(ngModel)]="newPartner.IF" name="IF" type="text" placeholder="e.g. 12345678" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
+                      <label for="identifiant_fiscal_i" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Identifiant Fiscal (IF) *</label>
+                      <input id="identifiant_fiscal_i" [(ngModel)]="newPartner.IF" name="IF" type="text" placeholder="e.g. 12345678" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Registre de Commerce (RC) *</label>
-                      <input [(ngModel)]="newPartner.RC" name="RC" type="text" placeholder="e.g. 123456" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
+                      <label for="registre_de_commerce" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Registre de Commerce (RC) *</label>
+                      <input id="registre_de_commerce" [(ngModel)]="newPartner.RC" name="RC" type="text" placeholder="e.g. 123456" required class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
                     </div>
                   }
 
                   @if (newPartner.type === 'Lead') {
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Lead Score (0-100)</label>
-                      <input [(ngModel)]="newPartner.score" name="score" type="number" min="0" max="100" placeholder="e.g. 85" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+                      <label for="lead_score_0_100" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Lead Score (0-100)</label>
+                      <input id="lead_score_0_100" [(ngModel)]="newPartner.score" name="score" type="number" min="0" max="100" placeholder="e.g. 85" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Lead Source</label>
-                      <select [(ngModel)]="newPartner.source" name="source" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+                      <label for="lead_source" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Lead Source</label>
+                      <select id="lead_source" [(ngModel)]="newPartner.source" name="source" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
                         <option value="Website form">Website form</option>
                         <option value="Trade show">Trade show</option>
                         <option value="LinkedIn">LinkedIn</option>
@@ -859,8 +861,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Assigned Salesperson</label>
-                      <select [(ngModel)]="newPartner.assignedTo" name="assignedTo" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+                      <label for="assigned_salesperson" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Assigned Salesperson</label>
+                      <select id="assigned_salesperson" [(ngModel)]="newPartner.assignedTo" name="assignedTo" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
                         <option value="">-- Unassigned --</option>
                         @for (user of state.users(); track user.name) {
                           <option [value]="user.name">{{user.name}} ({{user.team}})</option>
@@ -870,8 +872,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
                   }
 
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Comments / Notes</label>
-                    <textarea [(ngModel)]="newPartner.comments" name="comments" rows="3" placeholder="Additional details..." class="w-full input-field rounded-xl p-2.5 text-sm outline-none"></textarea>
+                    <label for="comments_notes" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Comments / Notes</label>
+                    <textarea id="comments_notes" [(ngModel)]="newPartner.comments" name="comments" rows="3" placeholder="Additional details..." class="w-full input-field rounded-xl p-2.5 text-sm outline-none"></textarea>
                   </div>
 
                   <div class="flex justify-end gap-2 pt-4 border-t border-white/20">
@@ -905,7 +907,7 @@ export class PartnersComponent {
     return this.state.hasAuthority('PARTNERS_WRITE');
   }
 
-  deletePartner(partner: any) {
+  deletePartner(partner: unknown) {
     if (!this.state.hasAuthority('PARTNERS_DELETE')) return;
     if (confirm(`Delete "${partner.name}"? This cannot be undone.`)) {
       this.state.deletePartner(partner.id);
@@ -929,7 +931,7 @@ export class PartnersComponent {
 
   // Partner (Customer/Prospect/Vendor) bulk selection
   selectedPartnerIds = signal<Set<string>>(new Set());
-  partnerStatusOptions: Array<'prospect' | 'active' | 'inactive' | 'archived'> = ['prospect', 'active', 'inactive', 'archived'];
+  partnerStatusOptions: ('prospect' | 'active' | 'inactive' | 'archived')[] = ['prospect', 'active', 'inactive', 'archived'];
 
   newActivity = {
     type: 'Call' as LeadActivity['type'],
@@ -1213,7 +1215,7 @@ export class PartnersComponent {
   toggleSelectAllPartners(event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
     if (checked) {
-      this.selectedPartnerIds.set(new Set(this.paginatedPartners().map((p: any) => p.id)));
+      this.selectedPartnerIds.set(new Set(this.paginatedPartners().map((p: unknown) => p.id)));
     } else {
       this.selectedPartnerIds.set(new Set());
     }
@@ -1284,7 +1286,7 @@ export class PartnersComponent {
           city: this.newPartner.city,
           comments: this.newPartner.comments,
           status: 'active'
-        } as any);
+        } as unknown);
       }
 
       this.activeTab.set(this.newPartner.type);
@@ -1413,7 +1415,7 @@ export class PartnersComponent {
     if (!this.canWrite()) return;
     this.state.removeLeadAttachment(leadId, file.id);
     if (file.fileId) {
-      this.api.deleteFile(file.fileId).subscribe({ error: () => {} });
+      this.api.deleteFile(file.fileId).subscribe({ error: () => { /* handle error */ } });
     }
     const updated = this.state.leadsData().find(l => l.id === leadId);
     if (updated) {

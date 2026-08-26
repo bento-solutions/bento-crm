@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -136,7 +136,7 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
 export class WhatsAppCampaignDetailComponent {
   campaignId = input<string | null>(null);
   campaignTitle = input<string>('Campaign');
-  close = output<void>();
+  closeEmitted = output<void>();
 
   wa = inject(WhatsAppCampaignsService);
   private destroyRef = inject(DestroyRef);

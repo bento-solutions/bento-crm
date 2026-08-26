@@ -48,24 +48,24 @@ export class DealsService {
   }
 
   addDeal(deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createDeal(deal as any).subscribe({
+    this.api.createDeal(deal as unknown).subscribe({
       next: (created) => {
         this.deals.update(deals => [...deals, created]);
         this.toast.show(`Deal <strong>${created.title}</strong> created`);
-        setTimeout(() => this.state.evaluateRules('DealCreated', created as unknown as Record<string, any>, `Deal: ${created.title}`), 0);
+        setTimeout(() => this.state.evaluateRules('DealCreated', created as unknown as Record<string, unknown>, `Deal: ${created.title}`), 0);
       },
       error: () => this.toast.show('Failed to create deal', { type: 'error' })
     });
   }
 
   updateDeal(id: string, deal: Partial<Deal>): void {
-    this.api.updateDeal(id, deal as any).subscribe({
+    this.api.updateDeal(id, deal as unknown).subscribe({
       next: (updated) => {
         this.deals.update(deals =>
           deals.map(d => d.id === id ? updated : d)
         );
         this.toast.show(`Deal updated`);
-        setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, any>, `Deal: ${updated.title}`), 0);
+        setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, unknown>, `Deal: ${updated.title}`), 0);
       },
       error: () => this.toast.show('Failed to update deal', { type: 'error' })
     });
@@ -101,7 +101,7 @@ export class DealsService {
   private reconcileDealActivityId(dealId: string, kind: keyof ActivityLog, localId: string, remoteId: string): void {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as any[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
+      const items = (d.activityLog[kind] as unknown[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
   }
@@ -176,7 +176,7 @@ export class DealsService {
   updateDealStage(dealId: string, stage: string): void {
     const deal = this.getDealById(dealId);
     if (deal) {
-      this.updateDeal(dealId, { ...deal, stage: stage as any });
+      this.updateDeal(dealId, { ...deal, stage: stage as unknown });
     }
   }
 
@@ -185,8 +185,8 @@ export class DealsService {
     const deal = this.getDealById(dealId);
     if (!deal) return;
     this.deals.update(deals => deals.map(d => d.id === dealId ? { ...d, stage } : d));
-    this.api.updateDeal(dealId, { ...deal, stage } as any).subscribe({
-      next: (updated) => setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, any>, `Deal: ${updated.title}`), 0),
+    this.api.updateDeal(dealId, { ...deal, stage } as unknown).subscribe({
+      next: (updated) => setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, unknown>, `Deal: ${updated.title}`), 0),
       error: () => this.toast.show('Failed to sync stage change with server', { type: 'error' })
     });
   }

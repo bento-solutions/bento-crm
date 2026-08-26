@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { CrmStateService, Deal, PurchaseOrder, Task } from '../services/crm-state.service';
+import { CrmStateService, Deal } from '../services/crm-state.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 
@@ -499,25 +499,25 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.calls.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="date" class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
+                  <input id="date" [(ngModel)]="newActivityInput.calls.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Duration (min)</label>
-                  <input [(ngModel)]="newActivityInput.calls.duration" type="number" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="duration_min" class="block text-xs font-semibold text-zinc-500 mb-1">Duration (min)</label>
+                  <input id="duration_min" [(ngModel)]="newActivityInput.calls.duration" type="number" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Caller Name</label>
-                <input [(ngModel)]="newActivityInput.calls.callerName" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="caller_name" class="block text-xs font-semibold text-zinc-500 mb-1">Caller Name</label>
+                <input id="caller_name" [(ngModel)]="newActivityInput.calls.callerName" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Summary</label>
-                <textarea [(ngModel)]="newActivityInput.calls.summary" rows="3" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label for="summary" class="block text-xs font-semibold text-zinc-500 mb-1">Summary</label>
+                <textarea id="summary" [(ngModel)]="newActivityInput.calls.summary" rows="3" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Outcome</label>
-                <select [(ngModel)]="newActivityInput.calls.outcome" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <label for="outcome" class="block text-xs font-semibold text-zinc-500 mb-1">Outcome</label>
+                <select id="outcome" [(ngModel)]="newActivityInput.calls.outcome" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
                   <option value="Interested">Interested</option>
                   <option value="Follow-up">Follow-up</option>
                   <option value="Not Interested">Not Interested</option>
@@ -530,34 +530,34 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.emails.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="date" class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
+                  <input id="date" [(ngModel)]="newActivityInput.emails.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Direction</label>
-                  <select [(ngModel)]="newActivityInput.emails.direction" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <label for="direction" class="block text-xs font-semibold text-zinc-500 mb-1">Direction</label>
+                  <select id="direction" [(ngModel)]="newActivityInput.emails.direction" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
                     <option value="sent">Sent</option>
                     <option value="received">Received</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Subject</label>
-                <input [(ngModel)]="newActivityInput.emails.subject" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="subject" class="block text-xs font-semibold text-zinc-500 mb-1">Subject</label>
+                <input id="subject" [(ngModel)]="newActivityInput.emails.subject" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">From</label>
-                  <input [(ngModel)]="newActivityInput.emails.from" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="from" class="block text-xs font-semibold text-zinc-500 mb-1">From</label>
+                  <input id="from" [(ngModel)]="newActivityInput.emails.from" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">To</label>
-                  <input [(ngModel)]="newActivityInput.emails.to" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="to" class="block text-xs font-semibold text-zinc-500 mb-1">To</label>
+                  <input id="to" [(ngModel)]="newActivityInput.emails.to" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Body</label>
-                <textarea [(ngModel)]="newActivityInput.emails.body" rows="3" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label for="body" class="block text-xs font-semibold text-zinc-500 mb-1">Body</label>
+                <textarea id="body" [(ngModel)]="newActivityInput.emails.body" rows="3" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
               </div>
             </div>
           }
@@ -566,39 +566,39 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.meetings.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="date" class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
+                  <input id="date" [(ngModel)]="newActivityInput.meetings.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Time</label>
-                  <input [(ngModel)]="newActivityInput.meetings.time" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="time" class="block text-xs font-semibold text-zinc-500 mb-1">Time</label>
+                  <input id="time" [(ngModel)]="newActivityInput.meetings.time" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
-                <input [(ngModel)]="newActivityInput.meetings.title" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="title" class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
+                <input id="title" [(ngModel)]="newActivityInput.meetings.title" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Type</label>
-                  <select [(ngModel)]="newActivityInput.meetings.type" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <label for="type" class="block text-xs font-semibold text-zinc-500 mb-1">Type</label>
+                  <select id="type" [(ngModel)]="newActivityInput.meetings.type" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
                     <option value="teams">Teams</option>
                     <option value="demo">Demo</option>
                     <option value="physical">Physical</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Location</label>
-                  <input [(ngModel)]="newActivityInput.meetings.location" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="location" class="block text-xs font-semibold text-zinc-500 mb-1">Location</label>
+                  <input id="location" [(ngModel)]="newActivityInput.meetings.location" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Attendees (comma separated)</label>
-                <input [(ngModel)]="newActivityInput.meetings.attendees" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="attendees_comma_sepa" class="block text-xs font-semibold text-zinc-500 mb-1">Attendees (comma separated)</label>
+                <input id="attendees_comma_sepa" [(ngModel)]="newActivityInput.meetings.attendees" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Summary</label>
-                <textarea [(ngModel)]="newActivityInput.meetings.summary" rows="2" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label for="summary" class="block text-xs font-semibold text-zinc-500 mb-1">Summary</label>
+                <textarea id="summary" [(ngModel)]="newActivityInput.meetings.summary" rows="2" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
               </div>
             </div>
           }
@@ -607,25 +607,25 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.recordings.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="date" class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
+                  <input id="date" [(ngModel)]="newActivityInput.recordings.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Duration</label>
-                  <input [(ngModel)]="newActivityInput.recordings.duration" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="duration" class="block text-xs font-semibold text-zinc-500 mb-1">Duration</label>
+                  <input id="duration" [(ngModel)]="newActivityInput.recordings.duration" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
-                <input [(ngModel)]="newActivityInput.recordings.title" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="title" class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
+                <input id="title" [(ngModel)]="newActivityInput.recordings.title" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Meeting Link</label>
-                <input [(ngModel)]="newActivityInput.recordings.meetingLink" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="meeting_link" class="block text-xs font-semibold text-zinc-500 mb-1">Meeting Link</label>
+                <input id="meeting_link" [(ngModel)]="newActivityInput.recordings.meetingLink" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Recording Link</label>
-                <input [(ngModel)]="newActivityInput.recordings.recordingLink" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="recording_link" class="block text-xs font-semibold text-zinc-500 mb-1">Recording Link</label>
+                <input id="recording_link" [(ngModel)]="newActivityInput.recordings.recordingLink" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
             </div>
           }
@@ -634,17 +634,17 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.notes.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="date" class="block text-xs font-semibold text-zinc-500 mb-1">Date</label>
+                  <input id="date" [(ngModel)]="newActivityInput.notes.date" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Author</label>
-                  <input [(ngModel)]="newActivityInput.notes.author" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label for="author" class="block text-xs font-semibold text-zinc-500 mb-1">Author</label>
+                  <input id="author" [(ngModel)]="newActivityInput.notes.author" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Content</label>
-                <textarea [(ngModel)]="newActivityInput.notes.content" rows="4" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label for="content" class="block text-xs font-semibold text-zinc-500 mb-1">Content</label>
+                <textarea id="content" [(ngModel)]="newActivityInput.notes.content" rows="4" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
               </div>
             </div>
           }
@@ -652,16 +652,16 @@ import { AttachmentsComponent } from '../shared/attachments.component';
           @if (modal.type === 'followups') {
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Due Date</label>
-                <input [(ngModel)]="newActivityInput.followups.dueDate" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="due_date" class="block text-xs font-semibold text-zinc-500 mb-1">Due Date</label>
+                <input id="due_date" [(ngModel)]="newActivityInput.followups.dueDate" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
-                <input [(ngModel)]="newActivityInput.followups.title" type="text" placeholder="e.g. Send quotation" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="title" class="block text-xs font-semibold text-zinc-500 mb-1">Title</label>
+                <input id="title" [(ngModel)]="newActivityInput.followups.title" type="text" placeholder="e.g. Send quotation" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</label>
-                <input [(ngModel)]="newActivityInput.followups.assignedTo" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="assigned_to" class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</label>
+                <input id="assigned_to" [(ngModel)]="newActivityInput.followups.assignedTo" type="text" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
               </div>
             </div>
           }
@@ -684,7 +684,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
           <div class="space-y-4 overflow-y-auto pr-1 flex-1">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase">Vendor</label>
+                <label for="vendor" class="block text-xs font-semibold text-zinc-500 uppercase">Vendor</label>
                 <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-zinc-900 hover:text-zinc-950 text-meta font-bold uppercase">
                   {{ showNewVendorForm() ? 'Select Existing' : '+ Create New Vendor Inline' }}
                 </button>
@@ -706,12 +706,12 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Delivery Date</label>
-              <input [(ngModel)]="newPoDeliveryDate" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label for="delivery_date" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Delivery Date</label>
+              <input id="delivery_date" [(ngModel)]="newPoDeliveryDate" type="date" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
             </div>
 
             <div class="space-y-2">
-              <label class="block text-xs font-semibold text-zinc-500 uppercase">Line Items</label>
+              <label for="line_items" class="block text-xs font-semibold text-zinc-500 uppercase">Line Items</label>
               <div class="space-y-2">
                 @for (line of poLines(); track $index) {
                   <div class="grid grid-cols-12 gap-2 items-center">
@@ -761,16 +761,16 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 
           <div class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 mb-1">Task Title</label>
-              <input [(ngModel)]="assignTaskData.title" type="text" placeholder="e.g. Review deal terms" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label for="task_title" class="block text-xs font-semibold text-zinc-500 mb-1">Task Title</label>
+              <input id="task_title" [(ngModel)]="assignTaskData.title" type="text" placeholder="e.g. Review deal terms" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 mb-1">Description</label>
-              <textarea [(ngModel)]="assignTaskData.description" rows="2" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+              <label for="description" class="block text-xs font-semibold text-zinc-500 mb-1">Description</label>
+              <textarea id="description" [(ngModel)]="assignTaskData.description" rows="2" class="w-full border border-zinc-200 rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 mb-1">Assigned Team</label>
-              <select [(ngModel)]="assignTaskData.assignedTeam" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+              <label for="assigned_team" class="block text-xs font-semibold text-zinc-500 mb-1">Assigned Team</label>
+              <select id="assigned_team" [(ngModel)]="assignTaskData.assignedTeam" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
                 <option value="Sales">Sales</option>
                 <option value="Operations">Operations</option>
                 <option value="Finance">Finance</option>
@@ -778,8 +778,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</label>
-              <select [(ngModel)]="assignTaskData.assignedTo" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+              <label for="assigned_to" class="block text-xs font-semibold text-zinc-500 mb-1">Assigned To</label>
+              <select id="assigned_to" [(ngModel)]="assignTaskData.assignedTo" class="w-full border border-zinc-200 rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
                 <option value="">— Select —</option>
                 @for (u of state.users(); track u.id) {
                   <option [value]="u.name">{{ u.name }}</option>
@@ -957,13 +957,13 @@ export class DealDetailComponent {
   hasEventsOnDay(deal: Deal, day: number): boolean {
     if (!deal.activityLog?.meetings) return false;
     const dateStr = '2026-06-' + String(day).padStart(2, '0');
-    return deal.activityLog.meetings.some((m: any) => m.date === dateStr);
+    return deal.activityLog.meetings.some((m: unknown) => m.date === dateStr);
   }
 
-  getEventsOnDay(deal: Deal, day: number): any[] {
+  getEventsOnDay(deal: Deal, day: number): unknown[] {
     if (!deal.activityLog?.meetings) return [];
     const dateStr = '2026-06-' + String(day).padStart(2, '0');
-    return deal.activityLog.meetings.filter((m: any) => m.date === dateStr);
+    return deal.activityLog.meetings.filter((m: unknown) => m.date === dateStr);
   }
 
   // PO helpers
@@ -987,9 +987,9 @@ export class DealDetailComponent {
 
     if (deal.orderLines && deal.orderLines.length > 0) {
       this.poLines.set(deal.orderLines.map(l => ({
-        item: (l as any).product,
-        qty: (l as any).qty,
-        unitPrice: Math.round((l as any).unitPrice * 0.7),
+        item: (l as unknown).product,
+        qty: (l as unknown).qty,
+        unitPrice: Math.round((l as unknown).unitPrice * 0.7),
         type: 'software' as const
       })));
     } else {

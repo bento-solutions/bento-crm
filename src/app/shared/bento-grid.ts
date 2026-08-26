@@ -41,7 +41,7 @@ const EDGE_ZONE = 80;
 const EDGE_SPEED = 18;
 
 @Directive({
-  selector: '[bentoTile]',
+  selector: '[appBentoTile]',
   host: { class: 'bento-tile', '[attr.data-bento-id]': 'bentoTile()' },
 })
 export class BentoTile {
@@ -55,7 +55,7 @@ export class BentoTile {
 }
 
 @Directive({
-  selector: '[bentoGrid]',
+  selector: '[appBentoGrid]',
   host: { class: 'bento-grid' },
 })
 export class BentoGrid {

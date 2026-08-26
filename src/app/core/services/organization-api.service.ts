@@ -29,6 +29,7 @@ export interface OrganizationResponse {
 
 @Injectable({ providedIn: 'root' })
 export class OrganizationApiService extends BaseApiService {
+  // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(http: HttpClient) {
     super(http);
   }

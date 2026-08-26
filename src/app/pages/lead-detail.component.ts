@@ -202,17 +202,17 @@ import { ApiService } from '../services/api.service';
                 <div class="card rounded-xl p-5 space-y-3">
                   <h3 class="text-xs font-bold text-zinc-700 uppercase">Log New Activity</h3>
                   <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
-                      <select [(ngModel)]="newActivity.type" class="w-full input-field rounded-lg p-2 text-xs outline-none bg-transparent">
+                    <div><label for="type" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Type</label>
+                      <select id="type" [(ngModel)]="newActivity.type" class="w-full input-field rounded-lg p-2 text-xs outline-none bg-transparent">
                         <option value="Call">Call</option><option value="Email">Email</option><option value="Meeting">Meeting</option><option value="Note">Note</option><option value="Task">Task</option>
                       </select></div>
-                    <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
-                      <input [(ngModel)]="newActivity.date" type="date" class="w-full input-field rounded-lg p-1.5 text-xs outline-none"></div>
+                    <div><label for="date" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Date</label>
+                      <input id="date" [(ngModel)]="newActivity.date" type="date" class="w-full input-field rounded-lg p-1.5 text-xs outline-none"></div>
                   </div>
-                  <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
-                    <input [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full input-field rounded-lg p-2 text-xs outline-none"></div>
-                  <div><label class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details</label>
-                    <textarea [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full input-field rounded-lg p-2 text-xs outline-none"></textarea></div>
+                  <div><label for="summary" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Summary</label>
+                    <input id="summary" [(ngModel)]="newActivity.summary" type="text" placeholder="e.g. Discussed pricing options" class="w-full input-field rounded-lg p-2 text-xs outline-none"></div>
+                  <div><label for="details" class="block text-meta uppercase font-semibold text-zinc-400 mb-1">Details</label>
+                    <textarea id="details" [(ngModel)]="newActivity.detail" rows="2" placeholder="More detailed recap..." class="w-full input-field rounded-lg p-2 text-xs outline-none"></textarea></div>
                   <div class="flex justify-end pt-2">
                     <button (click)="submitActivity(lead.id)" class="bg-zinc-800/80 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Log Activity</button>
                   </div>
@@ -415,7 +415,7 @@ export class LeadDetailComponent {
   deleteAttachment(leadId: string, file: LeadAttachment) {
     this.state.removeLeadAttachment(leadId, file.id);
     if (file.fileId) {
-      this.api.deleteFile(file.fileId).subscribe({ error: () => {} });
+      this.api.deleteFile(file.fileId).subscribe({ error: () => { /* ignore error */ } });
     }
   }
 

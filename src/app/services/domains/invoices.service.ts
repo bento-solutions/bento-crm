@@ -44,7 +44,7 @@ export class InvoicesService {
   }
 
   addInvoice(invoice: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): void {
-    this.api.createInvoice(invoice as any).subscribe({
+    this.api.createInvoice(invoice as unknown).subscribe({
       next: (created) => {
         this.invoices.update(invoices => [...invoices, created]);
         this.toast.show(`Invoice <strong>${created.invoiceNumber}</strong> created`);
@@ -54,7 +54,7 @@ export class InvoicesService {
   }
 
   updateInvoice(id: string, invoice: Partial<Invoice>): void {
-    this.api.updateInvoice(id, invoice as any).subscribe({
+    this.api.updateInvoice(id, invoice as unknown).subscribe({
       next: (updated) => {
         this.invoices.update(invoices =>
           invoices.map(i => i.id === id ? updated : i)

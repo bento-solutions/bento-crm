@@ -6,9 +6,6 @@ import { FormsModule } from '@angular/forms';
 import {
   CrmStateService,
   CustomerCard,
-  CustomerPersonnel,
-  RecordType,
-  OrgType,
   VatStatus,
 } from '../services/crm-state.service';
 
@@ -53,27 +50,27 @@ const JOB_TITLES = [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Account ID</label>
-            <input [value]="form().accountId" disabled class="w-full input-field rounded-xl p-2.5 text-sm text-zinc-500 opacity-60">
+            <label for="account_id" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Account ID</label>
+            <input id="account_id" [value]="form().accountId" disabled class="w-full input-field rounded-xl p-2.5 text-sm text-zinc-500 opacity-60">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Record Type</label>
-            <select [(ngModel)]="form().recordType" name="recordType" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+            <label for="record_type" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Record Type</label>
+            <select id="record_type" [(ngModel)]="form().recordType" name="recordType" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
               <option value="Organization">Organization</option>
               <option value="Individual">Individual</option>
             </select>
           </div>
           <div class="lg:col-span-2">
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Official Company Name</label>
-            <input [(ngModel)]="form().name" name="name" type="text" placeholder="e.g. Casablanca Technologies S.A.R.L." class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="official_company_nam" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Official Company Name</label>
+            <input id="official_company_nam" [(ngModel)]="form().name" name="name" type="text" placeholder="e.g. Casablanca Technologies S.A.R.L." class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Search Name</label>
-            <input [(ngModel)]="form().searchName" name="searchName" type="text" placeholder="Short name / Acronym" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="search_name" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Search Name</label>
+            <input id="search_name" [(ngModel)]="form().searchName" name="searchName" type="text" placeholder="Short name / Acronym" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ERP Customer Account</label>
-            <input [(ngModel)]="form().erpAccount" name="erpAccount" type="text" placeholder="Link to financial backend" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="erp_customer_account" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ERP Customer Account</label>
+            <input id="erp_customer_account" [(ngModel)]="form().erpAccount" name="erpAccount" type="text" placeholder="Link to financial backend" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
         </div>
       </section>
@@ -88,8 +85,8 @@ const JOB_TITLES = [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ICE</label>
-            <input [(ngModel)]="form().ice" name="ice" type="text" maxlength="15" placeholder="15 digits"
+            <label for="ice" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">ICE</label>
+            <input id="ice" [(ngModel)]="form().ice" name="ice" type="text" maxlength="15" placeholder="15 digits"
               (input)="onIceInput($event)"
               class="w-full rounded-xl p-2.5 text-sm outline-none font-mono transition-all"
               [class.input-field]="!iceError()"
@@ -100,16 +97,16 @@ const JOB_TITLES = [
             }
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">IF (Identifiant Fiscal)</label>
-            <input [(ngModel)]="form().ifField" name="ifField" type="text" placeholder="IF" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="if_identifiant_fisca" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">IF (Identifiant Fiscal)</label>
+            <input id="if_identifiant_fisca" [(ngModel)]="form().ifField" name="ifField" type="text" placeholder="IF" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">RC (Registre de Commerce)</label>
-            <input [(ngModel)]="form().rc" name="rc" type="text" placeholder="RC number" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="rc_registre_de_comme" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">RC (Registre de Commerce)</label>
+            <input id="rc_registre_de_comme" [(ngModel)]="form().rc" name="rc" type="text" placeholder="RC number" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Ville RC</label>
-            <select [(ngModel)]="form().rcCity" name="rcCity" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+            <label for="ville_rc" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Ville RC</label>
+            <select id="ville_rc" [(ngModel)]="form().rcCity" name="rcCity" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
               <option value="">Select city</option>
               @for (city of cities; track city) {
                 <option [value]="city">{{ city }}</option>
@@ -117,15 +114,15 @@ const JOB_TITLES = [
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">TP (Taxe Professionnelle)</label>
-            <input [(ngModel)]="form().tp" name="tp" type="text" placeholder="TP number" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="tp_taxe_professionne" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">TP (Taxe Professionnelle)</label>
+            <input id="tp_taxe_professionne" [(ngModel)]="form().tp" name="tp" type="text" placeholder="TP number" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div class="lg:col-span-3">
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">TVA / VAT Status</label>
+            <label for="tva_vat_status" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">TVA / VAT Status</label>
             <div class="flex flex-wrap gap-4">
               @for (option of vatOptions; track option) {
-                <label class="flex items-center gap-2 text-sm text-zinc-600 cursor-pointer badge rounded-lg px-3 py-1.5">
-                  <input type="checkbox" [checked]="form().vatStatus.includes(option)" (change)="toggleVat(option)"
+                <label for="label_11" class="flex items-center gap-2 text-sm text-zinc-600 cursor-pointer badge rounded-lg px-3 py-1.5">
+                  <input id="label_11" type="checkbox" [checked]="form().vatStatus.includes(option)" (change)="toggleVat(option)"
                     class="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700">
                   {{ option }}
                 </label>
@@ -145,16 +142,16 @@ const JOB_TITLES = [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Organization Type</label>
-            <select [(ngModel)]="form().orgType" name="orgType" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+            <label for="organization_type" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Organization Type</label>
+            <select id="organization_type" [(ngModel)]="form().orgType" name="orgType" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
               <option value="Headquarter">Headquarter</option>
               <option value="Subsidiary">Subsidiary</option>
               <option value="Branch">Branch</option>
             </select>
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Parent Account</label>
-            <select [(ngModel)]="form().parentAccountId" name="parentAccountId" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
+            <label for="parent_account" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Parent Account</label>
+            <select id="parent_account" [(ngModel)]="form().parentAccountId" name="parentAccountId" class="w-full input-field rounded-xl p-2.5 text-sm outline-none bg-transparent">
               <option [ngValue]="null">None (standalone)</option>
               @for (card of existingCards(); track card.id) {
                 @if (card.id !== form().id) {
@@ -250,19 +247,19 @@ const JOB_TITLES = [
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Main Phone</label>
-            <input [(ngModel)]="form().mainPhone" name="mainPhone" type="text" placeholder="+212 5XX XX XX XX"
+            <label for="main_phone" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Main Phone</label>
+            <input id="main_phone" [(ngModel)]="form().mainPhone" name="mainPhone" type="text" placeholder="+212 5XX XX XX XX"
               (input)="onPhoneInput($event)"
               class="w-full input-field rounded-xl p-2.5 text-sm outline-none font-mono">
             <p class="text-zinc-400 text-xs mt-1.5">Format: +212 X XX XX XX XX</p>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Corporate Email</label>
-            <input [(ngModel)]="form().corporateEmail" name="corporateEmail" type="email" placeholder="contact@client.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="corporate_email" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Corporate Email</label>
+            <input id="corporate_email" [(ngModel)]="form().corporateEmail" name="corporateEmail" type="email" placeholder="contact@client.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Website URL</label>
-            <input [(ngModel)]="form().websiteUrl" name="websiteUrl" type="url" placeholder="https://www.client.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
+            <label for="website_url" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">Website URL</label>
+            <input id="website_url" [(ngModel)]="form().websiteUrl" name="websiteUrl" type="url" placeholder="https://www.client.ma" class="w-full input-field rounded-xl p-2.5 text-sm outline-none">
           </div>
         </div>
       </section>
@@ -344,7 +341,7 @@ export class CustomerCardComponent implements OnInit {
   jobTitles = JOB_TITLES;
   vatOptions: VatStatus[] = ['Standard', 'No VAT', 'Export Trade'];
 
-  partnerId: string = '';
+  partnerId = '';
   isExisting = signal(false);
 
   form = signal<CustomerCard>(this.emptyCard());

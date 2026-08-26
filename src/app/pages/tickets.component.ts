@@ -184,8 +184,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 
           <div class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Subject / Title *</label>
-              <input
+              <label for="subject_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Subject / Title *</label>
+              <input id="subject_title"
                 [(ngModel)]="newTicket.title"
                 type="text"
                 placeholder="e.g. Login issue on client portal"
@@ -195,16 +195,16 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Ticket Type</label>
-                <select [(ngModel)]="newTicket.type" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="ticket_type" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Ticket Type</label>
+                <select id="ticket_type" [(ngModel)]="newTicket.type" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                   @for (t of state.ticketTypes(); track t) {
                     <option [value]="t">{{ t }}</option>
                   }
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Related Partner</label>
-                <select [(ngModel)]="newTicket.relatedPartnerId" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="related_partner" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Related Partner</label>
+                <select id="related_partner" [(ngModel)]="newTicket.relatedPartnerId" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                   <option value="">-- Select Partner --</option>
                   @for (p of state.partners(); track p.id) {
                     <option [value]="p.id">{{p.name}} ({{p.type}})</option>
@@ -214,8 +214,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned To</label>
-              <select [(ngModel)]="newTicket.assignedToUserId" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label for="assigned_to" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned To</label>
+              <select id="assigned_to" [(ngModel)]="newTicket.assignedToUserId" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                 <option value="">-- Select Assignee --</option>
                 @for (user of state.users(); track user.id) {
                   <option [value]="user.id">{{user.displayName}} ({{user.role}})</option>
@@ -225,16 +225,16 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Priority</label>
-                <select [(ngModel)]="newTicket.priority" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="priority" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Priority</label>
+                <select id="priority" [(ngModel)]="newTicket.priority" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
                   <option value="URGENT">High</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Status</label>
-                <select [(ngModel)]="newTicket.status" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label for="status" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Status</label>
+                <select id="status" [(ngModel)]="newTicket.status" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                   <option value="OPEN">Open</option>
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="RESOLVED">Resolved</option>
@@ -245,8 +245,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 
             <!-- Description Field -->
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description</label>
-              <textarea
+              <label for="description" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description</label>
+              <textarea id="description"
                 [(ngModel)]="newTicket.description"
                 rows="3"
                 placeholder="Describe the issue..."

@@ -27,7 +27,7 @@ export class UserAvatarComponent {
   @Input() userId?: string;
   @Input() initials?: string;
   @Input() color?: string;
-  @Input() size: number = 36; // 28 | 36 | 44 | 56
+  @Input() size = 36; // 28 | 36 | 44 | 56
 
   getBgColor(): string {
     if (this.userId) {

@@ -428,21 +428,21 @@
           <!-- Basic Info -->
           <div class="space-y-4">
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Rule Name</label>
-              <input type="text" [(ngModel)]="ruleName" placeholder="e.g. Auto-Assign Digital Leads"
+              <label for="rule_name" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Rule Name</label>
+              <input id="rule_name" type="text" [(ngModel)]="ruleName" placeholder="e.g. Auto-Assign Digital Leads"
                      class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
             </div>
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Description</label>
-              <textarea [(ngModel)]="ruleDescription" placeholder="Explain what this automation rule does..." rows="2"
+              <label for="description" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Description</label>
+              <textarea id="description" [(ngModel)]="ruleDescription" placeholder="Explain what this automation rule does..." rows="2"
                         class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"></textarea>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Trigger Event</label>
-              <select [(ngModel)]="ruleTrigger" (change)="resetBuilder()"
+              <label for="trigger_event" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Trigger Event</label>
+              <select id="trigger_event" [(ngModel)]="ruleTrigger" (change)="resetBuilder()"
                       class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
                 <option value="LeadCreated">Lead Created</option>
                 <option value="LeadUpdated">Lead Updated</option>
@@ -453,8 +453,8 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Priority</label>
-              <select [(ngModel)]="rulePriority"
+              <label for="priority" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Priority</label>
+              <select id="priority" [(ngModel)]="rulePriority"
                       class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
                 <option [ngValue]="1">P1 (Highest)</option>
                 <option [ngValue]="2">P2 (High)</option>
@@ -471,8 +471,8 @@
               <label for="stopOnMatch" class="text-sm font-semibold text-zinc-800">Stop evaluating lower-priority rules after match</label>
             </div>
             <div class="flex items-center gap-3">
-              <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Conflict Strategy</label>
-              <select [(ngModel)]="ruleConflictStrategy" class="border border-zinc-300 rounded-lg px-2 py-1 text-xs focus:outline-none">
+              <label for="conflict_strategy" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Conflict Strategy</label>
+              <select id="conflict_strategy" [(ngModel)]="ruleConflictStrategy" class="border border-zinc-300 rounded-lg px-2 py-1 text-xs focus:outline-none">
                 <option value="all-execute">Execute All Matches</option>
                 <option value="first-wins">First Match Wins (Priority)</option>
               </select>
@@ -493,9 +493,11 @@
               <div class="bg-white border border-zinc-200 rounded-2xl p-4 relative space-y-3">
                 <div class="flex justify-between items-center">
                   <span class="text-xs font-bold text-zinc-400 uppercase">Condition Group #{{ gIdx + 1 }} (AND)</span>
-                  <button *ngIf="conditionGroups().length > 1" (click)="removeConditionGroup(gIdx)" class="text-zinc-400 hover:text-zinc-900">
-                    <mat-icon class="text-lg">delete</mat-icon>
-                  </button>
+                  @if (conditionGroups().length > 1) {
+                    <button (click)="removeConditionGroup(gIdx)" class="text-zinc-400 hover:text-zinc-900">
+                      <mat-icon class="text-lg">delete</mat-icon>
+                    </button>
+                  }
                 </div>
 
                 <div class="space-y-2">
@@ -516,9 +518,10 @@
                       </select>
 
                       <!-- Value (Optional based on isEmpty operator) -->
-                      <input *ngIf="cond.operator !== 'isEmpty' && cond.operator !== 'isNotEmpty'" 
-                             type="text" [(ngModel)]="cond.value" placeholder="Value..."
-                             class="flex-1 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs">
+                      @if (cond.operator !== 'isEmpty' && cond.operator !== 'isNotEmpty') {
+                        <input type="text" [(ngModel)]="cond.value" placeholder="Value..."
+                               class="flex-1 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs">
+                      }
 
                       <!-- Delete Condition -->
                       <button (click)="removeConditionFromGroup(gIdx, cIdx)" class="text-zinc-400 hover:text-zinc-900">
@@ -578,8 +581,8 @@
                     <!-- AssignSalesperson -->
                     @if (act.type === 'AssignSalesperson' || act.type === 'NotifyManager') {
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Assignee / User Name</label>
-                        <select [(ngModel)]="act.params.assignee" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        <label for="assignee_user_name" class="block text-zinc-500 font-semibold mb-1">Assignee / User Name</label>
+                        <select id="assignee_user_name" [(ngModel)]="act.params.assignee" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                           <option value="Youssef El Alami">Youssef El Alami (Sales)</option>
                           <option value="Amine Bennani">Amine Bennani (Sales)</option>
                           <option value="Achraf (Manager)">Achraf (Manager - Sales)</option>
@@ -592,17 +595,17 @@
                     <!-- CreateFollowUpTask / NotifyManager common fields -->
                     @if (act.type === 'CreateFollowUpTask' || act.type === 'NotifyManager') {
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Task Title</label>
-                        <input type="text" [(ngModel)]="act.params.taskTitle" placeholder="e.g. Sales Follow-Up reminder" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        <label for="task_title" class="block text-zinc-500 font-semibold mb-1">Task Title</label>
+                        <input id="task_title" type="text" [(ngModel)]="act.params.taskTitle" placeholder="e.g. Sales Follow-Up reminder" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                       </div>
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Task Description</label>
-                        <textarea [(ngModel)]="act.params.taskDescription" placeholder="Add optional details..." rows="2" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                        <label for="task_description" class="block text-zinc-500 font-semibold mb-1">Task Description</label>
+                        <textarea id="task_description" [(ngModel)]="act.params.taskDescription" placeholder="Add optional details..." rows="2" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
                       </div>
                       <div class="grid grid-cols-2 gap-2">
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">Target Team</label>
-                          <select [(ngModel)]="act.params.targetTeam" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="target_team" class="block text-zinc-500 font-semibold mb-1">Target Team</label>
+                          <select id="target_team" [(ngModel)]="act.params.targetTeam" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                             <option value="Sales">Sales</option>
                             <option value="Operations">Operations</option>
                             <option value="Support">Support</option>
@@ -610,8 +613,8 @@
                           </select>
                         </div>
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">Due Date Offset (Days)</label>
-                          <input type="number" [(ngModel)]="act.params.taskDueDateOffsetDays" placeholder="e.g. 3" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="due_date_offset_days" class="block text-zinc-500 font-semibold mb-1">Due Date Offset (Days)</label>
+                          <input id="due_date_offset_days" type="number" [(ngModel)]="act.params.taskDueDateOffsetDays" placeholder="e.g. 3" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                         </div>
                       </div>
                     }
@@ -620,21 +623,21 @@
                     @if (act.type === 'SendEmailLog') {
                       <div class="grid grid-cols-2 gap-2">
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">From</label>
-                          <input type="text" [(ngModel)]="act.params.emailFrom" placeholder="crm@acme.ma" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="from" class="block text-zinc-500 font-semibold mb-1">From</label>
+                          <input id="from" type="text" [(ngModel)]="act.params.emailFrom" placeholder="crm@acme.ma" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                         </div>
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">To (Default is entity contact)</label>
-                          <input type="text" [(ngModel)]="act.params.emailTo" placeholder="contact@client.com" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="to_default_is_entity" class="block text-zinc-500 font-semibold mb-1">To (Default is entity contact)</label>
+                          <input id="to_default_is_entity" type="text" [(ngModel)]="act.params.emailTo" placeholder="contact@client.com" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                         </div>
                       </div>
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Subject</label>
-                        <input type="text" [(ngModel)]="act.params.emailSubject" placeholder="Welcome email..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        <label for="subject" class="block text-zinc-500 font-semibold mb-1">Subject</label>
+                        <input id="subject" type="text" [(ngModel)]="act.params.emailSubject" placeholder="Welcome email..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                       </div>
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Email Body</label>
-                        <textarea [(ngModel)]="act.params.emailBody" rows="2" placeholder="Write message details..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                        <label for="email_body" class="block text-zinc-500 font-semibold mb-1">Email Body</label>
+                        <textarea id="email_body" [(ngModel)]="act.params.emailBody" rows="2" placeholder="Write message details..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
                       </div>
                     }
 
@@ -642,16 +645,16 @@
                     @if (act.type === 'UpdateEntityField') {
                       <div class="grid grid-cols-2 gap-2">
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">Field to Update</label>
-                          <select [(ngModel)]="act.params.fieldKey" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="field_to_update" class="block text-zinc-500 font-semibold mb-1">Field to Update</label>
+                          <select id="field_to_update" [(ngModel)]="act.params.fieldKey" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                             @for (f of availableFields(); track f.key) {
                               <option [value]="f.key">{{ f.label }}</option>
                             }
                           </select>
                         </div>
                         <div>
-                          <label class="block text-zinc-500 font-semibold mb-1">New Value</label>
-                          <input type="text" [(ngModel)]="act.params.fieldValue" placeholder="Value..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <label for="new_value" class="block text-zinc-500 font-semibold mb-1">New Value</label>
+                          <input id="new_value" type="text" [(ngModel)]="act.params.fieldValue" placeholder="Value..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                         </div>
                       </div>
                     }
@@ -659,24 +662,24 @@
                     <!-- ChangeStage -->
                     @if (act.type === 'ChangeStage') {
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Move to Stage / Status</label>
-                        <input type="text" [(ngModel)]="act.params.targetStage" placeholder="e.g. Closed Won or Proposal Requested" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        <label for="move_to_stage_status" class="block text-zinc-500 font-semibold mb-1">Move to Stage / Status</label>
+                        <input id="move_to_stage_status" type="text" [(ngModel)]="act.params.targetStage" placeholder="e.g. Closed Won or Proposal Requested" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                       </div>
                     }
 
                     <!-- CreateNote -->
                     @if (act.type === 'CreateNote') {
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Note Content</label>
-                        <textarea [(ngModel)]="act.params.noteContent" rows="2" placeholder="Note text..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                        <label for="note_content" class="block text-zinc-500 font-semibold mb-1">Note Content</label>
+                        <textarea id="note_content" [(ngModel)]="act.params.noteContent" rows="2" placeholder="Note text..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
                       </div>
                     }
 
                     <!-- AddTag -->
                     @if (act.type === 'AddTag') {
                       <div>
-                        <label class="block text-zinc-500 font-semibold mb-1">Tag Name</label>
-                        <input type="text" [(ngModel)]="act.params.tagName" placeholder="e.g. VIP-Lead" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        <label for="tag_name" class="block text-zinc-500 font-semibold mb-1">Tag Name</label>
+                        <input id="tag_name" type="text" [(ngModel)]="act.params.tagName" placeholder="e.g. VIP-Lead" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
                       </div>
                     }
                   </div>
@@ -724,16 +727,16 @@
           <!-- Configuration Fields -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Entity Type</label>
-              <select [(ngModel)]="sandboxEntityType" (change)="loadMockEntityList()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+              <label for="entity_type" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Entity Type</label>
+              <select id="entity_type" [(ngModel)]="sandboxEntityType" (change)="loadMockEntityList()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
                 <option value="Lead">Lead</option>
                 <option value="Deal">Deal</option>
                 <option value="Ticket">Ticket</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Load Existing Record</label>
-              <select [(ngModel)]="sandboxEntityId" (change)="updateSandboxPayload()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+              <label for="load_existing_record" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Load Existing Record</label>
+              <select id="load_existing_record" [(ngModel)]="sandboxEntityId" (change)="updateSandboxPayload()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
                 @if (sandboxEntityType() === 'Lead') {
                   @for (l of state.leadsData(); track l.id) {
                     <option [value]="l.id">{{ l.companyName }} ({{ l.name }})</option>
@@ -752,8 +755,8 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Mock Payload JSON</label>
-            <textarea [(ngModel)]="sandboxRawPayload" rows="8" class="w-full font-mono border border-zinc-300 rounded-xl px-3 py-2 text-xs focus:ring-zinc-700 focus:border-zinc-700"></textarea>
+            <label for="mock_payload_json" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Mock Payload JSON</label>
+            <textarea id="mock_payload_json" [(ngModel)]="sandboxRawPayload" rows="8" class="w-full font-mono border border-zinc-300 rounded-xl px-3 py-2 text-xs focus:ring-zinc-700 focus:border-zinc-700"></textarea>
           </div>
 
           <div class="flex items-center gap-3">
@@ -823,7 +826,9 @@
         <div class="px-6 py-4 bg-white border border-zinc-200 border-t border-white/30 flex justify-end gap-3 shrink-0">
           <button (click)="isSandboxOpen.set(false)" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">Cancel</button>
           <button (click)="runSandboxSimulation()" [disabled]="sandboxLoading()" class="bg-zinc-900 hover:bg-zinc-950 disabled:opacity-50 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
-            <mat-icon class="text-base animate-spin" *ngIf="sandboxLoading()">sync</mat-icon>
+            @if (sandboxLoading()) {
+              <mat-icon class="text-base animate-spin">sync</mat-icon>
+            }
             {{ sandboxIsLiveRun() ? 'Execute Live Simulation' : 'Run Dry-Run Trace' }}
           </button>
         </div>

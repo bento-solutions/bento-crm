@@ -1,6 +1,5 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { Router } from '@angular/router';
-import { SEED_ORG, SEED_USERS, SEED_TEAMS, SEED_GROUPS, SEED_MESSAGES, SEED_MEETINGS } from '../data/seed-data';
 import { ToastService } from './toast.service';
 import { ApiService } from './api.service';
 import { TranslationService } from './translation.service';
@@ -938,13 +937,22 @@ export class CrmStateService {
   isAuthenticated = signal<boolean>(this.loadAuthState());
   currentUserId = signal<string>(this.loadCurrentUserId());
 
-  // Config signals - initialize with seed data, will be replaced by API data
-  organization = signal<Organization>(SEED_ORG);
-  users = signal<CrmUser[]>(SEED_USERS);
-  teams = signal<CrmTeam[]>(SEED_TEAMS);
-  groups = signal<CrmGroup[]>(SEED_GROUPS);
-  groupMessages = signal<GroupMessage[]>(SEED_MESSAGES);
-  groupMeetings = signal<GroupMeeting[]>(SEED_MEETINGS);
+  // Config signals - initialize empty, will be replaced by API data
+  organization = signal<Organization>({
+    id: '',
+    name: '',
+    logoInitials: '',
+    logoColor: '',
+    industry: '',
+    timezone: '',
+    fiscalYearStart: 1,
+    createdAt: new Date()
+  });
+  users = signal<CrmUser[]>([]);
+  teams = signal<CrmTeam[]>([]);
+  groups = signal<CrmGroup[]>([]);
+  groupMessages = signal<GroupMessage[]>([]);
+  groupMeetings = signal<GroupMeeting[]>([]);
 
   // Loading state
   isLoading = signal<boolean>(false);
@@ -993,7 +1001,7 @@ export class CrmStateService {
 
   // Command palette quick action — set before navigating so the target page can react
   // (open a create modal, log a call, etc). Consumers read it once via an effect and clear it.
-  pendingQuickAction = signal<{ id: string; payload?: any } | null>(null);
+  pendingQuickAction = signal<{ id: string; payload?: unknown } | null>(null);
 
   // Global currency setting — readable by all components, togglable from settings
   globalCurrency = signal<string>('MAD');
@@ -1075,7 +1083,7 @@ export class CrmStateService {
   };
 
   // Maps the backend's UserResponseDto (snake_case JSON) into a CrmUser
-  private userFromDto(dto: any): CrmUser {
+  private userFromDto(dto: unknown): CrmUser {
     const displayName = dto.display_name ?? '';
     const user: CrmUser = {
       id: dto.id,
@@ -1123,7 +1131,7 @@ export class CrmStateService {
   };
 
   // Team membership isn't stored on the backend Team entity -- it's derived from each AppUser.teamId
-  private teamFromDto(dto: any): CrmTeam {
+  private teamFromDto(dto: unknown): CrmTeam {
     return {
       id: dto.id,
       name: dto.name,
@@ -1156,7 +1164,7 @@ export class CrmStateService {
   // Maps the backend's PartnerResponse (snake_case JSON) into the thin UI-facing Partner shape
   // used for the customers/prospects/vendors lists. Lead-specific detail (leadsData signal) is
   // seeded/managed separately client-side and isn't hydrated from this endpoint.
-  private partnerFromDto(dto: any): Partner {
+  private partnerFromDto(dto: unknown): Partner {
     return {
       id: dto.id,
       name: dto.name,
@@ -1176,7 +1184,7 @@ export class CrmStateService {
   // Builds a CreatePartnerRequest/UpdatePartnerRequest-shaped payload (snake_case, uppercase
   // enums) from the local Partner shape so writes round-trip through the same field names
   // partnerFromDto reads back.
-  private partnerToApiPayload(partner: Partial<Partner> & { name: string }): any {
+  private partnerToApiPayload(partner: Partial<Partner> & { name: string }): unknown {
     return {
       type: partner.type ? CrmStateService.PARTNER_TYPE_TO_BACKEND[partner.type] : undefined,
       name: partner.name,
@@ -1576,7 +1584,7 @@ export class CrmStateService {
         }));
         this.toast.show(`User <strong>${user?.displayName || id}</strong> deactivated`, { type: 'info' });
       },
-      error: (err: any) => this.toast.show(err?.error?.detail || 'Failed to deactivate user', { type: 'error' })
+      error: (err: unknown) => this.toast.show(err?.error?.detail || 'Failed to deactivate user', { type: 'error' })
     });
   }
 
@@ -1723,7 +1731,7 @@ export class CrmStateService {
       title: draft.title,
       description: draft.description,
       scheduledAt: draft.scheduledAt,
-      meetingLink: (draft as any).meetingLink,
+      meetingLink: (draft as unknown).meetingLink,
       attendeeUserIds: draft.attendeeUserIds
     }).subscribe({
       next: (dto) => {
@@ -1860,277 +1868,21 @@ export class CrmStateService {
   }
 
   // Proposal templates
-  proposalTemplates = signal<ProposalTemplate[]>([
-    {
-      id: 'temp1',
-      name: 'Standard Cloud Hosting Services',
-      subject: 'Offre Commerciale - Cloud Hosting',
-      body: 'Voici notre proposition commerciale pour la mise en place d\'une infrastructure Cloud optimisée pour vos besoins.',
-      lines: [
-        { product: 'Serveur Dédié Maroc Cloud', description: 'Serveur Haute Performance localisé à Casablanca', qty: 2, unitPrice: 4500, total: 9000 },
-        { product: 'Installation & Configuration', description: 'Déploiement et migration des données', qty: 1, unitPrice: 6000, total: 6000 }
-      ]
-    },
-    {
-      id: 'temp2',
-      name: 'CRM Customization & Training',
-      subject: 'Offre Commerciale - Intégration CRM Maroc',
-      body: 'Proposition de services professionnels pour le développement spécifique et la formation CRM.',
-      lines: [
-        { product: 'Développement sur-mesure CRM', description: 'Modules spécifiques et intégration locale', qty: 10, unitPrice: 1500, total: 15000 },
-        { product: 'Formation des équipes', description: 'Formation pratique pour le staff de vente', qty: 2, unitPrice: 3000, total: 6000 }
-      ]
-    }
-  ]);
+  proposalTemplates = signal<ProposalTemplate[]>([]);
 
-  // Moroccan data population
-  partners = signal<Partner[]>([
-    { id: 'p1', name: 'Atlas Digital S.A.R.L.', type: 'Prospect', email: 'contact@atlasdigital.ma', phone: '+212-522-458922', comments: 'Grand intérêt pour la migration Cloud.', city: 'Casablanca', createdBy: 'usr_rachid', createdAt: '2026-01-15' },
-    { id: 'p2', name: 'Casablanca Tech Wholesale', type: 'Vendor', email: 'sales@casatechwholesale.ma', phone: '+212-522-897452', comments: 'Fournisseur principal de serveurs physiques.', city: 'Casablanca', createdBy: 'usr_rachid', createdAt: '2026-01-20' },
-    { id: 'p3', name: 'Maroc Telecom Systems', type: 'Customer', email: 'telecomsys@mts.co.ma', phone: '+212-537-778899', comments: 'Client historique pour le support réseau.', city: 'Rabat', createdBy: 'usr_rachid', createdAt: '2026-02-01' },
-    { id: 'p4', name: 'Al-Maghrib Consulting', type: 'Prospect', email: 'hello@almaghribconsulting.ma', phone: '+212-661-345678', comments: 'En attente d\'une offre personnalisée CRM.', city: 'Marrakech', createdBy: 'usr_rachid', createdAt: '2026-03-10' },
-    { id: 'p5', name: 'ABC Technologies', type: 'Customer', email: 'contact@abctech.ma', phone: '+212-522-112233', city: 'Casablanca', createdBy: 'usr_rachid', createdAt: '2026-04-05' }
-  ]);
+  // Partners
+  partners = signal<Partner[]>([]);
 
   // Shared with the Tasks module (TasksService) so the Dashboard always reflects
   // the same live data instead of its own separately-seeded copy.
   tasks = this.tasksService.tasks;
 
   proposals = signal<Proposal[]>([]);
-  deals = signal<Deal[]>([
-    {
-      id: 'd1',
-      title: 'Atlas Digital Cloud Migration Deal',
-      partnerId: 'p1',
-      amount: 13500,
-      stage: 'Invoiced',
-      createdBy: 'usr_fatima',
-      createdAt: '2026-06-01',
-      discount: 10,
-      emailExchange: 'De: contact@atlasdigital.ma\nÀ: y.alami@acme.ma\nSujet: Bon de commande signé\n\nBonjour Youssef,\nVous trouverez ci-joint le BC signé. Merci de procéder à la livraison des serveurs.',
-      orderNumber: 'ORD-2026-0087',
-      dealNumber: 'DL-2026-0045',
-      orderDate: '2026-06-18',
-      requestedDeliveryDate: '2026-07-10',
-      orderStatus: 'Confirmed',
-      customerAccount: 'ACT-ATLAS-99',
-      billingAddress: '120 Boulevard d\'Anfa, Casablanca, Maroc',
-      deliveryAddress: 'Sidi Maârouf Technopark, Bâtiment B, Casablanca, Maroc',
-      contactPerson: 'Karim Atlas',
-      contactEmail: 'contact@atlasdigital.ma',
-      contactPhone: '+212-522-458922',
-      salesPerson: 'Youssef El Alami',
-      salesRegion: 'Maroc - Casa',
-      currency: 'MAD',
-      paymentTerms: '30 Days Net',
-      orderTotalAmount: 13500,
-      vendorAccount: 'VND-CASA-04',
-      purchaseOrderRef: 'PO-2026-0021',
-      warehouseAddress: 'Zone Industrielle Sapino, Nouaceur, Maroc',
-      transportationService: 'Maroc Express Logistics',
-      expectedDeliveryDateVendor: '2026-07-02',
-      deliveryDate: '2026-07-05',
-      activityLog: {
-        calls: [
-          { id: 'c1_1', date: '2026-06-10', duration: 15, callerName: 'Youssef El Alami', summary: 'Introduction call, client interested in migration services.', outcome: 'Interested' },
-          { id: 'c1_2', date: '2026-06-14', duration: 30, callerName: 'Youssef El Alami', summary: 'Detailed scoping of hosting requirements.', outcome: 'Follow-up' }
-        ],
-        emails: [
-          { id: 'e1_1', date: '2026-06-10', from: 'youssef@acme.ma', to: 'contact@atlasdigital.ma', subject: 'Migration Proposal Intro', body: 'Bonjour Karim, merci pour notre échange. Voici notre présentation.', direction: 'sent' },
-          { id: 'e1_2', date: '2026-06-11', from: 'contact@atlasdigital.ma', to: 'youssef@acme.ma', subject: 'Re: Migration Proposal Intro', body: 'Merci Youssef. Nous attendons votre chiffrage détaillé.', direction: 'received' }
-        ],
-        meetings: [
-          { id: 'm1_1', date: '2026-06-15', time: '10:00', title: 'Tech Architecture Alignment', attendees: ['Youssef El Alami', 'Karim Atlas', 'Adnane (Tech Lead)'], location: 'Teams Meeting', summary: 'Aligned on server sizes and backup frequencies. Selected Casablanca Dedicated servers.', type: 'teams' }
-        ],
-        recordings: [
-          { id: 'r1_1', date: '2026-06-15', title: 'Tech Architecture Alignment Recording', meetingLink: 'https://teams.microsoft.com/l/meetup-join/123456', recordingLink: 'https://share.acme.ma/rec/atlas-migration-06-15', duration: '45 mins' }
-        ],
-        notes: [
-          { id: 'n1_1', date: '2026-06-10', author: 'Youssef El Alami', content: 'Client is transitioning away from AWS due to local compliance rules. High sensitivity to local latency.' }
-        ],
-        followUps: [
-          { id: 'f1_1', dueDate: '2026-07-15', title: 'Check invoice status', assignedTo: 'Omar (Finance)', status: 'pending' }
-        ]
-      }
-    },
-    {
-      id: 'd2',
-      title: 'Maroc Telecom Systems Network Upgrade',
-      partnerId: 'p3',
-      amount: 120000,
-      stage: 'Closed Won',
-      createdBy: 'usr_ahmed',
-      createdAt: '2026-05-10',
-      orderNumber: 'ORD-2026-0088',
-      dealNumber: 'DL-2026-0046',
-      orderDate: '2026-06-10',
-      salesPerson: 'Amine Bennani',
-      salesRegion: 'Maroc - Rabat',
-      currency: 'MAD',
-      activityLog: {
-        calls: [
-          { id: 'c2_1', date: '2026-06-05', duration: 10, callerName: 'Amine Bennani', summary: 'Brief status update regarding support renewal.', outcome: 'Interested' }
-        ],
-        emails: [],
-        meetings: [],
-        recordings: [],
-        notes: [
-          { id: 'n2_1', date: '2026-06-05', author: 'Amine Bennani', content: 'Customer very satisfied with network latency and stability.' }
-        ],
-        followUps: []
-      }
-    },
-    {
-      id: 'd3',
-      title: 'Rabat Finance System ERP',
-      partnerId: 'p3',
-      amount: 75000,
-      stage: 'New',
-      createdBy: 'usr_rachid',
-      createdAt: '2026-06-25',
-      orderDate: '2026-06-25',
-      salesPerson: 'Youssef El Alami',
-      salesRegion: 'Maroc - Rabat',
-      currency: 'MAD',
-      activityLog: {
-        calls: [],
-        emails: [],
-        meetings: [
-          { id: 'm3_1', date: '2026-06-25', time: '14:00', title: 'ERP Initial Demo', attendees: ['Youssef El Alami', 'Rachid Bennani'], location: 'Rabat HQ Office 402', summary: 'Showcased the financial reconciliation modules. Client was pleased.', type: 'demo' }
-        ],
-        recordings: [],
-        notes: [],
-        followUps: []
-      }
-    },
-    {
-      id: 'd4',
-      title: 'Tangier Logistics Warehousing Integration',
-      partnerId: 'p1',
-      amount: 45000,
-      stage: 'Closed Lost',
-      createdBy: 'usr_karim',
-      createdAt: '2026-05-12',
-      orderDate: '2026-05-12',
-      salesPerson: 'Amine Bennani',
-      salesRegion: 'Maroc - Tanger',
-      currency: 'MAD',
-      activityLog: {
-        calls: [
-          { id: 'c4_1', date: '2026-05-10', duration: 12, callerName: 'Amine Bennani', summary: 'Negotiation on pricing.', outcome: 'Closed' }
-        ],
-        emails: [],
-        meetings: [],
-        recordings: [],
-        notes: [
-          { id: 'n4_1', date: '2026-05-12', author: 'Amine Bennani', content: 'Lost due to budget limitations. Competitor undercut by 25.' }
-        ],
-        followUps: []
-      }
-    },
-    {
-      id: 'd5',
-      title: 'Fes Smart School WiFi',
-      partnerId: 'p4',
-      amount: 32000,
-      stage: 'Confirmed',
-      createdBy: 'usr_fatima',
-      createdAt: '2026-06-20',
-      orderDate: '2026-07-05',
-      salesPerson: 'Amine Bennani',
-      salesRegion: 'Maroc - Fès',
-      currency: 'MAD',
-      activityLog: {
-        calls: [],
-        emails: [],
-        meetings: [],
-        recordings: [],
-        notes: [],
-        followUps: []
-      }
-    },
-    {
-      id: 'd6',
-      title: 'Agadir Agro ERP',
-      partnerId: 'p4',
-      amount: 95000,
-      stage: 'Awaiting Invoicing',
-      createdBy: 'usr_rachid',
-      createdAt: '2026-06-28',
-      orderDate: '2026-06-28',
-      salesPerson: 'Youssef El Alami',
-      salesRegion: 'Maroc - Agadir',
-      currency: 'MAD',
-      activityLog: {
-        calls: [],
-        emails: [],
-        meetings: [],
-        recordings: [],
-        notes: [],
-        followUps: []
-      }
-    },
-    {
-      id: 'd-p5-1',
-      title: 'ABC Technologies Cloud ERP Migration',
-      partnerId: 'p5',
-      amount: 85000,
-      stage: 'Confirmed',
-      createdBy: 'usr_youssef',
-      createdAt: '2026-06-12',
-      orderDate: '2026-06-20',
-      salesPerson: 'Youssef El Alami',
-      salesRegion: 'Casablanca',
-      currency: 'MAD',
-      activityLog: {
-        calls: [],
-        emails: [],
-        meetings: [
-          { id: 'm-p5-1', date: '2026-06-12', time: '10:00', title: 'ERP Demo & Kickoff', attendees: ['Mohammed Alaoui', 'Youssef El Alami'], location: 'Teams', summary: 'Initial demo of ERP modules.', type: 'demo' },
-          { id: 'm-p5-2', date: '2026-06-15', time: '14:00', title: 'Technical Review', attendees: ['Karim Benali', 'Youssef El Alami'], location: 'Casablanca Office', summary: 'Reviewed IT infrastructure requirements.', type: 'in-person' }
-        ],
-        recordings: [],
-        notes: [],
-        followUps: []
-      }
-    },
-    {
-      id: 'd-p5-2',
-      title: 'ABC Technologies Hardware Procurement',
-      partnerId: 'p5',
-      amount: 42000,
-      stage: 'Invoiced',
-      createdBy: 'usr_nadia',
-      createdAt: '2026-06-18',
-      orderDate: '2026-06-22',
-      salesPerson: 'Amine Bennani',
-      salesRegion: 'Casablanca',
-      currency: 'MAD',
-      activityLog: {
-        calls: [],
-        emails: [],
-        meetings: [
-          { id: 'm-p5-3', date: '2026-06-18', time: '11:00', title: 'Pricing & Negotiation', attendees: ['Samira El Fassi', 'Amine Bennani'], location: 'Teams', summary: 'Agreed on hardware pricing and payment terms.', type: 'teams' }
-        ],
-        recordings: [],
-        notes: [],
-        followUps: []
-      }
-    }
-  ]);
+  deals = signal<Deal[]>([]);
   purchaseOrders = signal<PurchaseOrder[]>([]);
-  invoices = signal<Invoice[]>([
-    { id: 'i1', type: 'Customer', partnerId: 'p1', amount: 13500, status: 'Overdue', dueDate: '2026-07-20', dealId: 'd1', createdBy: 'usr_samira', createdAt: '2026-06-20' },
-    { id: 'i2', type: 'Customer', partnerId: 'p3', amount: 120000, status: 'Paid', dueDate: '2026-06-30', dealId: 'd2', createdBy: 'usr_samira', createdAt: '2026-06-10' },
-    { id: 'inv-p5-1', type: 'Customer', partnerId: 'p5', amount: 85000, status: 'Pending', dueDate: '2026-07-20', dealId: 'd-p5-1', createdBy: 'usr_samira', createdAt: '2026-06-22' },
-    { id: 'inv-p5-2', type: 'Customer', partnerId: 'p5', amount: 42000, status: 'Paid', dueDate: '2026-06-30', dealId: 'd-p5-2', createdBy: 'usr_samira', createdAt: '2026-06-22' }
-  ]);
+  invoices = signal<Invoice[]>([]);
 
-  campaigns = signal<Campaign[]>([
-    { id: 'c1', title: 'Aïd Al-Adha Promotion', type: 'Email', status: 'Completed', targetAudience: 'Prospects', sentCount: 450, createdBy: 'usr_rachid', createdAt: '2026-05-01' },
-    { id: 'c2', title: 'WhatsApp Alert - Nouveautés Cloud', type: 'WhatsApp', status: 'Active', targetAudience: 'Customers', sentCount: 180, createdBy: 'usr_rachid', createdAt: '2026-06-01' },
-    { id: 'c3', title: 'SMS Offres Spéciales PME', type: 'SMS', status: 'Draft', targetAudience: 'Prospects', sentCount: 0, createdBy: 'usr_rachid', createdAt: '2026-06-25' }
-  ]);
+  campaigns = signal<Campaign[]>([]);
 
   // Shared with the Tickets module (TicketsService) so the Dashboard always reflects
   // the same live data instead of its own separately-seeded copy.
@@ -2382,1374 +2134,19 @@ export class CrmStateService {
 
   automationExecutions = signal<AutomationExecutionLog[]>([]);
 
-  leadsData = signal<Lead[]>([
-    {
-      id: 'LEAD-10254',
-      name: 'Ahmed Benali',
-      companyName: 'MedCare Clinics',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 91,
-      temperature: 'Hot',
-      origin: 'Landing Page',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'IT Director',
-      estimatedDealValue: 135000,
-      probability: 70,
-      expectedCloseDate: '2026-07-30',
-      notes: 'Customer wants to replace legacy antivirus across 600 endpoints and requested a technical proof of concept.',
-      createdDate: '2026-06-01',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-24',
-      modifiedBy: 'usr_fatima',
-      company: {
-        industry: 'Healthcare',
-        size: '450 Employees',
-        annualRevenue: '€15M',
-        country: 'Morocco',
-        city: 'Casablanca',
-        address: 'Sidi Maarouf Technopark',
-        officesCount: 3
-      },
-      contacts: [
-        {
-          id: 'lc-1',
-          name: 'Ahmed Benali',
-          jobTitle: 'IT Director',
-          email: 'a.benali@medcare.ma',
-          phone: '+212 661 123456',
-          mobile: '+212 661 123456'
-        }
-      ],
-      activities: [
-        {
-          id: 'la-1',
-          type: 'Meeting',
-          date: '2026-06-24',
-          summary: 'Discovery meeting completed',
-          detail: 'Requested product demo and technical POC.',
-          assignedTo: 'Youness Nasrallah'
-        }
-      ],
-      attachments: [
-        { id: 'lat-1', fileName: 'MedCare_Requirements_RFP.pdf', fileSize: '1.2 MB', uploadedAt: '2026-06-01' }
-      ],
-      statusHistory: [
-        { status: 'New', timestamp: '2026-06-01 10:00', user: 'Sarah Johnson' },
-        { status: 'Qualified', timestamp: '2026-06-24 14:30', user: 'Sarah Johnson' }
-      ],
-      productInterests: [
-        { product: 'Microsoft Defender XDR', solution: 'Cybersecurity Endpoint Protection', usersCount: 600 }
-      ],
-      campaigns: [
-        { source: 'Website Contact Form', campaign: 'Cybersecurity Awareness Webinar' }
-      ]
-    },
-    {
-      id: 'LEAD-000254',
-      name: 'John Smith',
-      companyName: 'ABC Technologies',
-      status: 'New',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 82,
-      temperature: 'Hot',
-      origin: 'Landing Page',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Northern Europe',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'CIO',
-      influencer: 'Infrastructure Manager',
-      financeContact: 'CFO',
-      technicalContact: 'Network Engineer',
-      estimatedDealValue: 150000,
-      probability: 60,
-      expectedCloseDate: '2026-09-30',
-      notes: 'Customer is replacing VMware. Currently evaluating Microsoft Azure and AWS. Decision expected after internal budget approval in July. Main concern is migration downtime.',
-      createdDate: '2026-06-01',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-12',
-      modifiedBy: 'usr_ahmed',
-      company: {
-        industry: 'Healthcare',
-        size: '250 employees',
-        annualRevenue: '€25M',
-        country: 'UK',
-        city: 'London',
-        address: '15 Oxford Street',
-        officesCount: 5
-      },
-      contacts: [
-        {
-          id: 'lc-2',
-          name: 'John Smith',
-          jobTitle: 'IT Manager',
-          email: 'john.smith@abctech.com',
-          phone: '+44 7912 345678',
-          mobile: '+44 7912 987654',
-          website: 'www.abctech.com',
-          linkedin: 'linkedin.com/in/johnsmith'
-        }
-      ],
-      activities: [
-        {
-          id: 'la-2',
-          type: 'Call',
-          date: '2026-06-12',
-          summary: 'Phone Call with CIO',
-          detail: 'Discussed high maintenance costs of legacy infrastructure. 4 calls, 9 emails sent.',
-          assignedTo: 'Sarah Johnson'
-        }
-      ],
-      attachments: [
-        { id: 'lat-2', fileName: 'VMware_Infrastructure_Audit.pdf', fileSize: '2.5 MB', uploadedAt: '2026-06-02' }
-      ],
-      statusHistory: [
-        { status: 'New', timestamp: '2026-06-01 09:00', user: 'Sarah Johnson' }
-      ],
-      productInterests: [
-        { product: 'Microsoft Azure', solution: 'Cloud Migration', usersCount: 500 }
-      ],
-      campaigns: [
-        { source: 'Website', campaign: 'Cybersecurity Webinar 2026', referralPartner: 'Arrow ECS', tradeShow: 'GITEX', marketingCampaign: 'Email Campaign June', socialMedia: 'LinkedIn', salesReferral: 'Existing Customer' }
-      ]
-    },
-    {
-      id: 'LEAD-000255',
-      name: 'Fatima Zahra El Amrani',
-      companyName: 'Maroc Telecom Solutions',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 78,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'CTO',
-      estimatedDealValue: 250000,
-      probability: 50,
-      expectedCloseDate: '2026-08-15',
-      notes: 'Interested in full cloud migration and managed services.',
-      createdDate: '2026-06-05',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-20',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Telecommunications', size: '2000 Employees', annualRevenue: '€80M', country: 'Morocco', city: 'Rabat', address: 'Agdal District', officesCount: 8 },
-      contacts: [{ id: 'lc-3', name: 'Fatima Zahra El Amrani', jobTitle: 'CTO', email: 'f.elamrani@maroctelecom.ma', phone: '+212 661 234567' }],
-      activities: [{ id: 'la-3', type: 'Call', date: '2026-06-18', summary: 'Initial call with CTO', detail: 'Discussed cloud migration strategy and timeline.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-3', fileName: 'Maroc_Telecom_RFP.pdf', fileSize: '3.1 MB', uploadedAt: '2026-06-05' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-05 09:00', user: 'Youness Nasrallah' }, { status: 'Meeting Scheduled', timestamp: '2026-06-20 11:30', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Cloud Migration & Managed Services', usersCount: 2000 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Cloud Transformation Summit 2026' }]
-    },
-    {
-      id: 'LEAD-000256',
-      name: 'Karim Idrissi',
-      companyName: 'Attijari Finance Group',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 45,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'VP Technology',
-      estimatedDealValue: 95000,
-      probability: 25,
-      expectedCloseDate: '2026-10-01',
-      notes: 'Evaluating cybersecurity solutions for their banking infrastructure.',
-      createdDate: '2026-06-10',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-10',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Banking', size: '5000 Employees', annualRevenue: '€200M', country: 'Morocco', city: 'Casablanca', address: 'Maarif', officesCount: 20 },
-      contacts: [{ id: 'lc-4', name: 'Karim Idrissi', jobTitle: 'VP Technology', email: 'k.idrissi@attijari.ma', phone: '+212 522 123456' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-10 14:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Defender XDR', solution: 'Cybersecurity Threat Protection', usersCount: 5000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'GITEX Africa 2026', tradeShow: 'GITEX Africa' }]
-    },
-    {
-      id: 'LEAD-000257',
-      name: 'Youssef El Haddad',
-      companyName: 'ONEE (National Electricity Office)',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 88,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Proposal Preparation',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Public Sector',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'IT Director',
-      estimatedDealValue: 420000,
-      probability: 65,
-      expectedCloseDate: '2026-09-15',
-      notes: 'Large-scale infrastructure modernization project. Budget already approved.',
-      createdDate: '2026-05-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-25',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Energy', size: '12000 Employees', annualRevenue: '€500M', country: 'Morocco', city: 'Casablanca', address: 'Twin Center', officesCount: 15 },
-      contacts: [{ id: 'lc-5', name: 'Youssef El Haddad', jobTitle: 'IT Director', email: 'y.elhaddad@onee.ma', phone: '+212 522 987654' }],
-      activities: [{ id: 'la-5', type: 'Meeting', date: '2026-06-22', summary: 'Technical requirements workshop', detail: 'Full day workshop covering all technical requirements.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-5', fileName: 'ONEE_Infrastructure_Report.pdf', fileSize: '5.2 MB', uploadedAt: '2026-05-20' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-20 08:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-22 17:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Hybrid Cloud Infrastructure', usersCount: 12000 }],
-      campaigns: [{ source: 'Referral', campaign: 'Partner Referral Program', referralPartner: 'IBM Morocco' }]
-    },
-    {
-      id: 'LEAD-000258',
-      name: 'Sofia El Bakkali',
-      companyName: 'Label\'Vie Supermarkets',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 55,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Commercial',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'CIO',
-      estimatedDealValue: 180000,
-      probability: 35,
-      expectedCloseDate: '2026-11-01',
-      notes: 'Looking for POS system modernization and e-commerce integration.',
-      createdDate: '2026-06-15',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-18',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Retail', size: '3500 Employees', annualRevenue: '€150M', country: 'Morocco', city: 'Casablanca', address: 'Ain Sebaa', officesCount: 45 },
-      contacts: [{ id: 'lc-6', name: 'Sofia El Bakkali', jobTitle: 'CIO', email: 's.bakkali@labelvie.ma', phone: '+212 522 456789' }],
-      activities: [{ id: 'la-6', type: 'Email', date: '2026-06-16', summary: 'Introductory email sent', detail: 'Sent overview of our retail cloud solutions.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-15 10:00', user: 'Ahmed Bennis' }, { status: 'Contacted', timestamp: '2026-06-16 15:30', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Dynamics 365', solution: 'Retail POS & E-commerce', usersCount: 3500 }],
-      campaigns: [{ source: 'Marketing Campaign', campaign: 'Retail Digital Transformation', marketingCampaign: 'Q2 Retail Campaign' }]
-    },
-    {
-      id: 'LEAD-000259',
-      name: 'Hicham Benzekri',
-      companyName: 'OCP Group',
-      status: 'Proposal Requested',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 92,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Proposal Submitted',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Chief Digital Officer',
-      estimatedDealValue: 750000,
-      probability: 75,
-      expectedCloseDate: '2026-08-01',
-      notes: 'Strategic partnership opportunity. Proposal for full digital transformation submitted.',
-      createdDate: '2026-04-01',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Mining & Chemicals', size: '25000 Employees', annualRevenue: '€5B', country: 'Morocco', city: 'Khouribga', address: 'Industrial Zone', officesCount: 30 },
-      contacts: [{ id: 'lc-7', name: 'Hicham Benzekri', jobTitle: 'Chief Digital Officer', email: 'h.benzekri@ocp.ma', phone: '+212 661 789012' }],
-      activities: [{ id: 'la-7', type: 'Meeting', date: '2026-06-25', summary: 'Final proposal presentation', detail: 'Presented the full solution architecture to CDO and board.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-7', fileName: 'OCP_Proposal_v3.pdf', fileSize: '8.7 MB', uploadedAt: '2026-06-25' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-04-01 09:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-05-15 14:00', user: 'Youness Nasrallah' }, { status: 'Proposal Requested', timestamp: '2026-06-25 16:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Full Digital Transformation', usersCount: 25000 }],
-      campaigns: [{ source: 'Referral', campaign: 'Executive Partnership Program', referralPartner: 'Deloitte Morocco' }]
-    },
-    {
-      id: 'LEAD-000260',
-      name: 'Nadia Tazi',
-      companyName: 'Royal Air Maroc',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 72,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'VP IT Operations',
-      estimatedDealValue: 310000,
-      probability: 45,
-      expectedCloseDate: '2026-09-30',
-      notes: 'Modernizing legacy booking and crew management systems.',
-      createdDate: '2026-06-12',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-22',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Aviation', size: '4500 Employees', annualRevenue: '€400M', country: 'Morocco', city: 'Casablanca', address: 'Mohammed V Airport', officesCount: 12 },
-      contacts: [{ id: 'lc-8', name: 'Nadia Tazi', jobTitle: 'VP IT Operations', email: 'n.tazi@royalairmaroc.ma', phone: '+212 522 334455' }],
-      activities: [{ id: 'la-8', type: 'Call', date: '2026-06-20', summary: 'Discovery call with IT Ops team', detail: 'Discussed current pain points and system architecture.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-12 11:00', user: 'Ahmed Bennis' }, { status: 'Meeting Scheduled', timestamp: '2026-06-22 10:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Legacy Modernization', usersCount: 4500 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Aviation Digital Summit' }]
-    },
-    {
-      id: 'LEAD-000261',
-      name: 'Mohamed Bennis',
-      companyName: 'BMCE Capital',
-      status: 'Lost',
-      qualification: 'Unqualified',
-      priority: 'Low',
-      score: 28,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Closed Lost',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Risk Manager',
-      estimatedDealValue: 50000,
-      probability: 0,
-      expectedCloseDate: '2026-05-01',
-      notes: 'Lost to competitor. Budget constraints and internal compliance issues.',
-      createdDate: '2026-03-01',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-05-01',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Financial Services', size: '800 Employees', annualRevenue: '€50M', country: 'Morocco', city: 'Casablanca', address: 'Hassan II Avenue', officesCount: 5 },
-      contacts: [{ id: 'lc-9', name: 'Mohamed Bennis', jobTitle: 'Risk Manager', email: 'm.bennis@bmcecapital.ma', phone: '+212 522 556677' }],
-      activities: [{ id: 'la-9', type: 'Meeting', date: '2026-04-15', summary: 'Final negotiation meeting', detail: 'Customer decided to go with a competitor solution.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-03-01 08:00', user: 'Fatima B.' }, { status: 'Lost', timestamp: '2026-05-01 16:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft 365', solution: 'Compliance & Security', usersCount: 800 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Financial Services Webinar' }]
-    },
-    {
-      id: 'LEAD-000262',
-      name: 'Leila El Fassi',
-      companyName: 'CGI Morocco',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 41,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'IT Manager',
-      estimatedDealValue: 120000,
-      probability: 20,
-      expectedCloseDate: '2026-12-01',
-      notes: 'Exploring options for IT infrastructure outsourcing.',
-      createdDate: '2026-06-28',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'IT Services', size: '1200 Employees', annualRevenue: '€60M', country: 'Morocco', city: 'Casablanca', address: 'Sidi Maarouf', officesCount: 4 },
-      contacts: [{ id: 'lc-10', name: 'Leila El Fassi', jobTitle: 'IT Manager', email: 'l.elfassi@cgi.ma', phone: '+212 661 890123' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-28 09:30', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'IT Infrastructure Outsourcing', usersCount: 1200 }],
-      campaigns: [{ source: 'Referral', campaign: 'Partner Referral', referralPartner: 'HPE Morocco' }]
-    },
-    {
-      id: 'LEAD-000263',
-      name: 'Amine Berrada',
-      companyName: 'Lydec (LYDEC)',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 52,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Public Sector',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'Digital Transformation Director',
-      estimatedDealValue: 200000,
-      probability: 30,
-      expectedCloseDate: '2026-11-15',
-      notes: 'Smart grid and IoT infrastructure project. Needs Azure IoT solutions.',
-      createdDate: '2026-06-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-24',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Utilities', size: '3000 Employees', annualRevenue: '€120M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Ghandi', officesCount: 6 },
-      contacts: [{ id: 'lc-11', name: 'Amine Berrada', jobTitle: 'Digital Transformation Director', email: 'a.berrada@lydec.ma', phone: '+212 522 112233' }],
-      activities: [{ id: 'la-11', type: 'Email', date: '2026-06-22', summary: 'Sent IoT solution overview', detail: 'Shared Azure IoT Hub and Digital Twins documentation.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-20 13:00', user: 'Fatima B.' }, { status: 'Contacted', timestamp: '2026-06-22 10:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'Smart Grid Infrastructure', usersCount: 3000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Smart Cities Expo Morocco', tradeShow: 'Smart Cities Expo' }]
-    },
-    {
-      id: 'LEAD-000264',
-      name: 'Rachid Ouazzani',
-      companyName: 'Mutuelle Générale de Prévoyance',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 80,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Technical Evaluation',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Chief Innovation Officer',
-      estimatedDealValue: 280000,
-      probability: 60,
-      expectedCloseDate: '2026-08-30',
-      notes: 'Health insurance digital platform modernization. Strong interest in Power Platform.',
-      createdDate: '2026-05-10',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-26',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Insurance', size: '1500 Employees', annualRevenue: '€90M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Mohammed VI', officesCount: 7 },
-      contacts: [{ id: 'lc-12', name: 'Rachid Ouazzani', jobTitle: 'Chief Innovation Officer', email: 'r.ouazzani@mgp.ma', phone: '+212 661 445566' }],
-      activities: [{ id: 'la-12', type: 'Meeting', date: '2026-06-20', summary: 'Platform demo session', detail: 'Demonstrated Power Platform and Dynamics 365 capabilities.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-12', fileName: 'MGP_Requirements_Spec.pdf', fileSize: '2.1 MB', uploadedAt: '2026-05-10' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-10 10:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-20 15:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Power Platform', solution: 'Insurance Digital Platform', usersCount: 1500 }],
-      campaigns: [{ source: 'Marketing Campaign', campaign: 'Insurance Tech Summit', marketingCampaign: 'Q2 Insurance Campaign' }]
-    },
-    {
-      id: 'LEAD-000265',
-      name: 'Imane Lahlou',
-      companyName: 'Al Akhawayn University',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 35,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Education',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'VP Academic Affairs',
-      estimatedDealValue: 75000,
-      probability: 15,
-      expectedCloseDate: '2026-12-31',
-      notes: 'Looking for student collaboration and e-learning platform upgrades.',
-      createdDate: '2026-07-01',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-01',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Education', size: '4000 Employees', annualRevenue: '€40M', country: 'Morocco', city: 'Ifrane', address: 'University Campus', officesCount: 3 },
-      contacts: [{ id: 'lc-13', name: 'Imane Lahlou', jobTitle: 'VP Academic Affairs', email: 'i.lahlou@aui.ma', phone: '+212 535 778899' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-01 11:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft 365 Education', solution: 'E-Learning Platform', usersCount: 4000 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Education Digital Transformation' }]
-    },
-    {
-      id: 'LEAD-000266',
-      name: 'Omar Gharbi',
-      companyName: 'Sanlam Morocco',
-      status: 'Attempted Contact',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 48,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Follow-up Needed',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Head of IT',
-      estimatedDealValue: 160000,
-      probability: 30,
-      expectedCloseDate: '2026-10-15',
-      notes: 'Called twice, no response. Need to try alternative contact methods.',
-      createdDate: '2026-06-18',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-25',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Insurance', size: '600 Employees', annualRevenue: '€35M', country: 'Morocco', city: 'Casablanca', address: 'Anfa', officesCount: 3 },
-      contacts: [{ id: 'lc-14', name: 'Omar Gharbi', jobTitle: 'Head of IT', email: 'o.gharbi@sanlam.ma', phone: '+212 522 998877' }],
-      activities: [{ id: 'la-14', type: 'Call', date: '2026-06-24', summary: 'First outreach call', detail: 'Left voicemail. Will call back next week.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-18 14:00', user: 'Ahmed Bennis' }, { status: 'Attempted Contact', timestamp: '2026-06-24 16:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft 365', solution: 'Insurance Core Systems', usersCount: 600 }],
-      campaigns: [{ source: 'Referral', campaign: 'Partner Introduction', referralPartner: 'Capgemini Morocco' }]
-    },
-    {
-      id: 'LEAD-000267',
-      name: 'Hind El Maazouz',
-      companyName: 'Orange Maroc',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 70,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Network Director',
-      estimatedDealValue: 350000,
-      probability: 40,
-      expectedCloseDate: '2026-09-01',
-      notes: '5G network infrastructure management and analytics platform.',
-      createdDate: '2026-06-08',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-26',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Telecommunications', size: '3000 Employees', annualRevenue: '€250M', country: 'Morocco', city: 'Casablanca', address: 'Technopark', officesCount: 10 },
-      contacts: [{ id: 'lc-15', name: 'Hind El Maazouz', jobTitle: 'Network Director', email: 'h.maazouz@orange.ma', phone: '+212 661 667788' }],
-      activities: [{ id: 'la-15', type: 'Call', date: '2026-06-22', summary: 'Initial discovery call', detail: 'Discussed network monitoring and analytics requirements.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-08 09:00', user: 'Fatima B.' }, { status: 'Meeting Scheduled', timestamp: '2026-06-26 11:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Network Analytics Platform', usersCount: 3000 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Telco Innovation Summit' }]
-    },
-    {
-      id: 'LEAD-000268',
-      name: 'Said El Kholti',
-      companyName: 'CIH Bank',
-      status: 'Disqualified',
-      qualification: 'Unqualified',
-      priority: 'Low',
-      score: 15,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Closed Disqualified',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Procurement Manager',
-      estimatedDealValue: 0,
-      probability: 0,
-      expectedCloseDate: '',
-      notes: 'Already in contract with a competitor for the next 3 years. Disqualified for now.',
-      createdDate: '2026-04-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-05-10',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Banking', size: '2000 Employees', annualRevenue: '€100M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Zerktouni', officesCount: 50 },
-      contacts: [{ id: 'lc-16', name: 'Said El Kholti', jobTitle: 'Procurement Manager', email: 's.elkholti@cih.ma', phone: '+212 522 445566' }],
-      activities: [{ id: 'la-16', type: 'Email', date: '2026-05-01', summary: 'Follow-up email', detail: 'No interest, already committed to competitor.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-04-20 10:00', user: 'Fatima B.' }, { status: 'Disqualified', timestamp: '2026-05-10 14:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Banking Cloud Platform', usersCount: 2000 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Banking Tech Forum' }]
-    },
-    {
-      id: 'LEAD-000269',
-      name: 'Zineb El Ouafi',
-      companyName: 'Managem Mining Group',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 62,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'VP Digital Mining',
-      estimatedDealValue: 380000,
-      probability: 25,
-      expectedCloseDate: '2026-12-15',
-      notes: 'Digital mining transformation project. Interested in IoT, AI, and predictive maintenance.',
-      createdDate: '2026-07-02',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-02',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Mining', size: '5000 Employees', annualRevenue: '€300M', country: 'Morocco', city: 'Marrakech', address: 'Industrial Complex', officesCount: 8 },
-      contacts: [{ id: 'lc-17', name: 'Zineb El Ouafi', jobTitle: 'VP Digital Mining', email: 'z.ouafi@managem.ma', phone: '+212 524 112233' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-02 08:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Azure AI', solution: 'Predictive Maintenance', usersCount: 5000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Mining Innovation Expo', tradeShow: 'Mining Tech Expo' }]
-    },
-    {
-      id: 'LEAD-000270',
-      name: 'Driss El Asri',
-      companyName: 'Université Hassan II',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 32,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Education',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Dean of IT Faculty',
-      estimatedDealValue: 45000,
-      probability: 20,
-      expectedCloseDate: '2026-11-30',
-      notes: 'Need for research computing cluster and student lab upgrades.',
-      createdDate: '2026-06-25',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Education', size: '50000 Students', annualRevenue: '€20M', country: 'Morocco', city: 'Casablanca', address: 'Ben M\'sik', officesCount: 5 },
-      contacts: [{ id: 'lc-18', name: 'Driss El Asri', jobTitle: 'Dean of IT Faculty', email: 'd.asri@uh2c.ma', phone: '+212 522 334466' }],
-      activities: [{ id: 'la-18', type: 'Email', date: '2026-06-26', summary: 'Sent Azure for Education info', detail: 'Shared information about Azure for Research program.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-25 09:00', user: 'Fatima B.' }, { status: 'Contacted', timestamp: '2026-06-26 15:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure for Research', solution: 'Academic Computing', usersCount: 50000 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Education Webinar Series' }]
-    },
-    {
-      id: 'LEAD-000271',
-      name: 'Khadija Benjelloun',
-      companyName: 'Holmarcom Group',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 85,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Technical Evaluation',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Group CIO',
-      estimatedDealValue: 450000,
-      probability: 60,
-      expectedCloseDate: '2026-09-15',
-      notes: 'Conglomerate-wide digital transformation project across all subsidiaries.',
-      createdDate: '2026-05-01',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-30',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Conglomerate', size: '8000 Employees', annualRevenue: '€500M', country: 'Morocco', city: 'Casablanca', address: 'Excellence Tower', officesCount: 25 },
-      contacts: [{ id: 'lc-19', name: 'Khadija Benjelloun', jobTitle: 'Group CIO', email: 'k.benjelloun@holmarcom.ma', phone: '+212 661 223344' }],
-      activities: [{ id: 'la-19', type: 'Meeting', date: '2026-06-28', summary: 'Strategic planning workshop', detail: 'Full day workshop on enterprise architecture and cloud strategy.', assignedTo: 'Sarah Johnson' }],
-      attachments: [{ id: 'lat-19', fileName: 'Holmarcom_Strategic_Plan.pdf', fileSize: '4.5 MB', uploadedAt: '2026-05-01' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-01 08:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-28 17:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Enterprise Cloud Transformation', usersCount: 8000 }],
-      campaigns: [{ source: 'Referral', campaign: 'Executive Program', referralPartner: 'McKinsey Morocco' }]
-    },
-    {
-      id: 'LEAD-000272',
-      name: 'Abdelkader Laâroussi',
-      companyName: 'INA (National Institute of Agronomy)',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 22,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Education',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Research Director',
-      estimatedDealValue: 25000,
-      probability: 10,
-      expectedCloseDate: '2026-12-31',
-      notes: 'Small-scale research data management project.',
-      createdDate: '2026-07-03',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-03',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Agriculture Research', size: '500 Employees', annualRevenue: '€5M', country: 'Morocco', city: 'Rabat', address: 'Agdal', officesCount: 2 },
-      contacts: [{ id: 'lc-20', name: 'Abdelkader Laâroussi', jobTitle: 'Research Director', email: 'a.laaroussi@ina.ma', phone: '+212 537 556677' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-03 10:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft 365', solution: 'Research Data Management', usersCount: 500 }],
-      campaigns: [{ source: 'Website', campaign: 'Academic Outreach Program' }]
-    },
-    {
-      id: 'LEAD-000273',
-      name: 'Myriam El Founti',
-      companyName: 'BIOGALA Pharma',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 68,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Life Sciences',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'VP R&D',
-      estimatedDealValue: 210000,
-      probability: 45,
-      expectedCloseDate: '2026-10-01',
-      notes: 'Pharmaceutical company looking for lab data management and compliance solution.',
-      createdDate: '2026-06-15',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-29',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Pharmaceutical', size: '1200 Employees', annualRevenue: '€75M', country: 'Morocco', city: 'Casablanca', address: 'Zenata', officesCount: 4 },
-      contacts: [{ id: 'lc-21', name: 'Myriam El Founti', jobTitle: 'VP R&D', email: 'm.elfounti@biogala.ma', phone: '+212 522 778899' }],
-      activities: [{ id: 'la-21', type: 'Call', date: '2026-06-28', summary: 'Initial qualification call', detail: 'Discussed GxP compliance and lab data management requirements.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-15 11:00', user: 'Fatima B.' }, { status: 'Meeting Scheduled', timestamp: '2026-06-29 10:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft 365', solution: 'Lab Data Management & Compliance', usersCount: 1200 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Pharma Tech Expo', tradeShow: 'Pharma Innovation Summit' }]
-    },
-    {
-      id: 'LEAD-000274',
-      name: 'Taha Mesbahi',
-      companyName: 'Nareva Energy',
-      status: 'Proposal Requested',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 86,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Proposal Submitted',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'Chief Technical Officer',
-      estimatedDealValue: 520000,
-      probability: 70,
-      expectedCloseDate: '2026-08-15',
-      notes: 'Renewable energy monitoring and control systems. Proposal for SCADA modernization submitted.',
-      createdDate: '2026-04-15',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Energy', size: '2500 Employees', annualRevenue: '€180M', country: 'Morocco', city: 'Rabat', address: 'Hay Riad', officesCount: 6 },
-      contacts: [{ id: 'lc-22', name: 'Taha Mesbahi', jobTitle: 'Chief Technical Officer', email: 't.mesbahi@nareva.ma', phone: '+212 537 991122' }],
-      activities: [{ id: 'la-22', type: 'Meeting', date: '2026-06-25', summary: 'Proposal presentation', detail: 'Presented SCADA modernization proposal to technical team.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-22', fileName: 'Nareva_SCADA_Proposal.pdf', fileSize: '6.3 MB', uploadedAt: '2026-06-25' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-04-15 09:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-10 14:00', user: 'Youness Nasrallah' }, { status: 'Proposal Requested', timestamp: '2026-06-25 16:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'SCADA Modernization', usersCount: 2500 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Renewable Energy Summit' }]
-    },
-    {
-      id: 'LEAD-000275',
-      name: 'Mounia El Alami',
-      companyName: 'Wafasalaf',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 50,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Digital Banking Director',
-      estimatedDealValue: 175000,
-      probability: 30,
-      expectedCloseDate: '2026-11-01',
-      notes: 'Consumer finance company looking to modernize loan origination system.',
-      createdDate: '2026-06-22',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-06-26',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Financial Services', size: '900 Employees', annualRevenue: '€55M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Abdelmoumen', officesCount: 15 },
-      contacts: [{ id: 'lc-23', name: 'Mounia El Alami', jobTitle: 'Digital Banking Director', email: 'm.elalami@wafasalaf.ma', phone: '+212 522 556688' }],
-      activities: [{ id: 'la-23', type: 'Email', date: '2026-06-23', summary: 'Introductory email', detail: 'Sent overview of Dynamics 365 for financial services.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-22 10:00', user: 'Ahmed Bennis' }, { status: 'Contacted', timestamp: '2026-06-23 14:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Dynamics 365', solution: 'Loan Origination Modernization', usersCount: 900 }],
-      campaigns: [{ source: 'Marketing Campaign', campaign: 'Fintech Connect', marketingCampaign: 'Q2 Financial Campaign' }]
-    },
-    {
-      id: 'LEAD-000276',
-      name: 'Ahmed Tazi',
-      companyName: 'Fiat Chrysler Morocco',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 82,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Technical Evaluation',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Plant IT Director',
-      estimatedDealValue: 320000,
-      probability: 55,
-      expectedCloseDate: '2026-09-30',
-      notes: 'Automotive manufacturing plant needs IIoT platform for production line monitoring.',
-      createdDate: '2026-05-25',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-27',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Automotive', size: '3500 Employees', annualRevenue: '€200M', country: 'Morocco', city: 'Tangier', address: 'Free Zone', officesCount: 2 },
-      contacts: [{ id: 'lc-24', name: 'Ahmed Tazi', jobTitle: 'Plant IT Director', email: 'a.tazi@fcamorocco.ma', phone: '+212 539 112233' }],
-      activities: [{ id: 'la-24', type: 'Meeting', date: '2026-06-25', summary: 'Site visit and assessment', detail: 'Visited the plant to assess current IIoT infrastructure.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-24', fileName: 'FCA_Production_Requirements.pdf', fileSize: '3.8 MB', uploadedAt: '2026-05-25' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-25 08:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-25 17:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'IIoT Production Monitoring', usersCount: 3500 }],
-      campaigns: [{ source: 'Referral', campaign: 'Automotive Industry Program', referralPartner: 'Siemens Morocco' }]
-    },
-    {
-      id: 'LEAD-000277',
-      name: 'Salma Benbrahim',
-      companyName: 'Marjane Holding',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 40,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Commercial',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'E-commerce Director',
-      estimatedDealValue: 140000,
-      probability: 20,
-      expectedCloseDate: '2026-12-01',
-      notes: 'Looking to enhance omnichannel retail experience and supply chain optimization.',
-      createdDate: '2026-07-01',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-01',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Retail', size: '6000 Employees', annualRevenue: '€250M', country: 'Morocco', city: 'Casablanca', address: 'Ain Sebaa', officesCount: 30 },
-      contacts: [{ id: 'lc-25', name: 'Salma Benbrahim', jobTitle: 'E-commerce Director', email: 's.benbrahim@marjane.ma', phone: '+212 522 445577' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-01 13:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Dynamics 365', solution: 'Omnichannel Retail Platform', usersCount: 6000 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Retail Innovation Summit' }]
-    },
-    {
-      id: 'LEAD-000278',
-      name: 'Younes El Fassi',
-      companyName: 'Crédit Immobilier et Hôtelier',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 58,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'VP Digital',
-      estimatedDealValue: 190000,
-      probability: 40,
-      expectedCloseDate: '2026-10-15',
-      notes: 'Digital banking platform modernization. Interested in cloud-native solutions.',
-      createdDate: '2026-06-10',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Banking', size: '2500 Employees', annualRevenue: '€120M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Mohammed V', officesCount: 80 },
-      contacts: [{ id: 'lc-26', name: 'Younes El Fassi', jobTitle: 'VP Digital', email: 'y.elfassi@cih.ma', phone: '+212 522 332211' }],
-      activities: [{ id: 'la-26', type: 'Call', date: '2026-06-26', summary: 'Pre-meeting discovery call', detail: 'Prepared agenda for the upcoming discovery meeting.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-10 09:00', user: 'Fatima B.' }, { status: 'Meeting Scheduled', timestamp: '2026-06-28 11:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Digital Banking Platform', usersCount: 2500 }],
-      campaigns: [{ source: 'Marketing Campaign', campaign: 'Banking Digital Summit', marketingCampaign: 'Q2 Banking Campaign' }]
-    },
-    {
-      id: 'LEAD-000279',
-      name: 'Amina Belkadi',
-      companyName: 'LafargeHolcim Morocco',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 76,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Technical Evaluation',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'Industrial IT Director',
-      estimatedDealValue: 290000,
-      probability: 55,
-      expectedCloseDate: '2026-09-15',
-      notes: 'Cement plant automation and predictive maintenance project. Azure IoT and AI.',
-      createdDate: '2026-05-15',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-29',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Construction Materials', size: '4000 Employees', annualRevenue: '€300M', country: 'Morocco', city: 'Casablanca', address: 'Bouskoura', officesCount: 5 },
-      contacts: [{ id: 'lc-27', name: 'Amina Belkadi', jobTitle: 'Industrial IT Director', email: 'a.belkadi@lafargeholcim.ma', phone: '+212 522 667788' }],
-      activities: [{ id: 'la-27', type: 'Meeting', date: '2026-06-20', summary: 'Technical requirement gathering', detail: 'Gathered requirements for predictive maintenance system.', assignedTo: 'Sarah Johnson' }],
-      attachments: [{ id: 'lat-27', fileName: 'Lafarge_POC_Scope.pdf', fileSize: '2.8 MB', uploadedAt: '2026-05-15' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-15 10:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-20 16:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure AI', solution: 'Predictive Maintenance & Automation', usersCount: 4000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Industrial Automation Expo', tradeShow: 'Smart Manufacturing Expo' }]
-    },
-    {
-      id: 'LEAD-000280',
-      name: 'Rachida El Mokri',
-      companyName: 'Aradei Capital',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 30,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Real Estate IT Manager',
-      estimatedDealValue: 60000,
-      probability: 15,
-      expectedCloseDate: '2026-12-31',
-      notes: 'Real estate firm exploring property management system upgrade.',
-      createdDate: '2026-07-02',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-02',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Real Estate', size: '300 Employees', annualRevenue: '€25M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Anfa', officesCount: 3 },
-      contacts: [{ id: 'lc-28', name: 'Rachida El Mokri', jobTitle: 'IT Manager', email: 'r.elmokri@aradei.ma', phone: '+212 522 998800' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-02 14:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Dynamics 365', solution: 'Property Management System', usersCount: 300 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Real Estate Tech Forum' }]
-    },
-    {
-      id: 'LEAD-000281',
-      name: 'Hassan Boutaleb',
-      companyName: 'Marsa Maroc',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 65,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Public Sector',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'Port IT Director',
-      estimatedDealValue: 280000,
-      probability: 35,
-      expectedCloseDate: '2026-11-01',
-      notes: 'Port management system modernization and smart port initiative.',
-      createdDate: '2026-06-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Transport & Logistics', size: '3500 Employees', annualRevenue: '€160M', country: 'Morocco', city: 'Casablanca', address: 'Port of Casablanca', officesCount: 5 },
-      contacts: [{ id: 'lc-29', name: 'Hassan Boutaleb', jobTitle: 'Port IT Director', email: 'h.boutaleb@marsamaroc.ma', phone: '+212 522 334477' }],
-      activities: [{ id: 'la-29', type: 'Email', date: '2026-06-25', summary: 'Sent smart port solution overview', detail: 'Shared Azure Digital Twins and IoT for port management.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-20 09:00', user: 'Fatima B.' }, { status: 'Contacted', timestamp: '2026-06-25 14:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'Smart Port Management', usersCount: 3500 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Smart Ports Conference', tradeShow: 'Maritime Innovation Expo' }]
-    },
-    {
-      id: 'LEAD-000282',
-      name: 'Nabil Choukrallah',
-      companyName: 'Dell Technologies Morocco',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 38,
-      temperature: 'Cold',
-      origin: 'Marketing Campaign',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Partner Manager',
-      estimatedDealValue: 90000,
-      probability: 20,
-      expectedCloseDate: '2026-12-01',
-      notes: 'Partner opportunity - co-selling Azure infrastructure solutions.',
-      createdDate: '2026-07-01',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-01',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Technology', size: '200 Employees', annualRevenue: '€45M', country: 'Morocco', city: 'Casablanca', address: 'Technopark', officesCount: 1 },
-      contacts: [{ id: 'lc-30', name: 'Nabil Choukrallah', jobTitle: 'Partner Manager', email: 'n.choukrallah@dell.ma', phone: '+212 522 998811' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-01 15:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Azure', solution: 'Co-sell Infrastructure', usersCount: 200 }],
-      campaigns: [{ source: 'Referral', campaign: 'Partner Co-sell Program' }]
-    },
-    {
-      id: 'LEAD-000283',
-      name: 'Asmae El Harti',
-      companyName: 'Centrale Danone',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 60,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Supply Chain Director',
-      estimatedDealValue: 230000,
-      probability: 40,
-      expectedCloseDate: '2026-10-01',
-      notes: 'FMCG supply chain optimization project. Looking for AI-driven demand forecasting.',
-      createdDate: '2026-06-18',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-29',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Food & Beverage', size: '2500 Employees', annualRevenue: '€180M', country: 'Morocco', city: 'Casablanca', address: 'Bouskoura', officesCount: 4 },
-      contacts: [{ id: 'lc-31', name: 'Asmae El Harti', jobTitle: 'Supply Chain Director', email: 'a.elharti@danone.ma', phone: '+212 522 223344' }],
-      activities: [{ id: 'la-31', type: 'Call', date: '2026-06-26', summary: 'Initial supply chain discussion', detail: 'Discussed AI demand forecasting and inventory optimization.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-18 11:00', user: 'Fatima B.' }, { status: 'Meeting Scheduled', timestamp: '2026-06-29 14:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft Azure AI', solution: 'Supply Chain Optimization', usersCount: 2500 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'FMCG Digital Summit' }]
-    },
-    {
-      id: 'LEAD-000284',
-      name: 'Majid Ben Amor',
-      companyName: 'STMicroelectronics Morocco',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 88,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Technical Evaluation',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Semiconductor IT Director',
-      estimatedDealValue: 410000,
-      probability: 65,
-      expectedCloseDate: '2026-09-01',
-      notes: 'Semiconductor fab needs advanced analytics and ML for yield optimization.',
-      createdDate: '2026-05-05',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-30',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Semiconductor', size: '3000 Employees', annualRevenue: '€400M', country: 'Morocco', city: 'Bouskoura', address: 'Industrial Zone', officesCount: 2 },
-      contacts: [{ id: 'lc-32', name: 'Majid Ben Amor', jobTitle: 'IT Director', email: 'm.benamor@st.com', phone: '+212 522 556622' }],
-      activities: [{ id: 'la-32', type: 'Meeting', date: '2026-06-28', summary: 'ML workshop', detail: 'Workshop on Azure ML for semiconductor yield optimization.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-32', fileName: 'STM_Yield_Analysis_Report.pdf', fileSize: '4.1 MB', uploadedAt: '2026-05-05' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-05 08:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-28 16:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure AI', solution: 'Semiconductor Yield Optimization', usersCount: 3000 }],
-      campaigns: [{ source: 'Referral', campaign: 'Manufacturing Excellence Program', referralPartner: 'ASML' }]
-    },
-    {
-      id: 'LEAD-000285',
-      name: 'Zakaria Guedira',
-      companyName: 'Mitsubishi Electric Morocco',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Low',
-      score: 25,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Commercial',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Operations Manager',
-      estimatedDealValue: 55000,
-      probability: 10,
-      expectedCloseDate: '2026-12-31',
-      notes: 'Small-scale project for HVAC IoT monitoring system.',
-      createdDate: '2026-07-03',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-03',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Manufacturing', size: '150 Employees', annualRevenue: '€20M', country: 'Morocco', city: 'Casablanca', address: 'Technopark', officesCount: 1 },
-      contacts: [{ id: 'lc-33', name: 'Zakaria Guedira', jobTitle: 'Operations Manager', email: 'z.guedira@mitsubishi.ma', phone: '+212 522 112244' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-03 11:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'HVAC IoT Monitoring', usersCount: 150 }],
-      campaigns: [{ source: 'Website', campaign: 'IoT for Manufacturing' }]
-    },
-    {
-      id: 'LEAD-000286',
-      name: 'Latifa Benjelloun',
-      companyName: 'Prestige Hospitality Group',
-      status: 'Contacted',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 48,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Initial Contact',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Commercial',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Hotel IT Manager',
-      estimatedDealValue: 120000,
-      probability: 25,
-      expectedCloseDate: '2026-11-15',
-      notes: 'Hotel chain looking for PMS and CRM integration solution.',
-      createdDate: '2026-06-25',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Hospitality', size: '1000 Employees', annualRevenue: '€30M', country: 'Morocco', city: 'Marrakech', address: 'Hivernage', officesCount: 8 },
-      contacts: [{ id: 'lc-34', name: 'Latifa Benjelloun', jobTitle: 'Hotel IT Manager', email: 'l.benjelloun@prestige.ma', phone: '+212 524 556644' }],
-      activities: [{ id: 'la-34', type: 'Email', date: '2026-06-26', summary: 'Sent hospitality solution overview', detail: 'Shared Dynamics 365 for Hospitality overview.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-25 10:00', user: 'Fatima B.' }, { status: 'Contacted', timestamp: '2026-06-26 15:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Dynamics 365', solution: 'Hospitality PMS & CRM', usersCount: 1000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Hospitality Tech Expo', tradeShow: 'Hospitality Innovation Summit' }]
-    },
-    {
-      id: 'LEAD-000287',
-      name: 'Adil Chraibi',
-      companyName: 'Safari SARL',
-      status: 'Lost',
-      qualification: 'Unqualified',
-      priority: 'Low',
-      score: 18,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Closed Lost',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Commercial',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Owner',
-      estimatedDealValue: 15000,
-      probability: 0,
-      expectedCloseDate: '2026-04-30',
-      notes: 'Small business, decided to postpone all IT investments indefinitely.',
-      createdDate: '2026-03-15',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-04-30',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Retail', size: '50 Employees', annualRevenue: '€2M', country: 'Morocco', city: 'Fès', address: 'Downtown', officesCount: 1 },
-      contacts: [{ id: 'lc-35', name: 'Adil Chraibi', jobTitle: 'Owner', email: 'a.chraibi@safari.ma', phone: '+212 535 667788' }],
-      activities: [{ id: 'la-35', type: 'Call', date: '2026-04-20', summary: 'Final call with owner', detail: 'Owner confirmed they are not moving forward with any IT projects.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-03-15 10:00', user: 'Ahmed Bennis' }, { status: 'Lost', timestamp: '2026-04-30 14:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft 365 Business', solution: 'Small Business Productivity', usersCount: 50 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'Small Business Program' }]
-    },
-    {
-      id: 'LEAD-000288',
-      name: 'Najat El Ouazzani',
-      companyName: 'Mutuelles du Maroc',
-      status: 'Proposal Requested',
-      qualification: 'Qualified',
-      priority: 'High',
-      score: 84,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Proposal Submitted',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Chief Digital Officer',
-      estimatedDealValue: 370000,
-      probability: 65,
-      expectedCloseDate: '2026-08-30',
-      notes: 'Health insurance mutual. Proposal for end-to-end digital claims management.',
-      createdDate: '2026-04-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-28',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Insurance', size: '1800 Employees', annualRevenue: '€110M', country: 'Morocco', city: 'Casablanca', address: 'Hay Hassani', officesCount: 6 },
-      contacts: [{ id: 'lc-36', name: 'Najat El Ouazzani', jobTitle: 'Chief Digital Officer', email: 'n.ouazzani@mutuelles.ma', phone: '+212 661 334455' }],
-      activities: [{ id: 'la-36', type: 'Meeting', date: '2026-06-26', summary: 'Final proposal review', detail: 'Reviewed and refined the claims management proposal.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-36', fileName: 'Mutuelles_Claims_Proposal.pdf', fileSize: '5.5 MB', uploadedAt: '2026-06-26' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-04-20 09:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-10 14:00', user: 'Youness Nasrallah' }, { status: 'Proposal Requested', timestamp: '2026-06-26 17:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Power Platform', solution: 'Digital Claims Management', usersCount: 1800 }],
-      campaigns: [{ source: 'Referral', campaign: 'Insurance Network', referralPartner: 'Wafa Assurance' }]
-    },
-    {
-      id: 'LEAD-000289',
-      name: 'Mouad Bouzidi',
-      companyName: 'Lesieur Cristal',
-      status: 'Disqualified',
-      qualification: 'Unqualified',
-      priority: 'Low',
-      score: 10,
-      temperature: 'Cold',
-      origin: 'Landing Page',
-      stage: 'Closed Disqualified',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Procurement',
-      estimatedDealValue: 0,
-      probability: 0,
-      expectedCloseDate: '',
-      notes: 'No budget allocated for IT projects this fiscal year. Revisit next year.',
-      createdDate: '2026-05-10',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-05-25',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Food & Beverage', size: '1500 Employees', annualRevenue: '€120M', country: 'Morocco', city: 'Casablanca', address: 'Ain Sebaa', officesCount: 2 },
-      contacts: [{ id: 'lc-37', name: 'Mouad Bouzidi', jobTitle: 'Procurement Manager', email: 'm.bouzidi@lesieur.ma', phone: '+212 522 887799' }],
-      activities: [{ id: 'la-37', type: 'Email', date: '2026-05-20', summary: 'Follow-up on budget status', detail: 'Finance team confirmed no IT budget this year.', assignedTo: 'Sarah Johnson' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-10 10:00', user: 'Ahmed Bennis' }, { status: 'Disqualified', timestamp: '2026-05-25 16:00', user: 'Sarah Johnson' }],
-      productInterests: [{ product: 'Microsoft 365', solution: 'Enterprise Productivity', usersCount: 1500 }],
-      campaigns: [{ source: 'Website Contact Form', campaign: 'FMCG Tech Forum' }]
-    },
-    {
-      id: 'LEAD-000290',
-      name: 'Hiba El Mansouri',
-      companyName: 'Vivo Energy Morocco',
-      status: 'Qualified',
-      qualification: 'Qualified',
-      priority: 'Medium',
-      score: 72,
-      temperature: 'Warm',
-      origin: 'Marketing Campaign',
-      stage: 'Proposal Preparation',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'Digital Director',
-      estimatedDealValue: 260000,
-      probability: 50,
-      expectedCloseDate: '2026-10-01',
-      notes: 'Fuel distribution network digitalization. Fleet management and IoT solutions.',
-      createdDate: '2026-05-20',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-30',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Energy', size: '2000 Employees', annualRevenue: '€250M', country: 'Morocco', city: 'Casablanca', address: 'Boulevard Ghandi', officesCount: 8 },
-      contacts: [{ id: 'lc-38', name: 'Hiba El Mansouri', jobTitle: 'Digital Director', email: 'h.elmansouri@vivoenergy.ma', phone: '+212 522 778811' }],
-      activities: [{ id: 'la-38', type: 'Meeting', date: '2026-06-27', summary: 'Solution architecture workshop', detail: 'Designed the IoT architecture for fuel station monitoring.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [{ id: 'lat-38', fileName: 'Vivo_Energy_IoT_Architecture.pdf', fileSize: '3.2 MB', uploadedAt: '2026-05-20' }],
-      statusHistory: [{ status: 'New', timestamp: '2026-05-20 09:00', user: 'Fatima B.' }, { status: 'Qualified', timestamp: '2026-06-27 17:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure IoT', solution: 'Fuel Station IoT Monitoring', usersCount: 2000 }],
-      campaigns: [{ source: 'Trade Show', campaign: 'Energy Digital Summit', tradeShow: 'Energy Tech Expo' }]
-    },
-    {
-      id: 'LEAD-000291',
-      name: 'Sanae Lamrani',
-      companyName: 'Office des Changes',
-      status: 'New',
-      qualification: 'Pending',
-      priority: 'Medium',
-      score: 42,
-      temperature: 'Warm',
-      origin: 'Landing Page',
-      stage: 'Lead Intake',
-      assignedSalesperson: 'Sarah Johnson',
-      salesTeam: 'Public Sector',
-      territory: 'Morocco',
-      businessUnit: 'Cloud Solutions',
-      decisionMaker: 'IT Director',
-      estimatedDealValue: 85000,
-      probability: 20,
-      expectedCloseDate: '2026-11-30',
-      notes: 'Government agency needs data analytics and reporting platform upgrade.',
-      createdDate: '2026-07-01',
-      createdBy: 'usr_ahmed',
-      modifiedDate: '2026-07-01',
-      modifiedBy: 'usr_ahmed',
-      company: { industry: 'Government', size: '400 Employees', annualRevenue: '€10M', country: 'Morocco', city: 'Rabat', address: 'Agdal', officesCount: 2 },
-      contacts: [{ id: 'lc-39', name: 'Sanae Lamrani', jobTitle: 'IT Director', email: 's.lamrani@oc.gov.ma', phone: '+212 537 998877' }],
-      activities: [],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-07-01 10:00', user: 'Ahmed Bennis' }],
-      productInterests: [{ product: 'Microsoft Power BI', solution: 'Data Analytics Platform', usersCount: 400 }],
-      campaigns: [{ source: 'Website', campaign: 'Government Digital Transformation' }]
-    },
-    {
-      id: 'LEAD-000292',
-      name: 'Ilias El Gharbi',
-      companyName: 'Groupe Renault Morocco',
-      status: 'Meeting Scheduled',
-      qualification: 'Pending',
-      priority: 'High',
-      score: 74,
-      temperature: 'Hot',
-      origin: 'Marketing Campaign',
-      stage: 'Discovery Meeting',
-      assignedSalesperson: 'Youness Nasrallah',
-      salesTeam: 'Enterprise Sales',
-      territory: 'Morocco',
-      businessUnit: 'Infrastructure',
-      decisionMaker: 'Manufacturing IT Director',
-      estimatedDealValue: 350000,
-      probability: 45,
-      expectedCloseDate: '2026-09-30',
-      notes: 'Automotive manufacturing digital twin project for production simulation.',
-      createdDate: '2026-06-08',
-      createdBy: 'usr_fatima',
-      modifiedDate: '2026-06-30',
-      modifiedBy: 'usr_fatima',
-      company: { industry: 'Automotive', size: '8000 Employees', annualRevenue: '€500M', country: 'Morocco', city: 'Tangier', address: 'Renault Plant', officesCount: 2 },
-      contacts: [{ id: 'lc-40', name: 'Ilias El Gharbi', jobTitle: 'Manufacturing IT Director', email: 'i.elgharbi@renault.ma', phone: '+212 539 887766' }],
-      activities: [{ id: 'la-40', type: 'Call', date: '2026-06-25', summary: 'Digital twin discovery call', detail: 'Discussed Azure Digital Twins for production line simulation.', assignedTo: 'Youness Nasrallah' }],
-      attachments: [],
-      statusHistory: [{ status: 'New', timestamp: '2026-06-08 10:00', user: 'Fatima B.' }, { status: 'Meeting Scheduled', timestamp: '2026-06-30 10:00', user: 'Youness Nasrallah' }],
-      productInterests: [{ product: 'Microsoft Azure Digital Twins', solution: 'Manufacturing Digital Twin', usersCount: 8000 }],
-      campaigns: [{ source: 'LinkedIn', campaign: 'Automotive Innovation Summit' }]
-    }
-  ]);
+  leadsData = signal<Lead[]>([]);
 
   // ────────────────────────────────────────────────────────
   // Automation Rule Engine
   // ────────────────────────────────────────────────────────
 
-  private getNestedValue(obj: any, path: string): any {
+  private getNestedValue(obj: unknown, path: string): unknown {
     if (!obj || !path) return undefined;
     return path.split('.').reduce((acc, part) => acc && acc[part], obj);
   }
 
-  private evaluateCondition(condition: AutomationCondition, entity: Record<string, any>, trigger?: AutomationTrigger): { passed: boolean, actual: any } {
-    let raw: any = undefined;
+  private evaluateCondition(condition: AutomationCondition, entity: Record<string, unknown>, trigger?: AutomationTrigger): { passed: boolean, actual: unknown } {
+    let raw: unknown = undefined;
     if (trigger) {
       const fields = TRIGGER_FIELD_MAP[trigger];
       const desc = fields?.find(f => f.key === condition.fieldKey);
@@ -3807,12 +2204,12 @@ export class CrmStateService {
     return { passed, actual: raw };
   }
 
-  private evaluateRule(rule: AutomationRule, entity: Record<string, any>): { passed: boolean, trace: any[] } {
-    const trace: any[] = [];
+  private evaluateRule(rule: AutomationRule, entity: Record<string, unknown>): { passed: boolean, trace: unknown[] } {
+    const trace: unknown[] = [];
     let rulePassed = false;
 
     for (const group of rule.conditionGroups) {
-      const conditionsTraceList: any[] = [];
+      const conditionsTraceList: unknown[] = [];
       let groupPassed = true;
 
       for (const cond of group.conditions) {
@@ -3850,7 +2247,7 @@ export class CrmStateService {
     return { passed: rulePassed, trace };
   }
 
-  async evaluateRules(trigger: AutomationTrigger, entity: Record<string, any>, entityLabel: string, dryRunRuleId?: string): Promise<AutomationExecutionLog[]> {
+  async evaluateRules(trigger: AutomationTrigger, entity: Record<string, unknown>, entityLabel: string, dryRunRuleId?: string): Promise<AutomationExecutionLog[]> {
     const logs: AutomationExecutionLog[] = [];
     
     await new Promise<void>(resolve => setTimeout(resolve, 0));
@@ -3911,7 +2308,7 @@ export class CrmStateService {
                   relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
                   relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
                   relatedEntityId: entity['id']
-                } as any);
+                } as unknown);
                 break;
 
               case 'NotifyManager':
@@ -3926,7 +2323,7 @@ export class CrmStateService {
                   relatedModule: entityType === 'Lead' ? 'Partners' : entityType === 'Deal' ? 'Sales' : 'Support',
                   relatedSubModule: entityType === 'Lead' ? 'Lead' : entityType === 'Deal' ? 'Deal' : 'Ticket',
                   relatedEntityId: entity['id']
-                } as any);
+                } as unknown);
                 break;
 
               case 'SendEmailLog':
@@ -3992,7 +2389,7 @@ export class CrmStateService {
                     ));
                   } else if (trigger.startsWith('Deal')) {
                     this.deals.update(list => list.map(d =>
-                      d.id === entity['id'] ? { ...d, stage: action.params.targetStage as any } : d
+                      d.id === entity['id'] ? { ...d, stage: action.params.targetStage as unknown } : d
                     ));
                   }
                 }
@@ -4068,7 +2465,7 @@ export class CrmStateService {
               status: 'ok'
             });
             successCount++;
-          } catch (err: any) {
+          } catch (err: unknown) {
             actionsExecuted.push({
               actionId: action.id,
               type: action.type,
@@ -4136,7 +2533,7 @@ export class CrmStateService {
     if (!current) return;
     const nextVersion = (current.version || 1) + 1;
     const snapshot = { ...current };
-    delete (snapshot as any).changeHistory;
+    delete (snapshot as unknown).changeHistory;
 
     const history = current.changeHistory || [];
     const newHistory = [
@@ -4236,7 +2633,7 @@ export class CrmStateService {
     return source ? map[source] : undefined;
   }
 
-  private leadToPartnerPayload(lead: Partial<Lead> & { name: string }): any {
+  private leadToPartnerPayload(lead: Partial<Lead> & { name: string }): unknown {
     return {
       type: 'LEAD',
       name: lead.name,
@@ -4289,7 +2686,7 @@ export class CrmStateService {
     };
     this.leadsData.update(list => [...list, newLead]);
     // Fire automation rules after lead is persisted
-    setTimeout(() => this.evaluateRules('LeadCreated', newLead as unknown as Record<string, any>, `Lead: ${newLead.name} (${newLead.companyName})`), 0);
+    setTimeout(() => this.evaluateRules('LeadCreated', newLead as unknown as Record<string, unknown>, `Lead: ${newLead.name} (${newLead.companyName})`), 0);
     const leadName = newLead.name;
     this.api.createPartner(this.leadToPartnerPayload(newLead)).subscribe({
       next: (dto) => {
@@ -4302,7 +2699,7 @@ export class CrmStateService {
         const current = this.leadsData().find(l => l === newLead || l.name === leadName);
         this.leadsData.update(list => list.filter(l => l !== current));
         if (current) {
-          this.api.deletePartner(current.id).subscribe({ error: () => {} });
+          this.api.deletePartner(current.id).subscribe({ error: () => { /* ignore error */ } });
         }
       }
     });
@@ -4356,7 +2753,7 @@ export class CrmStateService {
       error: () => this.toast.show('Failed to record status change on the server', { type: 'error' })
     });
     this.api.updatePartner(leadId, this.leadToPartnerPayload({ ...(lead || { name: leadId }), status })).subscribe({
-      error: () => {}
+      error: () => { /* ignore error */ }
     });
     this.toast.show(`Lead <strong>${lead?.name || leadId}</strong> status changed to ${status}`, {
       undo: () => {
@@ -4395,7 +2792,7 @@ export class CrmStateService {
     }));
     const updatedLead = this.leadsData().find(l => l.id === leadId);
     if (updatedLead) {
-      setTimeout(() => this.evaluateRules('LeadUpdated', updatedLead as unknown as Record<string, any>, `Lead: ${updatedLead.name} (${updatedLead.companyName})`), 0);
+      setTimeout(() => this.evaluateRules('LeadUpdated', updatedLead as unknown as Record<string, unknown>, `Lead: ${updatedLead.name} (${updatedLead.companyName})`), 0);
       this.api.updatePartner(leadId, this.leadToPartnerPayload(updatedLead)).subscribe({
         error: () => this.toast.show('Failed to sync lead update to the server', { type: 'error' })
       });
@@ -4530,7 +2927,7 @@ export class CrmStateService {
   });
 
   dealsByRegion = computed(() => {
-    const groups: { [key: string]: number } = {};
+    const groups: Record<string, number> = {};
     this.deals().forEach(d => {
       const region = d.salesRegion || 'Unspecified';
       const isWon = ['Confirmed', 'Awaiting Invoicing', 'Invoiced', 'Closed Won'].includes(d.stage);
@@ -4542,7 +2939,7 @@ export class CrmStateService {
   });
 
   topCustomers = computed(() => {
-    const groups: { [key: string]: { name: string; totalValue: number; dealCount: number } } = {};
+    const groups: Record<string, { name: string; totalValue: number; dealCount: number }> = {};
     this.deals().forEach(d => {
       const partner = this.partners().find(p => p.id === d.partnerId);
       const name = partner ? partner.name : 'Unknown Client';
@@ -4563,7 +2960,7 @@ export class CrmStateService {
   });
 
   salesForecast = computed(() => {
-    const groups: { [key: string]: number } = {};
+    const groups: Record<string, number> = {};
     this.deals()
       .filter(d => d.stage !== 'Closed Lost')
       .forEach(d => {
@@ -4605,7 +3002,7 @@ export class CrmStateService {
   notificationsLoading = signal<boolean>(false);
   notificationsError = signal<string | null>(null);
 
-  private mapNotificationDto(dto: any): Notification {
+  private mapNotificationDto(dto: unknown): Notification {
     return {
       id: dto.id,
       type: (dto.type || 'system').toLowerCase(),
@@ -4820,7 +3217,7 @@ export class CrmStateService {
       city: lead.company?.city || 'Casablanca',
       comments: lead.notes || '',
       score: lead.score,
-      source: lead.campaigns?.[0]?.source || 'Website form' as any,
+      source: lead.campaigns?.[0]?.source || 'Website form' as unknown,
       assignedTo: lead.assignedSalesperson || ''
     });
     const prevStatus = lead.status;
@@ -4844,7 +3241,7 @@ export class CrmStateService {
     return this.customerCards().find(c => c.partnerId === partnerId);
   }
 
-  private customerCardToApiPayload(card: Partial<CustomerCard> & { name: string }): any {
+  private customerCardToApiPayload(card: Partial<CustomerCard> & { name: string }): unknown {
     return {
       account_id: card.accountId,
       record_type: card.recordType ? card.recordType.toUpperCase() : undefined,
@@ -4867,7 +3264,7 @@ export class CrmStateService {
     };
   }
 
-  private customerCardFromDto(dto: any, id: string): CustomerCard {
+  private customerCardFromDto(dto: unknown, id: string): CustomerCard {
     return {
       id,
       partnerId: dto.partner_id,
@@ -5081,7 +3478,7 @@ export class CrmStateService {
     const current = this.tasks().find(t => t.id === taskId);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: any = { status };
+    const payload: unknown = { status };
     if (assignedTo !== undefined) payload.assignedTo = assignedTo;
     this.api.updateTask(taskId, payload).subscribe({
       next: (dto) => {
@@ -5195,7 +3592,7 @@ export class CrmStateService {
     const newDeal = { ...deal, id: tempId, createdBy: this.currentUserId(), createdAt: now };
     this.deals.update(dList => [...dList, newDeal]);
     // Fire automation rules against the local (optimistic) record
-    setTimeout(() => this.evaluateRules('DealCreated', newDeal as unknown as Record<string, any>, `Deal: ${newDeal.title}`), 0);
+    setTimeout(() => this.evaluateRules('DealCreated', newDeal as unknown as Record<string, unknown>, `Deal: ${newDeal.title}`), 0);
     this.toast.show(`Deal <strong>${newDeal.title}</strong> created`, {
       undo: () => {
         this.deals.update(dList => dList.filter(d => d.id !== newDeal.id));
@@ -5220,7 +3617,7 @@ export class CrmStateService {
     this.api.updateDeal(dealId, { stage }).subscribe({
       next: (dto) => {
         this.deals.update(deals => deals.map(d => d.id === dealId ? dto : d));
-        setTimeout(() => this.evaluateRules('DealUpdated', dto as unknown as Record<string, any>, `Deal: ${dto.title}`), 0);
+        setTimeout(() => this.evaluateRules('DealUpdated', dto as unknown as Record<string, unknown>, `Deal: ${dto.title}`), 0);
         this.toast.show(`Deal stage updated to <strong>${stage}</strong>`, {
           undo: () => {
             this.deals.update(deals =>
@@ -5242,7 +3639,7 @@ export class CrmStateService {
   private reconcileDealActivityId(dealId: string, kind: keyof NonNullable<Deal['activityLog']>, localId: string, remoteId: string) {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as any[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
+      const items = (d.activityLog[kind] as unknown[]).map(item => item.id === localId ? { ...item, id: remoteId } : item);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
   }
@@ -5409,7 +3806,7 @@ export class CrmStateService {
   deleteDealActivityItem(dealId: string, kind: keyof NonNullable<Deal['activityLog']>, itemId: string) {
     this.deals.update(deals => deals.map(d => {
       if (d.id !== dealId || !d.activityLog) return d;
-      const items = (d.activityLog[kind] as any[]).filter(item => item.id !== itemId);
+      const items = (d.activityLog[kind] as unknown[]).filter(item => item.id !== itemId);
       return { ...d, activityLog: { ...d.activityLog, [kind]: items } };
     }));
     this.api.deleteDealActivity(dealId, itemId).subscribe({
@@ -5438,7 +3835,7 @@ export class CrmStateService {
     const current = this.purchaseOrders().find(po => po.id === poId);
     if (!current) return;
     const prevStatus = current.status;
-    const payload: any = { status };
+    const payload: unknown = { status };
     if (deliveryDate) payload.deliveryDate = deliveryDate;
     this.api.updatePurchaseOrder(poId, payload).subscribe({
       next: (dto) => {

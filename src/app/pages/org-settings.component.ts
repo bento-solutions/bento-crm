@@ -73,9 +73,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Industry</label>
+            <label for="industry" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Industry</label>
             @if (isEditing()) {
-              <select
+              <select id="industry"
                 [(ngModel)]="editIndustry"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 font-semibold text-zinc-700 cursor-pointer"
               >
@@ -92,7 +92,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Timezone</label>
+            <label for="timezone" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Timezone</label>
             @if (isEditing()) {
               <input
                 [(ngModel)]="editTimezone"
@@ -105,7 +105,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Fiscal Year Start Month</label>
+            <label for="fiscal_year_start_mo" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Fiscal Year Start Month</label>
             @if (isEditing()) {
               <select
                 [(ngModel)]="editFiscalStart"
