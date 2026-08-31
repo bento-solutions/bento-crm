@@ -1168,7 +1168,10 @@ const SEARCH_ITEMS: SearchItem[] = [
 
       <app-toast-container></app-toast-container>
     } @else {
-      @if (activeRoute().startsWith('/onboarding')) {
+      <!-- The only two routes a signed-out visitor is meant to reach: creating an
+           organization, and joining one from an emailed invitation. Everything else
+           collapses to the login screen. -->
+      @if (activeRoute().startsWith('/onboarding') || activeRoute().startsWith('/invite')) {
         <router-outlet></router-outlet>
       } @else {
         <app-login></app-login>

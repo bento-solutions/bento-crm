@@ -5,6 +5,9 @@ import { permissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
   { path: 'onboarding', canActivate: [guestGuard], loadComponent: () => import('./pages/onboarding.component').then(m => m.OnboardingComponent) },
+  // Deliberately unguarded: the invitee has no session, and guestGuard would bounce an
+  // already-signed-in user away from a link they were legitimately sent.
+  { path: 'invite/accept', loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent) },
   { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'analytics', canActivate: [authGuard], loadComponent: () => import('./pages/analytics.component').then(m => m.AnalyticsComponent) },
   { path: 'tasks', canActivate: [authGuard], loadComponent: () => import('./pages/tasks.component').then(m => m.TasksComponent) },

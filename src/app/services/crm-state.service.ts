@@ -6,6 +6,7 @@ import { TranslationService } from './translation.service';
 import { TasksService } from './domains/tasks.service';
 import { TicketsService } from './domains/tickets.service';
 import { isSupportedLanguage } from '../core/i18n/language';
+import { InvitationApiService, InvitationDto, InvitationRole } from '../core/services/invitation-api.service';
 import { RelatedEntityType } from '../shared/related-entity.model';
 
 export interface Organization {
@@ -929,6 +930,7 @@ export class CrmStateService {
   private toast = inject(ToastService);
   private router = inject(Router);
   private api = inject(ApiService);
+  private invitationApi = inject(InvitationApiService);
   private tasksService = inject(TasksService);
   private ticketsService = inject(TicketsService);
   private translation = inject(TranslationService);
@@ -949,6 +951,10 @@ export class CrmStateService {
     createdAt: new Date()
   });
   users = signal<CrmUser[]>([]);
+  // Pending/accepted/revoked invitations. Loaded on demand from the users settings page
+  // rather than eagerly -- only admins with USERS_READ can see them at all.
+  invitations = signal<InvitationDto[]>([]);
+  invitationsLoaded = signal<boolean>(false);
   teams = signal<CrmTeam[]>([]);
   groups = signal<CrmGroup[]>([]);
   groupMessages = signal<GroupMessage[]>([]);
@@ -1508,6 +1514,96 @@ export class CrmStateService {
     });
   }
 
+  // ---------------------------------------------------------------- invitations
+
+  // Not a signal: it exists only to stop the users page's effect from firing a second request
+  // while the first is still in flight, and nothing renders from it.
+  private invitationsInFlight = false;
+
+  /** Invitations are only visible to USERS_READ holders, so this is a no-op for everyone else. */
+  loadInvitations(): void {
+    if (!this.hasAuthority('USERS_READ') || this.invitationsInFlight) return;
+    this.invitationsInFlight = true;
+    this.invitationApi.list().subscribe({
+      next: (list) => {
+        this.invitationsInFlight = false;
+        this.invitations.set(list);
+        this.invitationsLoaded.set(true);
+      },
+      error: (err) => {
+        this.invitationsInFlight = false;
+        console.warn('Failed to load invitations:', err);
+      }
+    });
+  }
+
+  inviteUser(draft: { email: string; roleId: RoleId; teamId: string | null; displayName?: string; jobTitle?: string; language?: string }): void {
+    this.invitationApi.create({
+      email: draft.email.trim(),
+      role: CrmStateService.ROLE_ID_TO_BACKEND[draft.roleId] as InvitationRole,
+      team_id: draft.teamId || null,
+      display_name: draft.displayName?.trim() || null,
+      job_title: draft.jobTitle?.trim() || null,
+      language: draft.language || 'en'
+    }).subscribe({
+      next: (invitation) => {
+        this.invitations.update(list => [invitation, ...list]);
+        this.toast.show(`Invitation sent to <strong>${invitation.email}</strong>`, { type: 'success' });
+      },
+      // The backend returns 409 for "already a user" and "already invited"; both are worth
+      // showing verbatim, since the admin's next action differs (nothing to do vs. resend).
+      error: (err) => this.toast.show(this.invitationErrorMessage(err, 'Failed to send invitation'), { type: 'error' })
+    });
+  }
+
+  resendInvitation(id: string): void {
+    this.invitationApi.resend(id).subscribe({
+      next: (invitation) => {
+        this.invitations.update(list => list.map(i => i.id === id ? invitation : i));
+        this.toast.show(`Invitation resent to <strong>${invitation.email}</strong>`, { type: 'success' });
+      },
+      error: (err) => this.toast.show(this.invitationErrorMessage(err, 'Failed to resend invitation'), { type: 'error' })
+    });
+  }
+
+  revokeInvitation(id: string): void {
+    this.invitationApi.revoke(id).subscribe({
+      next: (invitation) => {
+        this.invitations.update(list => list.map(i => i.id === id ? invitation : i));
+        this.toast.show(`Invitation for <strong>${invitation.email}</strong> revoked`, { type: 'info' });
+      },
+      error: (err) => this.toast.show(this.invitationErrorMessage(err, 'Failed to revoke invitation'), { type: 'error' })
+    });
+  }
+
+  updateInvitation(id: string, draft: { email: string; roleId: RoleId; teamId: string | null; displayName?: string; jobTitle?: string }): void {
+    this.invitationApi.update(id, {
+      email: draft.email,
+      role: CrmStateService.ROLE_ID_TO_BACKEND[draft.roleId] as InvitationRole,
+      team_id: draft.teamId || null,
+      display_name: draft.displayName?.trim() || null,
+      job_title: draft.jobTitle?.trim() || null
+    }).subscribe({
+      next: (invitation) => {
+        this.invitations.update(list => list.map(i => i.id === id ? invitation : i));
+        this.toast.show(`Invitation for <strong>${invitation.email}</strong> updated`, { type: 'info' });
+      },
+      error: (err) => this.toast.show(this.invitationErrorMessage(err, 'Failed to update invitation'), { type: 'error' })
+    });
+  }
+
+  /**
+   * BaseApiService flattens errors into a generic Error, so the server's own explanation --
+   * which is the useful half for invitations -- has to be dug back out of the response body
+   * when it survived.
+   */
+  private invitationErrorMessage(err: unknown, fallback: string): string {
+    const detail = (err as { error?: { detail?: string } })?.error?.detail;
+    return detail || fallback;
+  }
+
+  // ---------------------------------------------------------------------- users
+
   addUser(draft: Omit<CrmUser, 'id' | 'initials' | 'createdAt' | 'lastActiveAt' | 'avatarColor' | 'name' | 'role' | 'team'>): void {
     const tempPassword = 'Temp-' + Math.random().toString(36).slice(2, 10) + 'A1!';
     const payload = { ...this.userToApiPayload(draft), email: draft.email, password: tempPassword };
@@ -1820,7 +1916,11 @@ export class CrmStateService {
             email: user.email,
             initials: user.initials,
             avatarColor: user.avatar_color,
-            roleId: user.role as RoleId,
+            // The backend sends UserRole in SCREAMING_CASE ("ADMIN"); RoleId is lowercase.
+            // Casting straight across silently produced a roleId no permission table has an
+            // entry for, so every lookup fell through to the viewer defaults and hid the
+            // Users and Teams settings tabs from actual admins.
+            roleId: CrmStateService.BACKEND_TO_ROLE_ID[user.role] ?? 'viewer',
             role: user.role,
             teamId: user.team_id,
             team: null,

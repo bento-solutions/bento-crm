@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CrmStateService, CrmUser, RoleId } from '../services/crm-state.service';
+import { InvitationDto, InvitationRole, InvitationStatus } from '../core/services/invitation-api.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { RoleBadgeComponent } from '../shared/role-badge.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,8 +34,8 @@ import { PaginatorComponent } from '../shared/paginator.component';
           (click)="openAddPanel()"
           class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
         >
-          <mat-icon class="text-base w-4 h-4 flex items-center justify-center">add</mat-icon>
-          Add User
+          <mat-icon class="text-base w-4 h-4 flex items-center justify-center">mail</mat-icon>
+          Invite User
         </button>
       </div>
       }
@@ -43,13 +44,21 @@ import { PaginatorComponent } from '../shared/paginator.component';
       <div [class.open]="showAddPanel()" class="panel bg-zinc-50 border border-zinc-200/80 rounded-2xl p-0 shadow-xs">
         <div class="p-6 space-y-4">
           <h3 class="font-bold text-zinc-800 text-sm">
-            {{ editingUser() ? 'Edit User details' : 'Add New User Account' }}
+            {{ panelTitle() }}
           </h3>
+          @if (!editingUser() && !editingInvitation()) {
+            <p class="text-meta text-zinc-500 -mt-2 leading-relaxed">
+              We'll email an invitation link. The role and team you pick here are applied the
+              moment they accept — they set their own password and never receive one from us.
+            </p>
+          }
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Display Name -->
             <div>
-              <label for="display_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Display Name *</label>
+              <label for="display_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                Display Name{{ isInviteMode() ? '' : ' *' }}
+              </label>
               <input id="display_name"
                 [(ngModel)]="formDisplayName"
                 type="text"
@@ -63,7 +72,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
               <label for="email_address" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Email address *</label>
               <input id="email_address"
                 [(ngModel)]="formEmail"
-                [disabled]="!!editingUser()"
+                [disabled]="!!editingUser() || !!editingInvitation()"
                 type="email"
                 placeholder="e.g. a.alaoui@acg.ma"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:cursor-not-allowed"
@@ -81,8 +90,10 @@ import { PaginatorComponent } from '../shared/paginator.component';
               />
             </div>
 
-            <!-- Phone -->
-            <div>
+            <!-- Phone. Hidden when inviting: an invitation carries no phone number -- the
+                 invitee supplies their own on the acceptance form -- so a value typed here
+                 would be silently discarded. -->
+            <div [hidden]="isInviteMode()">
               <label for="phone_number" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Phone number</label>
               <input id="phone_number"
                 [(ngModel)]="formPhone"
@@ -131,14 +142,129 @@ import { PaginatorComponent } from '../shared/paginator.component';
             </button>
             <button
               (click)="saveUser()"
-              [disabled]="!formDisplayName.trim() || !formEmail.trim()"
+              [disabled]="!canSubmit()"
               class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              {{ editingUser() ? 'Save changes' : 'Add User' }}
+              {{ submitLabel() }}
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Pending invitations. Only rendered when there are any, so an organization that
+           never invites anyone doesn't carry a permanently empty table. -->
+      @if (canRead() && visibleInvitations().length > 0) {
+        <div class="bg-white border border-zinc-200/80 rounded-2xl overflow-hidden shadow-xs">
+          <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <mat-icon class="text-zinc-400 text-base w-4 h-4 flex items-center justify-center">mail</mat-icon>
+              <h3 class="font-bold text-zinc-800 text-sm">Invitations</h3>
+              <span class="bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full text-meta font-bold">
+                {{ pendingCount() }} pending
+              </span>
+            </div>
+            <label for="show_resolved_invites" class="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input id="show_resolved_invites"
+                type="checkbox"
+                [(ngModel)]="showResolvedInvitations"
+                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
+              />
+              <span class="text-xs font-semibold text-zinc-600">Show accepted &amp; revoked</span>
+            </label>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-zinc-50">
+                <tr>
+                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Email</th>
+                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Pre-assigned role</th>
+                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Team</th>
+                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Invited by</th>
+                  <th class="px-6 py-3.5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 bg-white">
+                @for (invite of visibleInvitations(); track invite.id) {
+                  <tr class="hover:bg-zinc-50/40 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-xs text-zinc-800 font-medium font-mono block">{{ invite.email }}</span>
+                      @if (invite.display_name) {
+                        <span class="text-meta text-zinc-400 block font-medium mt-0.5">{{ invite.display_name }}</span>
+                      }
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">
+                      <app-role-badge [roleId]="roleIdOf(invite)"></app-role-badge>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-zinc-700">
+                      {{ getTeamName(invite.team_id) }}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">
+                      <div class="flex flex-col gap-1">
+                        <span [class]="invitationStatusClass(invite.status)"
+                          class="inline-flex w-fit px-2 py-0.5 rounded-full text-meta font-bold border">
+                          {{ invitationStatusLabel(invite.status) }}
+                        </span>
+                        <span class="text-meta text-zinc-400 font-medium">{{ invitationSubtext(invite) }}</span>
+                      </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-xs font-medium text-zinc-600">
+                      {{ invite.invited_by_name || '—' }}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-xs">
+                      @if (canWrite() && isOutstanding(invite)) {
+                        <div class="flex items-center justify-end gap-2">
+                          <button
+                            (click)="editInvitation(invite)"
+                            class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            (click)="resendInvitation(invite.id)"
+                            class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                          >
+                            Resend
+                          </button>
+                          @if (revokeConfirmId() === invite.id) {
+                            <button
+                              (click)="executeRevoke(invite.id)"
+                              class="bg-zinc-900 text-white px-3 py-1 rounded-lg text-meta font-bold cursor-pointer shadow-xs"
+                            >
+                              Confirm revoke
+                            </button>
+                            <button
+                              (click)="revokeConfirmId.set(null)"
+                              class="text-zinc-500 hover:text-zinc-700 px-1 text-meta font-bold cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          } @else {
+                            <button
+                              (click)="revokeConfirmId.set(invite.id)"
+                              class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                            >
+                              Revoke
+                            </button>
+                          }
+                        </div>
+                      } @else {
+                        <span class="text-meta text-zinc-300 font-bold">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
 
       <!-- Filter Bar -->
       <div class="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
@@ -387,9 +513,15 @@ export class UsersComponent {
   selectedTeam = signal<string>('all');
   showInactive = signal<boolean>(false);
 
-  // Add / Edit form signals
+  // Add / Edit form signals. The panel serves three modes: inviting someone new, editing an
+  // existing user, and editing a still-pending invitation.
   showAddPanel = signal<boolean>(false);
   editingUser = signal<CrmUser | null>(null);
+  editingInvitation = signal<InvitationDto | null>(null);
+
+  // Invitations
+  showResolvedInvitations = signal<boolean>(false);
+  revokeConfirmId = signal<string | null>(null);
 
   formDisplayName = '';
   formEmail = '';
@@ -414,10 +546,23 @@ export class UsersComponent {
         this.activeMenuUserId.set(null);
       });
     }
+
+    // Invitations are loaded here rather than eagerly at startup: they are only ever shown on
+    // this page, and only to a user who can read them. The effect waits for the authority
+    // check to become true, since the current user may still be hydrating when this runs.
+    effect(() => {
+      if (this.canRead() && !this.state.invitationsLoaded()) {
+        this.state.loadInvitations();
+      }
+    });
   }
 
   canWrite(): boolean {
     return this.state.hasAuthority('USERS_WRITE');
+  }
+
+  canRead(): boolean {
+    return this.state.hasAuthority('USERS_READ');
   }
 
   toggleMenu(userId: string, event: Event) {
@@ -486,6 +631,7 @@ export class UsersComponent {
   openAddPanel() {
     if (!this.canWrite()) return;
     this.editingUser.set(null);
+    this.editingInvitation.set(null);
     this.formDisplayName = '';
     this.formEmail = '';
     this.formJobTitle = '';
@@ -498,6 +644,7 @@ export class UsersComponent {
   editUser(user: CrmUser) {
     if (!this.canWrite()) return;
     this.editingUser.set(user);
+    this.editingInvitation.set(null);
     this.formDisplayName = user.displayName;
     this.formEmail = user.email;
     this.formJobTitle = user.jobTitle || '';
@@ -508,9 +655,49 @@ export class UsersComponent {
     this.activeMenuUserId.set(null);
   }
 
+  /** Reuses the same panel so changing a pending invite's role reads like editing a user. */
+  editInvitation(invite: InvitationDto) {
+    if (!this.canWrite()) return;
+    this.editingUser.set(null);
+    this.editingInvitation.set(invite);
+    this.formDisplayName = invite.display_name || '';
+    this.formEmail = invite.email;
+    this.formJobTitle = invite.job_title || '';
+    this.formPhone = '';
+    this.formRoleId = this.roleIdOf(invite);
+    this.formTeamId = invite.team_id || '';
+    this.showAddPanel.set(true);
+    this.revokeConfirmId.set(null);
+  }
+
   closeAddPanel() {
     this.showAddPanel.set(false);
     this.editingUser.set(null);
+    this.editingInvitation.set(null);
+  }
+
+  isInviteMode(): boolean {
+    return !this.editingUser() && !this.editingInvitation();
+  }
+
+  panelTitle(): string {
+    if (this.editingUser()) return 'Edit User details';
+    if (this.editingInvitation()) return 'Edit pending invitation';
+    return 'Invite a user by email';
+  }
+
+  submitLabel(): string {
+    if (this.editingUser()) return 'Save changes';
+    if (this.editingInvitation()) return 'Save invitation';
+    return 'Send invitation';
+  }
+
+  canSubmit(): boolean {
+    // Inviting needs only an address -- the display name is a suggestion the invitee can
+    // overwrite when they accept, so requiring it would block the common case of inviting
+    // someone whose exact spelling you don't know.
+    if (this.isInviteMode()) return !!this.formEmail.trim();
+    return !!this.formDisplayName.trim() && !!this.formEmail.trim();
   }
 
   saveUser() {
@@ -539,25 +726,100 @@ export class UsersComponent {
           this.state.addTeamMember(newTeamId, editMode.id);
         }
       }
-    } else {
-      this.state.addUser({
-        displayName: this.formDisplayName,
+    } else if (this.editingInvitation()) {
+      this.state.updateInvitation(this.editingInvitation()!.id, {
         email: this.formEmail,
-        jobTitle: this.formJobTitle,
-        phone: this.formPhone,
         roleId: this.formRoleId,
         teamId: this.formTeamId || null,
-        isActive: true,
-        preferences: {
-          language: 'fr',
-          theme: 'light',
-          notifyOnLeadAssign: true,
-          notifyOnDealUpdate: true,
-          notifyOnMention: true
-        }
+        displayName: this.formDisplayName,
+        jobTitle: this.formJobTitle
+      });
+    } else {
+      // Creating the account outright would mean generating a password nobody ever sees.
+      // An invitation defers account creation until the invitee sets their own.
+      this.state.inviteUser({
+        email: this.formEmail,
+        roleId: this.formRoleId,
+        teamId: this.formTeamId || null,
+        displayName: this.formDisplayName,
+        jobTitle: this.formJobTitle
       });
     }
     this.closeAddPanel();
+  }
+
+  // ------------------------------------------------------------- invitations
+
+  private static readonly ROLE_ID_BY_INVITATION_ROLE: Record<InvitationRole, RoleId> = {
+    ADMIN: 'admin', MANAGER: 'manager', SALESPERSON: 'salesperson', SUPPORT: 'support', VIEWER: 'viewer'
+  };
+
+  roleIdOf(invite: InvitationDto): RoleId {
+    return UsersComponent.ROLE_ID_BY_INVITATION_ROLE[invite.role] ?? 'viewer';
+  }
+
+  visibleInvitations = computed(() => {
+    const list = this.state.invitations();
+    if (this.showResolvedInvitations()) return list;
+    return list.filter(i => i.status === 'PENDING' || i.status === 'EXPIRED');
+  });
+
+  pendingCount = computed(() => this.state.invitations().filter(i => i.status === 'PENDING').length);
+
+  /** Only a live invitation can be resent, edited or revoked. */
+  isOutstanding(invite: InvitationDto): boolean {
+    return invite.status === 'PENDING' || invite.status === 'EXPIRED';
+  }
+
+  invitationStatusLabel(status: InvitationStatus): string {
+    switch (status) {
+      case 'PENDING': return 'Pending';
+      case 'ACCEPTED': return 'Accepted';
+      case 'REVOKED': return 'Revoked';
+      case 'EXPIRED': return 'Expired';
+      default: return status;
+    }
+  }
+
+  invitationStatusClass(status: InvitationStatus): string {
+    switch (status) {
+      case 'ACCEPTED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'EXPIRED': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      case 'REVOKED': return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+      default: return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+    }
+  }
+
+  /** The line under the badge: whichever date actually explains the current status. */
+  invitationSubtext(invite: InvitationDto): string {
+    if (invite.status === 'ACCEPTED' && invite.accepted_at) {
+      return 'Joined ' + this.formatDate(invite.accepted_at);
+    }
+    if (invite.status === 'REVOKED' && invite.revoked_at) {
+      return 'Revoked ' + this.formatDate(invite.revoked_at);
+    }
+    if (invite.status === 'EXPIRED') {
+      return 'Expired ' + this.formatDate(invite.expires_at);
+    }
+    const sent = invite.send_count > 1 ? ' · sent ' + invite.send_count + '×' : '';
+    return 'Expires ' + this.formatDate(invite.expires_at) + sent;
+  }
+
+  private formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  resendInvitation(id: string) {
+    if (!this.canWrite()) return;
+    this.state.resendInvitation(id);
+    this.revokeConfirmId.set(null);
+  }
+
+  executeRevoke(id: string) {
+    if (!this.canWrite()) return;
+    this.state.revokeInvitation(id);
+    this.revokeConfirmId.set(null);
   }
 
   // Inline role editing
