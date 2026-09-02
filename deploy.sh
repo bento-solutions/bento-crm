@@ -31,13 +31,18 @@ dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"; }
 # than clobbering anything edited by hand on the server. The branch is whichever
 # one this checkout tracks (main for prod, dev for the dev environment).
 #
-# bento-crm is a PUBLIC repo, so the pull needs no credentials. Force the request
-# anonymous: GIT_TERMINAL_PROMPT=0 fails fast instead of hanging on a username
-# prompt, and clearing credential.helper / the cached github.com extraheader
-# stops a stale token on the box from turning an anonymous 200 into a 401. Do NOT
-# reuse this pattern if the repo is ever made private.
+# bento-crm is a PUBLIC repo, so the pull needs no credentials.
+#   - http.version=HTTP/1.1: the box's git 2.43 / curl multiplexes info/refs and
+#     git-upload-pack onto one HTTP/2 connection, and GitHub 401s the POST --
+#     "could not read Username for 'https://github.com'" on a public repo. Pinning
+#     HTTP/1.1 for the transfer avoids it. (Also set globally on the server.)
+#   - GIT_TERMINAL_PROMPT=0: fail fast instead of hanging on a username prompt.
+#   - cleared credential.helper / github.com extraheader: ignore any stale token
+#     cached on the box that would turn an anonymous 200 into a 401.
+# Do NOT reuse this pattern if the repo is ever made private.
 git_pub() {
   GIT_TERMINAL_PROMPT=0 git \
+    -c http.version=HTTP/1.1 \
     -c credential.helper= \
     -c 'http.https://github.com/.extraheader=' \
     "$@"
