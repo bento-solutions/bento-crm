@@ -8,7 +8,12 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build
+# Which Angular build configuration to compile. `production` (default) targets
+# api.crmbento.com; CI passes `dev` for the dev branch, which swaps in
+# src/environments/environment.dev.ts (-> apidev.crmbento.com).
+ARG BUILD_CONFIGURATION=production
+
+RUN npx ng build --configuration "${BUILD_CONFIGURATION}"
 
 
 FROM node:22-alpine AS runtime

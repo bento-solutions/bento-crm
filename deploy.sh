@@ -3,39 +3,62 @@
 # Fast-forwards the checkout (so compose changes and this script stay in sync),
 # pulls the image tag GHCR just pushed, recreates the container, then health-checks
 # it. Non-zero exit fails the Actions job (no silent failures).
+#
+# Environment-agnostic: the same committed script runs unchanged in the prod app
+# dir (/srv/bento/apps/crm, checkout on `main`, docker-compose.yml) and in the dev
+# app dir (/srv/bento/apps/crm-dev, checkout on `dev`, docker-compose.dev.yml).
+# Everything environment-specific is derived at runtime:
+#   - APP_DIR        : this script's own location
+#   - branch         : whatever the checkout is on, pulled from origin
+#   - compose file   : $DEPLOY_COMPOSE_FILE (default docker-compose.yml)
+#   - compose project: basename of APP_DIR -- equals Compose's own default, so the
+#                      prod stack keeps its existing project/container names
+#   - container      : looked up via `docker compose ps -q crm`, never hard-coded
 set -euo pipefail
 
-APP_DIR="/srv/bento/apps/crm"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.yml}"
+PROJECT="$(basename "$APP_DIR")"
 SERVICE="crm"
-CONTAINER="bento-crm"
 HEALTH_PORT=4000
 IMAGE_TAG="${1:?usage: deploy.sh <image-tag> (reads GHCR_LOGIN_TOKEN from env)}"
 
 cd "$APP_DIR"
 
-# Keep docker-compose.yml and this script current. --ff-only fails loudly rather
-# than clobbering anything edited by hand on the server.
-git fetch --quiet origin main
-git pull --ff-only --quiet origin main
+dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"; }
+
+# Keep the compose file and this script current. --ff-only fails loudly rather
+# than clobbering anything edited by hand on the server. The branch is whichever
+# one this checkout tracks (main for prod, dev for the dev environment).
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+git fetch --quiet origin "$BRANCH"
+git pull --ff-only --quiet origin "$BRANCH"
 
 if [ -n "${GHCR_LOGIN_TOKEN:-}" ]; then
   echo "$GHCR_LOGIN_TOKEN" | docker login ghcr.io -u "${GHCR_LOGIN_USER:-github-actions}" --password-stdin
 fi
 
 export CRM_IMAGE_TAG="$IMAGE_TAG"
-docker compose pull "$SERVICE"
-docker compose up -d "$SERVICE"
+dc pull "$SERVICE"
+dc up -d "$SERVICE"
 
-echo "Waiting for $CONTAINER to become healthy..."
+CONTAINER="$(dc ps -q "$SERVICE")"
+if [ -z "$CONTAINER" ]; then
+  echo "ERROR: could not resolve the '$SERVICE' container for project '$PROJECT'" >&2
+  dc ps >&2
+  exit 1
+fi
+
+echo "Waiting for $PROJECT/$SERVICE ($CONTAINER) to become healthy..."
 for i in $(seq 1 30); do
   if docker exec "$CONTAINER" node -e "require('http').get('http://127.0.0.1:${HEALTH_PORT}/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))" 2>/dev/null; then
-    echo "$CONTAINER is responding after ${i}s"
+    echo "$PROJECT/$SERVICE is responding after ${i}s"
     docker image prune -f >/dev/null 2>&1 || true
     exit 0
   fi
   sleep 1
 done
 
-echo "ERROR: $CONTAINER did not respond within 30s after deploy" >&2
+echo "ERROR: $PROJECT/$SERVICE did not respond within 30s after deploy" >&2
 docker logs "$CONTAINER" --tail 50 >&2
 exit 1

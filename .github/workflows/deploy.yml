@@ -1,12 +1,16 @@
 name: Build and deploy crm
 
+# Branch-routed pipeline:
+#   push to main -> production  (crmbento.com,     /srv/bento/apps/crm,     :<sha> + :latest, build config: production)
+#   push to dev  -> dev         (dev.crmbento.com, /srv/bento/apps/crm-dev, :dev-<sha> + :dev, build config: dev)
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch: {}
 
 concurrency:
-  group: deploy-crm
+  # Per-branch queue so a dev deploy never blocks or cancels a prod deploy.
+  group: deploy-crm-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -19,12 +23,35 @@ jobs:
       contents: read
       packages: write
     outputs:
-      tag: ${{ steps.meta.outputs.tag }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      env_name: ${{ steps.resolve.outputs.env_name }}
+      app_dir: ${{ steps.resolve.outputs.app_dir }}
+      compose_file: ${{ steps.resolve.outputs.compose_file }}
     steps:
       - uses: actions/checkout@v4
 
-      - id: meta
-        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - id: resolve
+        run: |
+          SHA="${GITHUB_SHA::12}"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            {
+              echo "tag=$SHA"
+              echo "moving=latest"
+              echo "env_name=prod"
+              echo "app_dir=/srv/bento/apps/crm"
+              echo "compose_file=docker-compose.yml"
+              echo "build_config=production"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tag=dev-$SHA"
+              echo "moving=dev"
+              echo "env_name=dev"
+              echo "app_dir=/srv/bento/apps/crm-dev"
+              echo "compose_file=docker-compose.dev.yml"
+              echo "build_config=dev"
+            } >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
@@ -38,9 +65,11 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            BUILD_CONFIGURATION=${{ steps.resolve.outputs.build_config }}
           tags: |
-            ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
-            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.resolve.outputs.tag }}
+            ${{ env.IMAGE }}:${{ steps.resolve.outputs.moving }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -64,4 +93,4 @@ jobs:
       - name: Deploy new image to host
         run: |
           ssh "${{ secrets.DEPLOY_SSH_HOST }}" \
-            "GHCR_LOGIN_USER='${{ github.actor }}' GHCR_LOGIN_TOKEN='${{ secrets.GITHUB_TOKEN }}' /srv/bento/apps/crm/deploy.sh ${{ needs.build.outputs.tag }}"
+            "GHCR_LOGIN_USER='${{ github.actor }}' GHCR_LOGIN_TOKEN='${{ secrets.GITHUB_TOKEN }}' DEPLOY_COMPOSE_FILE='${{ needs.build.outputs.compose_file }}' ${{ needs.build.outputs.app_dir }}/deploy.sh ${{ needs.build.outputs.tag }}"

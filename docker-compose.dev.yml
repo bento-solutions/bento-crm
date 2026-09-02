@@ -1,0 +1,37 @@
+services:
+  crm:
+    # CI deploys by `docker compose pull` with CRM_IMAGE_TAG set to the dev-<sha>
+    # tag GHCR just built; `build` keeps `docker compose up -d --build` working for
+    # local/manual use.
+    image: ghcr.io/achrafouajid/varyocrm-crm:${CRM_IMAGE_TAG:-dev}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: dev
+    container_name: bento-crm-dev
+    restart: unless-stopped
+
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOSTNAME: 0.0.0.0
+      # The Express server proxies /api to this; reaches the dev backend by
+      # container name over the shared `proxy` network.
+      BACKEND_URL: http://crm-backend-dev:8080
+
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bento-crm-dev.rule=Host(`dev.crmbento.com`)"
+      - "traefik.http.routers.bento-crm-dev.entrypoints=websecure"
+      - "traefik.http.routers.bento-crm-dev.tls=true"
+      - "traefik.http.routers.bento-crm-dev.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bento-crm-dev.loadbalancer.server.port=4000"
+      - "traefik.docker.network=proxy"
+
+networks:
+  proxy:
+    external: true
