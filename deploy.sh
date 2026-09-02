@@ -30,9 +30,21 @@ dc() { docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"; }
 # Keep the compose file and this script current. --ff-only fails loudly rather
 # than clobbering anything edited by hand on the server. The branch is whichever
 # one this checkout tracks (main for prod, dev for the dev environment).
+#
+# bento-crm is a PUBLIC repo, so the pull needs no credentials. Force the request
+# anonymous: GIT_TERMINAL_PROMPT=0 fails fast instead of hanging on a username
+# prompt, and clearing credential.helper / the cached github.com extraheader
+# stops a stale token on the box from turning an anonymous 200 into a 401. Do NOT
+# reuse this pattern if the repo is ever made private.
+git_pub() {
+  GIT_TERMINAL_PROMPT=0 git \
+    -c credential.helper= \
+    -c 'http.https://github.com/.extraheader=' \
+    "$@"
+}
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-git fetch --quiet origin "$BRANCH"
-git pull --ff-only --quiet origin "$BRANCH"
+git_pub fetch --quiet origin "$BRANCH"
+git_pub merge --ff-only --quiet "origin/$BRANCH"
 
 if [ -n "${GHCR_LOGIN_TOKEN:-}" ]; then
   echo "$GHCR_LOGIN_TOKEN" | docker login ghcr.io -u "${GHCR_LOGIN_USER:-github-actions}" --password-stdin
