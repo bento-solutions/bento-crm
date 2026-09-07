@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { CrmStateService, CrmUser, RoleId } from '../services/crm-state.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { RoleBadgeComponent } from '../shared/role-badge.component';
+import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslationService } from '../services/translation.service';
 
@@ -540,8 +541,8 @@ export class UserProfileComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.roleError.set(null);
-    } catch (err: any) {
-      this.roleError.set(err.message || 'Operation failed');
+    } catch (err: unknown) {
+      this.roleError.set(errorMessage(err, 'Operation failed'));
       // Reset select element visual state
       event.preventDefault();
     }
@@ -553,8 +554,8 @@ export class UserProfileComponent {
       this.showDeactivateConfirm.set(false);
       this.deactivateError.set(null);
       this.router.navigate(['/settings/users']);
-    } catch (err: any) {
-      this.deactivateError.set(err.message || 'Operation failed');
+    } catch (err: unknown) {
+      this.deactivateError.set(errorMessage(err, 'Operation failed'));
     }
   }
 

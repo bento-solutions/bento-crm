@@ -1088,7 +1088,10 @@ export class CrmStateService {
     ADMIN: 'admin', MANAGER: 'manager', SALESPERSON: 'salesperson', SUPPORT: 'support', VIEWER: 'viewer'
   };
 
-  // Maps the backend's UserResponseDto (snake_case JSON) into a CrmUser
+  // Maps the backend's UserResponseDto (snake_case JSON) into a CrmUser. This is the boundary
+  // where dynamically-shaped API JSON becomes a typed domain object, so `any` is deliberate and
+  // confined to the parameter.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private userFromDto(dto: any): CrmUser {
     const displayName = dto.display_name ?? '';
     const user: CrmUser = {
@@ -1137,6 +1140,7 @@ export class CrmStateService {
   };
 
   // Team membership isn't stored on the backend Team entity -- it's derived from each AppUser.teamId
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private teamFromDto(dto: any): CrmTeam {
     return {
       id: dto.id,
@@ -1170,6 +1174,7 @@ export class CrmStateService {
   // Maps the backend's PartnerResponse (snake_case JSON) into the thin UI-facing Partner shape
   // used for the customers/prospects/vendors lists. Lead-specific detail (leadsData signal) is
   // seeded/managed separately client-side and isn't hydrated from this endpoint.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private partnerFromDto(dto: any): Partner {
     return {
       id: dto.id,
@@ -1680,7 +1685,10 @@ export class CrmStateService {
         }));
         this.toast.show(`User <strong>${user?.displayName || id}</strong> deactivated`, { type: 'info' });
       },
-      error: (err: any) => this.toast.show(err?.error?.detail || 'Failed to deactivate user', { type: 'error' })
+      error: (err: unknown) => this.toast.show(
+        (err as { error?: { detail?: string } })?.error?.detail || 'Failed to deactivate user',
+        { type: 'error' }
+      )
     });
   }
 
@@ -1827,7 +1835,7 @@ export class CrmStateService {
       title: draft.title,
       description: draft.description,
       scheduledAt: draft.scheduledAt,
-      meetingLink: (draft as any).meetingLink,
+      meetingLink: (draft as { meetingLink?: string }).meetingLink,
       attendeeUserIds: draft.attendeeUserIds
     }).subscribe({
       next: (dto) => {
@@ -1856,7 +1864,13 @@ export class CrmStateService {
 
   private loadAuthState(): boolean {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      return localStorage.getItem('bento_auth') === 'true';
+      // The session is only real if a token still backs it. `bento_auth` on its
+      // own can outlive the tokens (cleared in another tab, purged on expiry),
+      // and trusting it alone booted the app into the authenticated shell against
+      // a 401 wall instead of showing the login screen.
+      const hasToken =
+        !!localStorage.getItem('accessToken') || !!localStorage.getItem('refreshToken');
+      return hasToken && localStorage.getItem('bento_auth') === 'true';
     }
     return false;
   }
@@ -2242,7 +2256,10 @@ export class CrmStateService {
 
   private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     if (!obj || !path) return undefined;
-    return path.split('.').reduce((acc: any, part) => acc && acc[part], obj);
+    return path.split('.').reduce<unknown>(
+      (acc, part) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[part] : undefined),
+      obj
+    );
   }
 
   private evaluateCondition(condition: AutomationCondition, entity: Record<string, unknown>, trigger?: AutomationTrigger): { passed: boolean, actual: unknown } {
@@ -2561,12 +2578,12 @@ export class CrmStateService {
               status: 'ok'
             });
             successCount++;
-          } catch (err: any) {
+          } catch (err: unknown) {
             actionsExecuted.push({
               actionId: action.id,
               type: action.type,
               status: 'error',
-              error: err?.message || String(err)
+              error: err instanceof Error ? err.message : String(err)
             });
             failCount++;
           }
@@ -3111,6 +3128,7 @@ export class CrmStateService {
   notificationsLoading = signal<boolean>(false);
   notificationsError = signal<string | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private mapNotificationDto(dto: any): Notification {
     return {
       id: dto.id,
@@ -3365,6 +3383,7 @@ export class CrmStateService {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private customerCardFromDto(dto: any, id: string): CustomerCard {
     return {
       id,

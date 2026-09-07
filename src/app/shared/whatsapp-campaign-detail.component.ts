@@ -23,7 +23,7 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
               <h3 class="text-lg font-bold text-zinc-950">{{ campaignTitle() }}</h3>
               <p class="text-xs text-zinc-500 mt-0.5">Live delivery and reply status</p>
             </div>
-            <button (click)="close.emit()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <button (click)="closed.emit()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
               <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
             </button>
           </div>
@@ -136,7 +136,7 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
 export class WhatsAppCampaignDetailComponent {
   campaignId = input<string | null>(null);
   campaignTitle = input<string>('Campaign');
-  close = output<void>();
+  closed = output<void>();
 
   wa = inject(WhatsAppCampaignsService);
   private destroyRef = inject(DestroyRef);

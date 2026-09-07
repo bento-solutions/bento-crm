@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CrmStateService, CrmTeam, CrmUser } from '../services/crm-state.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
+import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
@@ -478,8 +479,8 @@ export class TeamsComponent {
     try {
       this.state.updateTeam(teamId, { leadUserId: selectedUserId });
       this.cancelTransferLead();
-    } catch (err: any) {
-      this.leadTransferError.set(err.message || 'Lead transfer failed.');
+    } catch (err: unknown) {
+      this.leadTransferError.set(errorMessage(err, 'Lead transfer failed.'));
     }
   }
 
@@ -495,9 +496,9 @@ export class TeamsComponent {
       this.state.removeTeamMember(teamId, userId);
       this.memberErrorTeamId.set(null);
       this.memberErrorMessage.set(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.memberErrorTeamId.set(teamId);
-      this.memberErrorMessage.set(err.message || 'Failed to remove member.');
+      this.memberErrorMessage.set(errorMessage(err, 'Failed to remove member.'));
     }
   }
 

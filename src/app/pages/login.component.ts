@@ -256,7 +256,9 @@ export class LoginComponent {
 
   onLogin(): void {
     const email = this.email().trim();
-    const password = this.password().trim();
+    // Do not trim the password: leading/trailing spaces are valid characters and
+    // silently stripping them locks out anyone whose password uses them.
+    const password = this.password();
 
     if (!email || !password) {
       this.error.set(this.translation.t('login.errorRequired'));

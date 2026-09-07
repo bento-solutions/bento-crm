@@ -25,6 +25,13 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
   selector: 'app-sales',
   imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent],
   template: `
+    <!--
+      eslint-disable @angular-eslint/template/label-has-associated-control --
+      ~90 block-level <label>s in this template sit visually above their field but are not
+      programmatically associated (no for/id, not nested). Associating each one needs per-field
+      visual QA on this 3600-line template, so it is tracked as follow-up a11y work.
+      TODO(a11y): wire these labels to their controls and remove this directive.
+    -->
     <div class="space-y-8">
       @if (activeTab() !== 'deals') {
         <app-data-status-banner [loading]="activeTabLoading()" [error]="activeTabError()" />
@@ -1531,7 +1538,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Slide-Over Drawer for Proposal Details -->
     @if (selectedProposal(); as prop) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="proposal-drawer-title" role="dialog" aria-modal="true">
-        <div (click)="closeProposalDrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closeProposalDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
             <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
@@ -1686,7 +1693,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Slide-Over Drawer for PO Details -->
     @if (selectedPO(); as po) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="po-drawer-title" role="dialog" aria-modal="true">
-        <div (click)="closePODrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closePODrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
             <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
@@ -1785,7 +1792,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     @if (selectedDeal(); as deal) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="deal-drawer-title" role="dialog" aria-modal="true">
         <!-- Backdrop -->
-        <div (click)="closeDealDrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closeDealDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-3xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">

@@ -5,7 +5,10 @@ import { CrmStateService } from '../services/crm-state.service';
 import { CommonModule } from '@angular/common';
 import { Customer360Component } from './customer-360-card.component';
 
-declare let Chart: any;
+// Chart.js is loaded globally via a <script> tag (no npm package / types). Only the constructor
+// is used here, and instances are never read back, so a minimal structural type is enough.
+type ChartConstructor = new (ctx: CanvasRenderingContext2D | HTMLCanvasElement, config: unknown) => unknown;
+declare let Chart: ChartConstructor;
 
 @Component({
   selector: 'app-analytics',
@@ -422,8 +425,8 @@ export class AnalyticsComponent implements AfterViewInit {
   @ViewChild('forecastChart') forecastCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('regionChart') regionCanvas!: ElementRef<HTMLCanvasElement>;
 
-  forecastChartInstance: any;
-  regionChartInstance: any;
+  forecastChartInstance: unknown;
+  regionChartInstance: unknown;
 
   constructor() {
     // Auto-select first customer for immediate richness

@@ -158,13 +158,13 @@ import { SimpleCampaignModalComponent } from '../shared/simple-campaign-modal.co
 
       <app-whatsapp-campaign-modal
         [open]="showComposer()"
-        (close)="showComposer.set(false)"
+        (closed)="showComposer.set(false)"
         (created)="onCampaignCreated($event)" />
 
       <app-whatsapp-campaign-detail
         [campaignId]="detailCampaignId()"
         [campaignTitle]="detailCampaignTitle()"
-        (close)="onDetailClosed()" />
+        (closed)="onDetailClosed()" />
 
       <app-simple-campaign-modal
         [open]="showSimpleComposer()"

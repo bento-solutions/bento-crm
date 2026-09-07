@@ -6,6 +6,7 @@ import { CrmStateService, AutomationRuleGroup, AutomationAction, AutomationExecu
 import { AutomationRulesService, AutomationRule } from '../services/domains/automation-rules.service';
 import { DataStatusBannerComponent } from '../shared/data-status-banner.component';
 import { PaginatorComponent } from '../shared/paginator.component';
+import { errorMessage } from '../shared/error-message.util';
 
 const RULE_TEMPLATES: Omit<AutomationRule, 'id'>[] = [
   {
@@ -461,8 +462,8 @@ export class AutomationComponent {
         const results = await this.state.evaluateRules(trigger, entity, label, ruleId || undefined);
         this.sandboxLogs.set(results);
       }
-    } catch (e: any) {
-      alert('Failed to parse JSON payload or run simulation: ' + e?.message);
+    } catch (e: unknown) {
+      alert('Failed to parse JSON payload or run simulation: ' + errorMessage(e));
     } finally {
       this.sandboxLoading.set(false);
     }

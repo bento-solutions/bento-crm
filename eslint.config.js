@@ -31,6 +31,16 @@ module.exports = defineConfig([
           style: 'kebab-case',
         },
       ],
+      // Treat a leading underscore as "deliberately unused" -- used for interface-mandated
+      // parameters the implementation does not yet need (e.g. loadRelatedTo(_link)).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
