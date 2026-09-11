@@ -1,0 +1,10 @@
+{
+  "name": "bento-crm-server",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "compression": "^1.7.5",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.3"
+  }
+}

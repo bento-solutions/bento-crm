@@ -1,0 +1,6 @@
+{
+  "name": "Bento",
+  "description": "Static Angular CRM resolving Sales, Marketing, Analytics, Partners, Tickets, and Finance tracking with mock scenario data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

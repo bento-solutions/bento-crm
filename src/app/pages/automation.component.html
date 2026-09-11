@@ -1,0 +1,839 @@
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex justify-end">
+    <div class="flex gap-2">
+      <button (click)="openSandbox()" class="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+        <mat-icon class="text-base">science</mat-icon>
+        Test Sandbox
+      </button>
+      @if (canCreate()) {
+        <button (click)="openNewBuilder()" class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-md shadow-lg shadow-zinc-300 transition-all">
+          <mat-icon class="text-base">add</mat-icon>
+          Create Custom Rule
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (state.automationRulesLoading()) {
+    <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="5" [rows]="8" />
+  } @else {
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <!-- Active Rules -->
+    <div class="card rounded-2xl p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Active Rules</span>
+        <span class="p-2 bg-zinc-100 text-zinc-900 rounded-lg"><mat-icon class="block text-xl">rule</mat-icon></span>
+      </div>
+      <div class="mt-4 flex items-baseline gap-2">
+        <span class="text-2xl lg:text-3xl font-bold text-zinc-900 truncate">{{ kpis().activeRules }}</span>
+        <span class="text-xs text-zinc-500">rules active</span>
+      </div>
+    </div>
+
+    <!-- Total Executions -->
+    <div class="card rounded-2xl p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Executions</span>
+        <span class="p-2 bg-zinc-100 text-zinc-900 rounded-lg"><mat-icon class="block text-xl">play_circle</mat-icon></span>
+      </div>
+      <div class="mt-4 flex items-baseline gap-2">
+        <span class="text-2xl lg:text-3xl font-bold text-zinc-900 truncate">{{ kpis().totalExecutions }}</span>
+        <span class="text-xs text-zinc-500">runs total</span>
+      </div>
+    </div>
+
+    <!-- Time Saved -->
+    <div class="card rounded-2xl p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Estimated Time Saved</span>
+        <span class="p-2 bg-zinc-100 text-zinc-900 rounded-lg"><mat-icon class="block text-xl">bolt</mat-icon></span>
+      </div>
+      <div class="mt-4 flex items-baseline gap-2">
+        <span class="text-2xl lg:text-3xl font-bold text-zinc-900 truncate">{{ kpis().timeSavedHours }}</span>
+        <span class="text-xs text-zinc-500">hours saved</span>
+      </div>
+    </div>
+
+    <!-- Last Execution -->
+    <div class="card rounded-2xl p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Last Run</span>
+        <span class="p-2 bg-zinc-100 text-zinc-900 rounded-lg"><mat-icon class="block text-xl">schedule</mat-icon></span>
+      </div>
+      <div class="mt-4">
+        <span class="text-sm font-bold text-zinc-900 truncate block">{{ kpis().lastExecution }}</span>
+        <span class="text-xs text-zinc-500 block mt-1">most recent execution</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="flex gap-5 sm:gap-6 border-b border-zinc-200">
+    <button (click)="activeTab.set('rules')"
+            [class]="activeTab() === 'rules' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
+            class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap">
+      <mat-icon class="text-[18px] w-[18px] h-[18px]">settings</mat-icon>
+      Rules List
+    </button>
+    <button (click)="activeTab.set('templates')"
+            [class]="activeTab() === 'templates' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
+            class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap">
+      <mat-icon class="text-[18px] w-[18px] h-[18px]">auto_awesome</mat-icon>
+      Pre-built Templates
+    </button>
+    <button (click)="activeTab.set('logs')"
+            [class]="activeTab() === 'logs' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
+            class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap">
+      <mat-icon class="text-[18px] w-[18px] h-[18px]">history</mat-icon>
+      Execution Logs
+    </button>
+  </div>
+
+  <!-- Rules Tab -->
+  @if (activeTab() === 'rules') {
+    <div class="card rounded-2xl overflow-hidden">
+      @if (state.automationRules().length === 0) {
+        <!-- Empty State -->
+        <div class="text-center py-16 px-4">
+          <div class="w-16 h-16 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <mat-icon class="text-zinc-400 text-3xl h-8 w-8">auto_mode</mat-icon>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-950">No rules configured</h3>
+          <p class="text-sm text-zinc-500 max-w-sm mx-auto mt-1">Configure custom conditional triggers to automate leads assignment, task creation, updates, and manager notifications.</p>
+          <div class="mt-6 flex justify-center gap-3">
+            <button (click)="activeTab.set('templates')" class="bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+              Browse Templates
+            </button>
+            @if (canCreate()) {
+              <button (click)="openNewBuilder()" class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-md shadow-lg shadow-zinc-300 transition-all">
+                Create Custom Rule
+              </button>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Rules List Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-white border border-zinc-200 border-b border-white/30 text-zinc-400 font-semibold text-xs uppercase tracking-wider">
+                <th class="px-6 py-4">Status & Rule Details</th>
+                <th class="px-6 py-4">Trigger Event</th>
+                <th class="px-6 py-4 text-center">Priority</th>
+                <th class="px-6 py-4 text-center">Runs</th>
+                <th class="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (rule of paginatedRules(); track rule.id) {
+                <tr class="hover:bg-zinc-50/50 transition-colors">
+                  <td class="px-6 py-4 min-w-[280px]">
+                    <div class="flex items-start gap-4">
+                      <!-- Active Toggle -->
+                      <button (click)="toggleActive(rule.id)" [disabled]="!canWrite()" [class.bg-zinc-700]="rule.isActive" [class.bg-zinc-200]="!rule.isActive"
+                              class="w-10 h-6 shrink-0 rounded-full p-0.5 transition-colors relative focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span [class.translate-x-4]="rule.isActive" [class.translate-x-0]="!rule.isActive"
+                              class="block w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+                      </button>
+                      <div>
+                        <div class="font-bold text-zinc-950 flex items-center gap-2">
+                          {{ rule.name }}
+                          @if (rule.stopOnMatch) {
+                            <span class="bg-zinc-100 text-zinc-950 text-meta px-1.5 py-0.5 rounded font-bold border border-zinc-300">Stop On Match</span>
+                          }
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-1 max-w-lg">{{ rule.description }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-950 font-semibold border border-zinc-200">
+                      <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">bolt</mat-icon>
+                      {{ rule.trigger }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="inline-block text-xs font-bold px-2 py-0.5 rounded"
+                          [class.bg-zinc-100]="(rule.priority || 0) === 1" [class.text-zinc-950]="(rule.priority || 0) === 1"
+                          [class.bg-zinc-100]="(rule.priority || 0) === 2" [class.text-zinc-950]="(rule.priority || 0) === 2"
+                          [class.bg-zinc-100]="(rule.priority || 0) > 2" [class.text-zinc-700]="(rule.priority || 0) > 2">
+                      P{{ rule.priority || 0 }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-center font-semibold text-zinc-900">
+                    {{ rule.executionCount || 0 }}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button (click)="openSandbox(rule.id)" title="Simulate in Sandbox" class="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors">
+                        <mat-icon class="text-lg">science</mat-icon>
+                      </button>
+                      @if (canCreate()) {
+                        <button (click)="duplicateRule(rule)" title="Duplicate Rule" class="p-1.5 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors">
+                          <mat-icon class="text-lg">content_copy</mat-icon>
+                        </button>
+                      }
+                      @if (canWrite()) {
+                        <button (click)="editRule(rule)" title="Edit Rule" class="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors">
+                          <mat-icon class="text-lg">edit</mat-icon>
+                        </button>
+                      }
+                      @if (canDelete()) {
+                        <button (click)="deleteRule(rule.id)" title="Delete Rule" class="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors">
+                          <mat-icon class="text-lg">delete</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (state.automationRules().length > 0) {
+            <app-paginator
+              [currentPage]="rulesPage()"
+              [totalPages]="rulesTotalPages()"
+              [pageSize]="rulesPageSize()"
+              (pageChange)="rulesPage.set($event)"
+              (pageSizeChange)="rulesPageSize.set($event)" />
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Templates Tab -->
+  @if (activeTab() === 'templates') {
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      @for (tpl of templates; track tpl.name) {
+        <div class="card rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="inline-flex items-center gap-1 bg-zinc-100 text-zinc-950 text-xs font-bold px-2.5 py-1 rounded-full">
+                <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">bolt</mat-icon>
+                {{ tpl.trigger }}
+              </span>
+              <span class="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Template</span>
+            </div>
+            <h3 class="text-lg font-bold text-zinc-950">{{ tpl.name }}</h3>
+            <p class="text-sm text-zinc-500 mt-2">{{ tpl.description }}</p>
+
+            <!-- Condition and Action Summary Preview -->
+            <div class="mt-4 space-y-2.5 bg-white border border-zinc-200 rounded-xl p-4 text-xs">
+              <div class="flex items-start gap-2">
+                <span class="font-bold text-zinc-400 uppercase w-10">IF:</span>
+                <div class="text-zinc-700">
+                  @for (grp of tpl.conditionGroups; track $index; let last = $last) {
+                    <span>
+                      (
+                      @for (cond of grp.conditions; track $index; let isLast = $last) {
+                        <span>{{ cond.fieldKey }} {{ cond.operator }} "{{ cond.value }}"{{ !isLast ? ' AND ' : '' }}</span>
+                      }
+                      )
+                      {{ !last ? ' OR ' : '' }}
+                    </span>
+                  }
+                </div>
+              </div>
+              <div class="flex items-start gap-2 border-t border-zinc-200/60 pt-2.5">
+                <span class="font-bold text-zinc-400 uppercase w-10">THEN:</span>
+                <div class="text-zinc-700 space-y-1">
+                  @for (action of tpl.actions; track $index) {
+                    <div class="flex items-center gap-1.5">
+                      <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-700">subdirectory_arrow_right</mat-icon>
+                      <span>{{ action.type }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          @if (canCreate()) {
+            <div class="mt-6 border-t border-zinc-100 pt-4 flex justify-end">
+              <button (click)="cloneTemplate(tpl)" class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm shadow-lg shadow-zinc-300 transition-all">
+                <mat-icon class="text-base">content_copy</mat-icon>
+                Clone & Customize
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Logs Tab -->
+  @if (activeTab() === 'logs') {
+    <div class="card rounded-2xl overflow-hidden">
+      @if (state.automationExecutions().length === 0) {
+        <div class="text-center py-16 px-4">
+          <div class="w-16 h-16 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <mat-icon class="text-zinc-400 text-3xl h-8 w-8">history</mat-icon>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-950">No executions recorded</h3>
+          <p class="text-sm text-zinc-500 max-w-sm mx-auto mt-1">Rule executions and action traces will be logged here in real-time when automation rules fire.</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-white border border-zinc-200 border-b border-white/30 text-zinc-400 font-semibold text-xs uppercase tracking-wider">
+                <th class="w-8"></th>
+                <th class="px-6 py-4">Rule Name</th>
+                <th class="px-6 py-4">Trigger Entity</th>
+                <th class="px-6 py-4">Executed At</th>
+                <th class="px-6 py-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (log of state.automationExecutions(); track log.id) {
+                <tr (click)="toggleLogExpand(log.id)" class="hover:bg-zinc-50/50 cursor-pointer transition-colors">
+                  <td class="pl-4 text-center">
+                    <mat-icon class="text-zinc-400 transition-transform duration-200" [class.rotate-90]="expandedLogId() === log.id">chevron_right</mat-icon>
+                  </td>
+                  <td class="px-6 py-4 font-semibold text-zinc-950">
+                    <div class="flex items-center gap-2">
+                      {{ log.ruleName }}
+                      @if (log.dryRun) {
+                        <span class="bg-zinc-100 text-zinc-950 text-meta px-1.5 py-0.5 rounded font-bold border border-zinc-300">Dry Run</span>
+                      }
+                    </div>
+                    <span class="text-meta text-zinc-400 font-semibold">Version {{ log.ruleVersion }} • ID: {{ log.ruleId }}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-zinc-900">{{ log.entityLabel }}</div>
+                    <span class="text-xs text-zinc-400">{{ log.entityType }} ID: {{ log.entityId }}</span>
+                  </td>
+                  <td class="px-6 py-4 text-zinc-600 text-sm">
+                    {{ log.executedAt }}
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="inline-block text-xs font-semibold px-2.5 py-1 rounded-full"
+                          [class.bg-zinc-100]="log.status === 'success'" [class.text-zinc-950]="log.status === 'success'"
+                          [class.bg-zinc-100]="log.status === 'partial'" [class.text-zinc-950]="log.status === 'partial'"
+                          [class.bg-zinc-100]="log.status === 'failed'" [class.text-zinc-950]="log.status === 'failed'">
+                      {{ log.status }}
+                    </span>
+                  </td>
+                </tr>
+                @if (expandedLogId() === log.id) {
+                  <tr class="bg-zinc-50/70">
+                    <td colspan="5" class="px-8 py-5 border-t border-zinc-100">
+                      <!-- Drilldown Details -->
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <!-- Condition Evaluation Trace -->
+                        <div class="space-y-3">
+                          <h4 class="font-bold text-zinc-900 flex items-center gap-1.5">
+                            <mat-icon class="text-zinc-700 text-lg">fact_check</mat-icon>
+                            Condition Verification Trace
+                          </h4>
+                          <div class="space-y-3">
+                            @for (grp of log.conditionsTrace; track grp.groupId; let idx = $index) {
+                              <div class="card rounded-xl p-3">
+                                <div class="flex items-center justify-between border-b border-white/30 pb-2 mb-2">
+                                  <span class="font-semibold text-xs text-zinc-400">Condition Group #{{ idx + 1 }} (AND)</span>
+                                  <span class="text-xs font-bold" [class.text-zinc-900]="grp.passed" [class.text-zinc-900]="!grp.passed">
+                                    {{ grp.passed ? 'PASSED' : 'FAILED' }}
+                                  </span>
+                                </div>
+                                <div class="space-y-2">
+                                  @for (cond of grp.conditions; track cond.fieldKey) {
+                                    <div class="flex justify-between items-center text-xs">
+                                      <div class="flex items-center gap-1">
+                                        <mat-icon class="text-base" [class.text-zinc-700]="cond.passed" [class.text-zinc-700]="!cond.passed">
+                                          {{ cond.passed ? 'check' : 'close' }}
+                                        </mat-icon>
+                                        <span class="font-medium text-zinc-700">{{ cond.fieldKey }}</span>
+                                      </div>
+                                      <div class="text-zinc-500">
+                                        Expected: <span class="badge px-1 py-0.5 rounded font-mono font-semibold">{{ cond.expected }}</span> • 
+                                        Actual: <span class="badge px-1 py-0.5 rounded font-mono font-semibold">{{ cond.actual || 'null' }}</span>
+                                      </div>
+                                    </div>
+                                  }
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+
+                        <!-- Action Execution Trace -->
+                        <div class="space-y-3">
+                          <h4 class="font-bold text-zinc-900 flex items-center gap-1.5">
+                            <mat-icon class="text-zinc-700 text-lg">play_circle</mat-icon>
+                            Actions Executed
+                          </h4>
+                          <div class="space-y-2">
+                            @for (act of log.actionsExecuted; track act.actionId) {
+                              <div class="card rounded-xl p-3 flex items-center justify-between">
+                                <div>
+                                  <span class="font-semibold text-zinc-900 block text-xs">{{ act.type }}</span>
+                                  <span class="text-meta text-zinc-400">Action ID: {{ act.actionId }}</span>
+                                  @if (act.error) {
+                                    <span class="text-meta text-zinc-900 block mt-1 font-mono">{{ act.error }}</span>
+                                  }
+                                </div>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded"
+                                      [class.bg-zinc-100]="act.status === 'ok'" [class.text-zinc-950]="act.status === 'ok'"
+                                      [class.bg-zinc-100]="act.status === 'error'" [class.text-zinc-950]="act.status === 'error'">
+                                  {{ act.status === 'ok' ? 'Success' : 'Error' }}
+                                </span>
+                              </div>
+                            }
+                            @if (log.actionsExecuted.length === 0) {
+                              <div class="text-zinc-400 text-xs text-center py-4 bg-white border border-zinc-200 rounded-xl">No actions ran (dry-run or conditional fail)</div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+  }
+  @if (state.automationRulesError()) {
+    <app-data-status-banner [error]="state.automationRulesError()" />
+  }
+</div>
+
+<!-- Slide-Over Drawer for Visual Rule Builder -->
+@if (isBuilderOpen()) {
+  <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 overflow-hidden bg-zinc-900/40 backdrop-blur-sm transition-opacity"></div>
+    <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+      <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
+        
+        <!-- Drawer Header -->
+        <div class="px-6 py-5 bg-white border border-zinc-200 border-b border-white/30 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-zinc-900" id="slide-over-title">
+            {{ editingRuleId() ? 'Edit Automation Rule' : 'Create Automation Rule' }}
+          </h2>
+          <button (click)="isBuilderOpen.set(false)" class="text-zinc-400 hover:text-zinc-600">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Drawer Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          
+          <!-- Basic Info -->
+          <div class="space-y-4">
+            <div>
+              <label for="rule_name" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Rule Name</label>
+              <input id="rule_name" type="text" [(ngModel)]="ruleName" placeholder="e.g. Auto-Assign Digital Leads"
+                     class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
+            </div>
+            <div>
+              <label for="description" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Description</label>
+              <textarea id="description" [(ngModel)]="ruleDescription" placeholder="Explain what this automation rule does..." rows="2"
+                        class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"></textarea>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="trigger_event" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Trigger Event</label>
+              <select id="trigger_event" [(ngModel)]="ruleTrigger" (change)="resetBuilder()"
+                      class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
+                <option value="LeadCreated">Lead Created</option>
+                <option value="LeadUpdated">Lead Updated</option>
+                <option value="DealCreated">Deal Created</option>
+                <option value="DealUpdated">Deal Updated</option>
+                <option value="TicketCreated">Ticket Created</option>
+                <option value="TicketUpdated">Ticket Updated</option>
+              </select>
+            </div>
+            <div>
+              <label for="priority" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Priority</label>
+              <select id="priority" [(ngModel)]="rulePriority"
+                      class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent">
+                <option [ngValue]="1">P1 (Highest)</option>
+                <option [ngValue]="2">P2 (High)</option>
+                <option [ngValue]="3">P3 (Medium)</option>
+                <option [ngValue]="4">P4 (Low)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Conflict / Execution Policy -->
+          <div class="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" id="stopOnMatch" [(ngModel)]="ruleStopOnMatch" class="w-4 h-4 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-700">
+              <label for="stopOnMatch" class="text-sm font-semibold text-zinc-800">Stop evaluating lower-priority rules after match</label>
+            </div>
+            <div class="flex items-center gap-3">
+              <label for="conflict_strategy" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Conflict Strategy</label>
+              <select id="conflict_strategy" [(ngModel)]="ruleConflictStrategy" class="border border-zinc-300 rounded-lg px-2 py-1 text-xs focus:outline-none">
+                <option value="all-execute">Execute All Matches</option>
+                <option value="first-wins">First Match Wins (Priority)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Rule Conditions CNF Query Builder -->
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-bold text-zinc-900 uppercase tracking-wider">Trigger Conditions (IF)</h3>
+              <button (click)="addConditionGroup()" class="flex items-center gap-1 text-xs text-zinc-900 hover:text-zinc-950 font-bold">
+                <mat-icon class="text-base">add</mat-icon>
+                Add Condition Group (OR)
+              </button>
+            </div>
+
+            @for (grp of conditionGroups(); track grp.id; let gIdx = $index) {
+              <div class="bg-white border border-zinc-200 rounded-2xl p-4 relative space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-bold text-zinc-400 uppercase">Condition Group #{{ gIdx + 1 }} (AND)</span>
+                  @if (conditionGroups().length > 1) {
+                    <button (click)="removeConditionGroup(gIdx)" class="text-zinc-400 hover:text-zinc-900">
+                      <mat-icon class="text-lg">delete</mat-icon>
+                    </button>
+                  }
+                </div>
+
+                <div class="space-y-2">
+                  @for (cond of grp.conditions; track $index; let cIdx = $index) {
+                    <div class="flex gap-2 items-center">
+                      <!-- Field selector -->
+                      <select [(ngModel)]="cond.fieldKey" class="flex-1 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs">
+                        @for (f of availableFields(); track f.key) {
+                          <option [value]="f.key">{{ f.label }}</option>
+                        }
+                      </select>
+
+                      <!-- Operator -->
+                      <select [(ngModel)]="cond.operator" class="w-36 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs">
+                        @for (op of operators; track op.key) {
+                          <option [value]="op.key">{{ op.label }}</option>
+                        }
+                      </select>
+
+                      <!-- Value (Optional based on isEmpty operator) -->
+                      @if (cond.operator !== 'isEmpty' && cond.operator !== 'isNotEmpty') {
+                        <input type="text" [(ngModel)]="cond.value" placeholder="Value..."
+                               class="flex-1 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs">
+                      }
+
+                      <!-- Delete Condition -->
+                      <button (click)="removeConditionFromGroup(gIdx, cIdx)" class="text-zinc-400 hover:text-zinc-900">
+                        <mat-icon class="text-lg">close</mat-icon>
+                      </button>
+                    </div>
+                  }
+                  @if (grp.conditions.length === 0) {
+                    <p class="text-xs text-zinc-400 italic">No conditions added. This group will match unconditionally.</p>
+                  }
+                </div>
+
+                <button (click)="addConditionToGroup(gIdx)" class="flex items-center gap-1 text-meta text-zinc-900 hover:text-zinc-950 font-bold pt-1">
+                  <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">add</mat-icon>
+                  Add Condition
+                </button>
+              </div>
+
+              <!-- OR Divider between groups -->
+              @if (gIdx < conditionGroups().length - 1) {
+                <div class="flex items-center justify-center my-2">
+                  <span class="bg-zinc-100 border border-zinc-300 text-zinc-950 text-meta font-bold px-2 py-0.5 rounded-full">OR</span>
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Rule Actions Builder -->
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-bold text-zinc-900 uppercase tracking-wider">Automated Actions (THEN)</h3>
+              <button (click)="addAction()" class="flex items-center gap-1 text-xs text-zinc-900 hover:text-zinc-950 font-bold">
+                <mat-icon class="text-base">add</mat-icon>
+                Add Action
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              @for (act of ruleActions(); track act.id; let aIdx = $index) {
+                <div class="card rounded-2xl p-4 space-y-3">
+                  <div class="flex justify-between items-center border-b border-white/30 pb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="w-5 h-5 bg-zinc-100 text-zinc-900 rounded-full flex items-center justify-center text-xs font-bold">{{ aIdx + 1 }}</span>
+                      <select [(ngModel)]="act.type" class="border-none font-bold text-xs text-zinc-900 uppercase focus:outline-none focus:ring-0">
+                        @for (at of actionTypes; track at.key) {
+                          <option [value]="at.key">{{ at.label }}</option>
+                        }
+                      </select>
+                    </div>
+                    <button (click)="removeAction(aIdx)" class="text-zinc-400 hover:text-zinc-900">
+                      <mat-icon class="text-lg">delete</mat-icon>
+                    </button>
+                  </div>
+
+                  <!-- Dynamic Parameters Form based on action type -->
+                  <div class="grid grid-cols-1 gap-3 text-xs">
+                    <!-- AssignSalesperson -->
+                    @if (act.type === 'AssignSalesperson' || act.type === 'NotifyManager') {
+                      <div>
+                        <label for="assignee_user_name" class="block text-zinc-500 font-semibold mb-1">Assignee / User Name</label>
+                        <select id="assignee_user_name" [(ngModel)]="act.params.assignee" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                          <option value="Youssef El Alami">Youssef El Alami (Sales)</option>
+                          <option value="Amine Bennani">Amine Bennani (Sales)</option>
+                          <option value="Achraf (Manager)">Achraf (Manager - Sales)</option>
+                          <option value="Khadija (Ops Manager)">Khadija (Ops Manager)</option>
+                          <option value="Fatima Chraibi">Fatima Chraibi (Support)</option>
+                        </select>
+                      </div>
+                    }
+
+                    <!-- CreateFollowUpTask / NotifyManager common fields -->
+                    @if (act.type === 'CreateFollowUpTask' || act.type === 'NotifyManager') {
+                      <div>
+                        <label for="task_title" class="block text-zinc-500 font-semibold mb-1">Task Title</label>
+                        <input id="task_title" type="text" [(ngModel)]="act.params.taskTitle" placeholder="e.g. Sales Follow-Up reminder" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                      </div>
+                      <div>
+                        <label for="task_description" class="block text-zinc-500 font-semibold mb-1">Task Description</label>
+                        <textarea id="task_description" [(ngModel)]="act.params.taskDescription" placeholder="Add optional details..." rows="2" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label for="target_team" class="block text-zinc-500 font-semibold mb-1">Target Team</label>
+                          <select id="target_team" [(ngModel)]="act.params.targetTeam" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                            <option value="Sales">Sales</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Support">Support</option>
+                            <option value="Finance">Finance</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label for="due_date_offset_days" class="block text-zinc-500 font-semibold mb-1">Due Date Offset (Days)</label>
+                          <input id="due_date_offset_days" type="number" [(ngModel)]="act.params.taskDueDateOffsetDays" placeholder="e.g. 3" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        </div>
+                      </div>
+                    }
+
+                    <!-- SendEmailLog -->
+                    @if (act.type === 'SendEmailLog') {
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label for="from" class="block text-zinc-500 font-semibold mb-1">From</label>
+                          <input id="from" type="text" [(ngModel)]="act.params.emailFrom" placeholder="crm@acme.ma" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        </div>
+                        <div>
+                          <label for="to_default_is_entity" class="block text-zinc-500 font-semibold mb-1">To (Default is entity contact)</label>
+                          <input id="to_default_is_entity" type="text" [(ngModel)]="act.params.emailTo" placeholder="contact@client.com" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        </div>
+                      </div>
+                      <div>
+                        <label for="subject" class="block text-zinc-500 font-semibold mb-1">Subject</label>
+                        <input id="subject" type="text" [(ngModel)]="act.params.emailSubject" placeholder="Welcome email..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                      </div>
+                      <div>
+                        <label for="email_body" class="block text-zinc-500 font-semibold mb-1">Email Body</label>
+                        <textarea id="email_body" [(ngModel)]="act.params.emailBody" rows="2" placeholder="Write message details..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                      </div>
+                    }
+
+                    <!-- UpdateEntityField -->
+                    @if (act.type === 'UpdateEntityField') {
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label for="field_to_update" class="block text-zinc-500 font-semibold mb-1">Field to Update</label>
+                          <select id="field_to_update" [(ngModel)]="act.params.fieldKey" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                            @for (f of availableFields(); track f.key) {
+                              <option [value]="f.key">{{ f.label }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div>
+                          <label for="new_value" class="block text-zinc-500 font-semibold mb-1">New Value</label>
+                          <input id="new_value" type="text" [(ngModel)]="act.params.fieldValue" placeholder="Value..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                        </div>
+                      </div>
+                    }
+
+                    <!-- ChangeStage -->
+                    @if (act.type === 'ChangeStage') {
+                      <div>
+                        <label for="move_to_stage_status" class="block text-zinc-500 font-semibold mb-1">Move to Stage / Status</label>
+                        <input id="move_to_stage_status" type="text" [(ngModel)]="act.params.targetStage" placeholder="e.g. Closed Won or Proposal Requested" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                      </div>
+                    }
+
+                    <!-- CreateNote -->
+                    @if (act.type === 'CreateNote') {
+                      <div>
+                        <label for="note_content" class="block text-zinc-500 font-semibold mb-1">Note Content</label>
+                        <textarea id="note_content" [(ngModel)]="act.params.noteContent" rows="2" placeholder="Note text..." class="w-full border border-zinc-300 rounded-lg px-2 py-1.5"></textarea>
+                      </div>
+                    }
+
+                    <!-- AddTag -->
+                    @if (act.type === 'AddTag') {
+                      <div>
+                        <label for="tag_name" class="block text-zinc-500 font-semibold mb-1">Tag Name</label>
+                        <input id="tag_name" type="text" [(ngModel)]="act.params.tagName" placeholder="e.g. VIP-Lead" class="w-full border border-zinc-300 rounded-lg px-2 py-1.5">
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+              @if (ruleActions().length === 0) {
+                <div class="text-center py-6 border border-dashed border-zinc-300 rounded-2xl bg-zinc-50/50">
+                  <p class="text-xs text-zinc-400">Add actions to run when rule conditions pass.</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="px-6 py-4 bg-white border border-zinc-200 border-t border-white/30 flex justify-end gap-3 shrink-0">
+          <button (click)="isBuilderOpen.set(false)" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">Cancel</button>
+          <button (click)="saveRule()" class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm shadow-lg shadow-zinc-300 transition-all">Save Automation Rule</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Slide-Over Drawer for Simulation Sandbox -->
+@if (isSandboxOpen()) {
+  <div class="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity"></div>
+    <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+      <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
+        
+        <!-- Header -->
+        <div class="px-6 py-5 bg-white border border-zinc-200 border-b border-white/30 flex justify-between items-center">
+          <h2 class="text-lg font-bold text-zinc-900">Automation Rule Sandbox</h2>
+          <button (click)="isSandboxOpen.set(false)" class="text-zinc-400 hover:text-zinc-600"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          <div class="bg-white border border-zinc-200 rounded-2xl p-4 text-xs text-zinc-950 leading-relaxed">
+            Configure mock data payload and run dry-run rule validation. Verify conditions matching and simulated traces before applying changes.
+          </div>
+
+          <!-- Configuration Fields -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="entity_type" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Entity Type</label>
+              <select id="entity_type" [(ngModel)]="sandboxEntityType" (change)="loadMockEntityList()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+                <option value="Lead">Lead</option>
+                <option value="Deal">Deal</option>
+                <option value="Ticket">Ticket</option>
+              </select>
+            </div>
+            <div>
+              <label for="load_existing_record" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Load Existing Record</label>
+              <select id="load_existing_record" [(ngModel)]="sandboxEntityId" (change)="updateSandboxPayload()" class="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm">
+                @if (sandboxEntityType() === 'Lead') {
+                  @for (l of state.leadsData(); track l.id) {
+                    <option [value]="l.id">{{ l.companyName }} ({{ l.name }})</option>
+                  }
+                } @else if (sandboxEntityType() === 'Deal') {
+                  @for (d of state.deals(); track d.id) {
+                    <option [value]="d.id">{{ d.title }}</option>
+                  }
+                } @else if (sandboxEntityType() === 'Ticket') {
+                  @for (t of state.tickets(); track t.id) {
+                    <option [value]="t.id">{{ t.title }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="mock_payload_json" class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Mock Payload JSON</label>
+            <textarea id="mock_payload_json" [(ngModel)]="sandboxRawPayload" rows="8" class="w-full font-mono border border-zinc-300 rounded-xl px-3 py-2 text-xs focus:ring-zinc-700 focus:border-zinc-700"></textarea>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="liveModeToggle" [(ngModel)]="sandboxIsLiveRun" class="w-4 h-4 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-700">
+            <label for="liveModeToggle" class="text-sm font-bold text-zinc-800">
+              Run Live Run <span class="text-xs font-normal text-zinc-700">(Writes mutations to CRM state)</span>
+            </label>
+          </div>
+
+          <!-- Simulation results -->
+          @if (sandboxLogs().length > 0) {
+            <div class="space-y-4 border-t border-zinc-200 pt-6">
+              <h3 class="text-sm font-bold text-zinc-900 uppercase tracking-wider">Trace Execution Results</h3>
+              @for (log of sandboxLogs(); track log.id) {
+                <div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden text-xs">
+                  <div class="px-4 py-3 border-b border-zinc-200 flex justify-between items-center font-bold">
+                    <span class="text-zinc-800">{{ log.ruleName }}</span>
+                    <span [class.text-zinc-950]="log.status === 'success'" [class.text-zinc-950]="log.status === 'failed'">
+                      {{ log.status === 'success' ? 'MATCH' : 'NO MATCH' }}
+                    </span>
+                  </div>
+
+                  <div class="p-4 space-y-4">
+                    <!-- conditions trace -->
+                    <div class="space-y-3">
+                      <div class="font-semibold text-zinc-500">Condition Trace</div>
+                      @for (grp of log.conditionsTrace; track grp.groupId) {
+                        <div class="space-y-1.5 card rounded-xl p-3">
+                          @for (cond of grp.conditions; track cond.fieldKey) {
+                            <div class="flex justify-between items-center text-xs">
+                              <div class="flex items-center gap-1 font-semibold">
+                                <mat-icon class="text-base" [class.text-zinc-700]="cond.passed" [class.text-zinc-700]="!cond.passed">
+                                  {{ cond.passed ? 'check' : 'close' }}
+                                </mat-icon>
+                                <span>{{ cond.fieldKey }}</span>
+                              </div>
+                              <div class="text-zinc-500">
+                                Expected: <span class="bg-zinc-100 px-1 py-0.5 rounded font-mono">{{ cond.expected }}</span> • 
+                                Actual: <span class="bg-zinc-100 px-1 py-0.5 rounded font-mono">{{ cond.actual || 'null' }}</span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    <!-- actions trace -->
+                    @if (log.status === 'success') {
+                      <div class="space-y-2">
+                        <div class="font-semibold text-zinc-500">Simulated Actions Output</div>
+                        @for (act of log.actionsExecuted; track act.actionId) {
+                          <div class="card rounded-xl p-3 flex items-center justify-between">
+                            <span>{{ act.type }}</span>
+                            <span class="text-meta uppercase font-bold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded">simulate</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-white border border-zinc-200 border-t border-white/30 flex justify-end gap-3 shrink-0">
+          <button (click)="isSandboxOpen.set(false)" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all">Cancel</button>
+          <button (click)="runSandboxSimulation()" [disabled]="sandboxLoading()" class="bg-zinc-900 hover:bg-zinc-950 disabled:opacity-50 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
+            @if (sandboxLoading()) {
+              <mat-icon class="text-base animate-spin">sync</mat-icon>
+            }
+            {{ sandboxIsLiveRun() ? 'Execute Live Simulation' : 'Run Dry-Run Trace' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}
