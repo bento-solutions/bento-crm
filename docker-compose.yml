@@ -3,7 +3,7 @@ services:
     # `image` lets CI deploy by `docker compose pull` (CRM_IMAGE_TAG set to the
     # commit-sha tag GHCR just built); `build` keeps `docker compose up -d --build`
     # working unchanged for local/manual use.
-    image: ghcr.io/achrafouajid/varyocrm-crm:${CRM_IMAGE_TAG:-latest}
+    image: ghcr.io/bento-solutions/varyocrm-crm:${CRM_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
