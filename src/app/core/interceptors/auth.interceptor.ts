@@ -6,8 +6,8 @@ import {
   HttpInterceptor,
   HttpErrorResponse,
 } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, filter, switchMap, take } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError, finalize, map, shareReplay, switchMap, take } from 'rxjs/operators';
 import { CrmStateService } from '../../services/crm-state.service';
 import { AuthApiService, LoginResponse } from '../services/auth-api.service';
 
@@ -16,16 +16,23 @@ export class AuthInterceptor implements HttpInterceptor {
   private state = inject(CrmStateService);
   private authApi = inject(AuthApiService);
 
-  // Coordinates concurrent 401s so only one /auth/refresh call is in flight
-  // at a time; requests that 401 while a refresh is already running wait for
-  // it instead of each triggering their own refresh.
-  private refreshInFlight = false;
-  private refreshedToken$ = new BehaviorSubject<string | null>(null);
+  // Coordinates concurrent 401s so only one /auth/refresh call is in flight at a
+  // time. Every request that 401s while a refresh is running subscribes to this
+  // same shared observable, so they all resolve together -- on success they retry
+  // with the new token, and on failure they all receive the error. The previous
+  // BehaviorSubject approach only ever emitted on success, so a failed refresh
+  // left every queued request hanging forever (permanent spinners).
+  private refresh$: Observable<string> | null = null;
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    const authedRequest = this.applyHeaders(request, token);
     const isAuthEndpoint = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
+    const isSignup = request.method === 'POST' && /\/organizations\/?$/.test(request.url.split('?')[0]);
+    // A login or signup must never carry a leftover token: the backend scopes the request to
+    // that token's organization, and logging into a different one then fails its
+    // cross-tenant write guard (500) instead of simply signing the user in.
+    const token = typeof localStorage !== 'undefined' && !isAuthEndpoint && !isSignup
+      ? localStorage.getItem('accessToken') : null;
+    const authedRequest = this.applyHeaders(request, token);
 
     return next.handle(authedRequest).pipe(
       catchError((error: HttpErrorResponse) => {
@@ -69,29 +76,26 @@ export class AuthInterceptor implements HttpInterceptor {
       return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'No refresh token available' }));
     }
 
-    if (!this.refreshInFlight) {
-      this.refreshInFlight = true;
-      this.refreshedToken$.next(null);
-
-      return this.authApi.refresh(refreshToken).pipe(
-        switchMap((response: LoginResponse) => {
-          this.refreshInFlight = false;
+    if (!this.refresh$) {
+      this.refresh$ = this.authApi.refresh(refreshToken).pipe(
+        map((response: LoginResponse) => {
           this.storeTokens(response);
-          this.refreshedToken$.next(response.access_token);
-          return next.handle(this.applyHeaders(originalRequest, response.access_token));
+          return response.access_token;
         }),
         catchError((refreshError) => {
-          this.refreshInFlight = false;
           this.state.logout();
           return throwError(() => refreshError);
-        })
+        }),
+        // Reset once the cycle settles (success or failure) so the next 401 starts
+        // a fresh refresh instead of replaying this one's stale result.
+        finalize(() => { this.refresh$ = null; }),
+        // One refresh shared by every concurrent 401; late subscribers still get
+        // the settled value or the error.
+        shareReplay({ bufferSize: 1, refCount: false })
       );
     }
 
-    // A refresh is already in flight for another request — wait for it to
-    // finish, then retry this request with the newly issued access token.
-    return this.refreshedToken$.pipe(
-      filter((token): token is string => token !== null),
+    return this.refresh$.pipe(
       take(1),
       switchMap((token) => next.handle(this.applyHeaders(originalRequest, token)))
     );

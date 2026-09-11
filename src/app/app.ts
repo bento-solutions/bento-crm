@@ -10,7 +10,7 @@ import { NotificationInboxDrawerComponent } from './shared/notification-inbox-dr
 import { ToastContainerComponent } from './shared/toast.component';
 import { LoginComponent } from './pages/login.component';
 import { filter } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { DealsService } from './services/domains/deals.service';
 import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
@@ -1164,6 +1164,7 @@ const SEARCH_ITEMS: SearchItem[] = [
         [open]="drawerOpen()"
         (closed)="closeDrawer()"
         (switchType)="drawerType.set($event)"
+        (notificationOpened)="onNotificationOpened()"
       ></app-notification-inbox-drawer>
 
       <app-toast-container></app-toast-container>
@@ -1266,6 +1267,8 @@ export class App implements OnInit, OnDestroy {
   openNotifications() {
     this.drawerType.set('notifications');
     this.drawerOpen.set(true);
+    // Fresh assignments must appear the moment the bell is opened.
+    this.state.refreshNotifications();
   }
 
   openInbox() {
@@ -1482,8 +1485,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'ticket': {
-        this.state.pendingQuickAction.set({ id: 'open-ticket', payload: item.entityId });
-        this.router.navigate(['/tickets']);
+        this.router.navigate(['/tickets', item.entityId]);
         return;
       }
       case 'invoice': {
@@ -1508,6 +1510,7 @@ export class App implements OnInit, OnDestroy {
   activeRoute = signal<string>('/');
 
   private routerSub: Subscription | null = null;
+  private notifPollSub: Subscription | null = null;
 
   ngOnInit() {
     this.activeRoute.set(this.router.url.split('?')[0]);
@@ -1522,6 +1525,16 @@ export class App implements OnInit, OnDestroy {
 
     // Sync current user data from API on app initialization
     this.state.syncCurrentUserFromApi();
+
+    // Poll the inbox so task / lead / ticket assignments surface in the
+    // notification bar without a manual refresh. Skipped while logged out
+    // (the guard inside refresh would just 401) and while the drawer is open
+    // (opening already triggers a refresh).
+    this.notifPollSub = interval(30000).subscribe(() => {
+      if (this.state.isAuthenticated() && !this.drawerOpen()) {
+        this.state.refreshNotifications();
+      }
+    });
   }
 
   breadcrumbs = computed(() => {
@@ -1564,8 +1577,13 @@ export class App implements OnInit, OnDestroy {
     return route.startsWith(item.route);
   }
 
+  onNotificationOpened() {
+    this.closeDrawer();
+  }
+
   ngOnDestroy() {
     if (this.routerSub) this.routerSub.unsubscribe();
+    if (this.notifPollSub) this.notifPollSub.unsubscribe();
   }
 
   // eslint-disable-next-line @angular-eslint/prefer-inject

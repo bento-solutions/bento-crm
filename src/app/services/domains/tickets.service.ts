@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
 import { Ticket } from '../crm-state.service';
+import { Observable, tap } from 'rxjs';
 import { EntityLink, isLinked } from '../../shared/related-entity.model';
 
 export type { Ticket };
@@ -54,6 +55,45 @@ export class TicketsService {
     });
   }
 
+  /**
+   * Fetches one ticket by id and merges it into the store — for deep links to a ticket page
+   * before (or instead of) the full list being loaded.
+   */
+  fetchTicket(id: string): Observable<Ticket> {
+    return this.api.getTicket(id).pipe(
+      tap(ticket => this.tickets.update(tickets =>
+        tickets.some(t => t.id === id) ? tickets.map(t => t.id === id ? ticket : t) : [...tickets, ticket]))
+    );
+  }
+
+  /**
+   * Applies a partial change on top of the stored ticket and sends the whole record, because
+   * PATCH /tickets/{id} re-validates every required field (title, status…). The partner link
+   * is sent in both the legacy `partnerId` form and the generic link pair so either reader
+   * on the backend sees it.
+   */
+  patchTicket(id: string, changes: Partial<Ticket>): void {
+    const current = this.tickets().find(t => t.id === id);
+    if (!current) return;
+    const merged: Ticket = { ...current, ...changes };
+    const partnerId = merged.relatedPartnerId || merged.partnerId || undefined;
+    const link = merged.relatedEntityType && merged.relatedEntityId
+      ? { relatedEntityType: merged.relatedEntityType, relatedEntityId: merged.relatedEntityId }
+      : partnerId ? { relatedEntityType: 'PARTNER' as const, relatedEntityId: partnerId } : {};
+    this.updateTicket(id, {
+      title: merged.title,
+      description: merged.description,
+      type: merged.type,
+      status: merged.status,
+      priority: merged.priority,
+      assignedToUserId: merged.assignedToUserId || undefined,
+      deadline: merged.deadline || undefined,
+      resolution: merged.resolution,
+      partnerId,
+      ...link
+    });
+  }
+
   updateTicket(id: string, ticket: Partial<Ticket>): void {
     this.api.updateTicket(id, ticket).subscribe({
       next: (updated) => {
@@ -93,7 +133,8 @@ export class TicketsService {
     if (link.relatedEntityType === 'PARTNER') {
       return this.tickets().filter(t => t.relatedPartnerId === link.relatedEntityId || t.partnerId === link.relatedEntityId);
     }
-    return [];
+    return this.tickets().filter(t =>
+      t.relatedEntityType === link.relatedEntityType && t.relatedEntityId === link.relatedEntityId);
   }
 
   /**

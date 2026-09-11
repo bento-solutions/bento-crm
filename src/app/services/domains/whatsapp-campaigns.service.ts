@@ -13,6 +13,7 @@ export interface CampaignRecipient {
   partnerName: string;
   conversationId?: string;
   phone?: string;
+  email?: string;
   status: RecipientStatus;
   sentAt?: string;
   deliveredAt?: string;
@@ -132,6 +133,41 @@ export class WhatsAppCampaignsService {
     });
   }
 
+  /**
+   * Enrols partners as recipients of any campaign (Email/SMS/WhatsApp) — the backend resolves
+   * each one's contact detail for the campaign's own channel and skips those without one.
+   * Despite this service's name, the recipient endpoints it wraps are channel-agnostic; only
+   * `create`/`launch`/relance management below are WhatsApp-specific.
+   */
+  addRecipients(campaignId: string, partnerIds: string[], onDone?: () => void): void {
+    if (partnerIds.length === 0) return;
+    this.api.addCampaignRecipients(campaignId, partnerIds).subscribe({
+      next: (rows) => {
+        this.recipients.set(rows ?? []);
+        const skipped = (rows ?? []).filter(r => r.status === 'SKIPPED' && partnerIds.includes(r.partnerId)).length;
+        const added = partnerIds.length - skipped;
+        this.toast.show(skipped > 0
+          ? `${added} contact(s) added, ${skipped} skipped (no reachable contact detail)`
+          : `${added} contact(s) added`);
+        onDone?.();
+      },
+      error: (err) => this.toast.show(this.readError(err, 'Failed to add recipients'), { type: 'error' }),
+    });
+  }
+
+  removeRecipient(campaignId: string, recipientId: string, onDone?: () => void): void {
+    const removed = this.recipients().find(r => r.id === recipientId);
+    this.recipients.update(rows => rows.filter(r => r.id !== recipientId));
+    this.api.removeCampaignRecipient(campaignId, recipientId).subscribe({
+      next: () => onDone?.(),
+      error: () => {
+        // Put it back — the delete didn't actually happen.
+        if (removed) this.recipients.update(rows => [...rows, removed]);
+        this.toast.show('Failed to remove recipient', { type: 'error' });
+      },
+    });
+  }
+
   loadRecipients(campaignId: string): void {
     this.isLoadingRecipients.set(true);
     this.api.getCampaignRecipients(campaignId).subscribe({
@@ -179,7 +215,8 @@ export class WhatsAppCampaignsService {
    * almost always actionable ("no WhatsApp number connected", "no template
    * selected"), so replacing them with a generic string would hide the fix.
    */
-  private readError(err: any, fallback: string): string {
-    return err?.error?.message || err?.error?.error || fallback;
+  private readError(err: unknown, fallback: string): string {
+    const body = (err as { error?: { message?: string; error?: string } })?.error;
+    return body?.message || body?.error || fallback;
   }
 }

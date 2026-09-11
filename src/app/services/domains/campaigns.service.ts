@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
 import { Campaign } from '../crm-state.service';
@@ -53,6 +54,19 @@ export class CampaignsService {
     });
   }
 
+  /**
+   * The backend's PATCH /campaigns/{id} re-validates the whole campaign (title and channel are
+   * both @NotNull on the shared create/update DTO), so a partial body such as `{ status }` alone
+   * is rejected with 400. Callers that only mean to change one field (the edit modal, bulk
+   * actions) go through here: the change is merged onto the stored campaign and the full record
+   * is sent.
+   */
+  patchCampaign(id: string, changes: Partial<Campaign>): void {
+    const current = this.getCampaignById(id);
+    if (!current) return;
+    this.updateCampaign(id, { ...current, ...changes });
+  }
+
   updateCampaign(id: string, campaign: Partial<Campaign>): void {
     this.api.updateCampaign(id, campaign as unknown).subscribe({
       next: (updated) => {
@@ -84,5 +98,16 @@ export class CampaignsService {
 
   getCampaignById(id: string): Campaign | undefined {
     return this.campaigns().find(c => c.id === id);
+  }
+
+  /**
+   * Fetches one campaign by id and merges it into the store — for a deep link to a campaign's
+   * detail page before (or instead of) the full list being loaded.
+   */
+  fetchCampaign(id: string): Observable<Campaign> {
+    return this.api.getCampaign(id).pipe(
+      tap(campaign => this.campaigns.update(list =>
+        list.some(c => c.id === id) ? list.map(c => c.id === id ? campaign : c) : [...list, campaign]))
+    );
   }
 }

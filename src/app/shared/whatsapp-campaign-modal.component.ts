@@ -22,7 +22,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
               <mat-icon class="text-emerald-600 text-[22px] w-5.5 h-5.5">chat</mat-icon>
               <h3 class="text-lg font-bold text-zinc-950">New WhatsApp Campaign</h3>
             </div>
-            <button (click)="close.emit()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <button (click)="closed.emit()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
               <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
             </button>
           </div>
@@ -192,7 +192,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
               }
             </p>
             <div class="flex gap-2">
-              <button (click)="close.emit()"
+              <button (click)="closed.emit()"
                       class="px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-colors">
                 Cancel
               </button>
@@ -214,7 +214,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
 })
 export class WhatsAppCampaignModalComponent {
   open = input<boolean>(false);
-  close = output<void>();
+  closed = output<void>();
   created = output<string>();
 
   partnersService = inject(PartnersService);
@@ -306,7 +306,7 @@ export class WhatsAppCampaignModalComponent {
     }, (campaignId) => {
       this.reset();
       this.created.emit(campaignId);
-      this.close.emit();
+      this.closed.emit();
     });
   }
 

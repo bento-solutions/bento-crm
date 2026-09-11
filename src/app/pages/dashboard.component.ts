@@ -833,7 +833,8 @@ export class DashboardComponent {
       emptyText: 'No open tickets',
       open: () => this.router.navigate(['/tickets']),
       filter: (key: string) => {
-        this.state.ticketFilter.set({ priority: key === 'URGENT' ? 'High' : key === 'MEDIUM' ? 'Medium' : 'Low' });
+        // The tickets page filters on the backend enum, not the display label.
+        this.state.ticketFilter.set({ priority: key });
         this.router.navigate(['/tickets']);
       }
     };

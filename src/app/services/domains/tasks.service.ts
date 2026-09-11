@@ -44,6 +44,48 @@ export class TasksService {
     });
   }
 
+  /**
+   * Raises a task for a ticket through the ticket sub-resource, so the link and the inherited
+   * defaults (assignee, priority, due date) are applied server-side. `onCreated` lets callers
+   * react to the persisted row (e.g. clear an inline form) without a second lookup.
+   */
+  addTaskToTicket(ticketId: string, task: Partial<Task> & { title: string }, onCreated?: (task: Task) => void): void {
+    this.api.createTicketTask(ticketId, task).subscribe({
+      next: (created) => {
+        this.tasks.update(tasks => [...tasks, created]);
+        this.toast.show(`Task <strong>${created.title}</strong> added to ticket`);
+        onCreated?.(created);
+      },
+      error: () => this.toast.show('Failed to add task to ticket', { type: 'error' })
+    });
+  }
+
+  /**
+   * Points an existing task at a record (or clears its link with `{}`), sending the full task
+   * because PATCH re-validates every required field.
+   */
+  relink(id: string, link: EntityLink): void {
+    const current = this.tasks().find(t => t.id === id);
+    if (!current) return;
+    const payload: Task = {
+      ...current,
+      relatedEntityType: link.relatedEntityType ?? undefined,
+      relatedEntityId: link.relatedEntityId ?? undefined
+    };
+    this.api.updateTask(id, payload).subscribe({
+      next: (dto) => {
+        this.tasks.update(tasks => tasks.map(t => t.id === id ? dto : t));
+        this.toast.show(isLinked(link) ? 'Task linked' : 'Task unlinked');
+      },
+      error: () => this.toast.show('Failed to update task link', { type: 'error' })
+    });
+  }
+
+  /** Tasks not attached to any record — candidates for "link an existing task". */
+  unlinked(): Task[] {
+    return this.tasks().filter(t => !t.relatedEntityType || !t.relatedEntityId);
+  }
+
   addTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): void {
     this.api.createTask(task).subscribe({
       next: (created) => {
@@ -118,7 +160,8 @@ export class TasksService {
   /** Tasks linked to the given record, from the already-loaded list. */
   relatedTo(link: EntityLink): Task[] {
     if (!isLinked(link)) return [];
-    return this.tasks().filter(t => t.relatedEntityId === link.relatedEntityId);
+    return this.tasks().filter(t =>
+      t.relatedEntityId === link.relatedEntityId && t.relatedEntityType === link.relatedEntityType);
   }
 
   /**

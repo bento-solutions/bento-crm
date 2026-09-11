@@ -139,7 +139,6 @@ export class PartnersService {
     return 'ACC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   saveCustomerCard(_card: Partial<CustomerCard>): void {
     // Stub method for saving customer card
   }
@@ -157,12 +156,10 @@ export class PartnersService {
     return this.partners().filter((p: Partner) => p.type === 'Vendor');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createPartnerAwaitingId(_partialPartner: unknown, _onCreated?: (id: string) => void): void {
     // Stub method for creating a partner awaiting ID assignment
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   convertLeadToProspect(_leadId: string): void {
     // Stub method for converting lead to prospect
   }

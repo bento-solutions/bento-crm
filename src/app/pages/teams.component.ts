@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CrmStateService, CrmTeam, CrmUser } from '../services/crm-state.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
+import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
@@ -76,7 +77,7 @@ import { MatIconModule } from '@angular/material/icon';
                 [(ngModel)]="newTeamLeadId"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
               >
-                <option value="">-- Select a Manager --</option>
+                <option value="">-- Select a team lead --</option>
                 @for (mgr of getAvailableLeads(); track mgr.id) {
                   <option [value]="mgr.id">{{ mgr.displayName }} ({{ mgr.jobTitle || 'Manager' }})</option>
                 }
@@ -380,8 +381,9 @@ export class TeamsComponent {
 
   // Filters leads
   getAvailableLeads(): CrmUser[] {
-    // Lead must have manager role
-    return this.state.users().filter(u => u.isActive && u.roleId === 'manager');
+    // A lead must be a Manager or an Admin. A fresh organization only has its Admin, and
+    // restricting leads to Managers meant it could not create its first team at all.
+    return this.state.users().filter(u => u.isActive && (u.roleId === 'manager' || u.roleId === 'admin'));
   }
 
   canCreate(): boolean {
@@ -478,8 +480,8 @@ export class TeamsComponent {
     try {
       this.state.updateTeam(teamId, { leadUserId: selectedUserId });
       this.cancelTransferLead();
-    } catch (err: any) {
-      this.leadTransferError.set(err.message || 'Lead transfer failed.');
+    } catch (err: unknown) {
+      this.leadTransferError.set(errorMessage(err, 'Lead transfer failed.'));
     }
   }
 
@@ -495,9 +497,9 @@ export class TeamsComponent {
       this.state.removeTeamMember(teamId, userId);
       this.memberErrorTeamId.set(null);
       this.memberErrorMessage.set(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.memberErrorTeamId.set(teamId);
-      this.memberErrorMessage.set(err.message || 'Failed to remove member.');
+      this.memberErrorMessage.set(errorMessage(err, 'Failed to remove member.'));
     }
   }
 

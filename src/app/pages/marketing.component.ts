@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { Router, RouterLink } from '@angular/router';
 import { CrmStateService } from '../services/crm-state.service';
 import { CampaignsService, Campaign } from '../services/domains';
 import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns.service';
@@ -8,13 +9,12 @@ import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { DataStatusBannerComponent } from '../shared/data-status-banner.component';
 import { PaginatorComponent } from '../shared/paginator.component';
 import { WhatsAppCampaignModalComponent } from '../shared/whatsapp-campaign-modal.component';
-import { WhatsAppCampaignDetailComponent } from '../shared/whatsapp-campaign-detail.component';
 import { SimpleCampaignModalComponent } from '../shared/simple-campaign-modal.component';
 
 @Component({
   selector: 'app-marketing',
-  imports: [MatIconModule, CommonModule, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent,
-            WhatsAppCampaignModalComponent, WhatsAppCampaignDetailComponent, SimpleCampaignModalComponent],
+  imports: [MatIconModule, CommonModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent,
+            WhatsAppCampaignModalComponent, SimpleCampaignModalComponent],
   template: `
     <div class="space-y-8">
       <app-data-status-banner [loading]="campaignsService.isLoading$()" [error]="campaignsService.error$()" />
@@ -99,15 +99,11 @@ import { SimpleCampaignModalComponent } from '../shared/simple-campaign-modal.co
           </thead>
           <tbody class="bg-white divide-y divide-slate-200">
             @for (campaign of paginatedCampaigns(); track campaign.id) {
-              <tr class="hover:bg-zinc-50 transition-colors"
-                  [class.cursor-pointer]="isWhatsApp(campaign)"
-                  (click)="openDetail(campaign)">
+              <tr class="hover:bg-zinc-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-zinc-900 flex items-center gap-2">
-                    {{campaign.title}}
-                    @if (isWhatsApp(campaign)) {
-                      <mat-icon class="text-zinc-300 text-[16px]! w-4 h-4 leading-none!">chevron_right</mat-icon>
-                    }
+                    <a [routerLink]="['/campaigns', campaign.id]" class="table-name-link text-left" [title]="'View ' + campaign.title">{{campaign.title}}</a>
+                    <mat-icon class="text-zinc-300 text-[16px]! w-4 h-4 leading-none!">chevron_right</mat-icon>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -158,19 +154,14 @@ import { SimpleCampaignModalComponent } from '../shared/simple-campaign-modal.co
 
       <app-whatsapp-campaign-modal
         [open]="showComposer()"
-        (close)="showComposer.set(false)"
+        (closed)="showComposer.set(false)"
         (created)="onCampaignCreated($event)" />
-
-      <app-whatsapp-campaign-detail
-        [campaignId]="detailCampaignId()"
-        [campaignTitle]="detailCampaignTitle()"
-        (close)="onDetailClosed()" />
 
       <app-simple-campaign-modal
         [open]="showSimpleComposer()"
         [channel]="simpleComposerChannel()"
         [campaign]="editingCampaign()"
-        (close)="showSimpleComposer.set(false)"
+        (closeEmitted)="showSimpleComposer.set(false)"
         (saved)="refreshCampaigns()" />
 
       <!-- Delete Campaign Confirmation Modal -->
@@ -210,8 +201,7 @@ export class MarketingComponent {
   activeTab = signal<'Email' | 'WhatsApp' | 'SMS'>('Email');
 
   showComposer = signal(false);
-  detailCampaignId = signal<string | null>(null);
-  detailCampaignTitle = signal<string>('Campaign');
+  private router = inject(Router);
 
   showSimpleComposer = signal(false);
   simpleComposerChannel = signal<'Email' | 'SMS'>('Email');
@@ -322,29 +312,14 @@ export class MarketingComponent {
 
   onCampaignCreated(campaignId: string): void {
     this.refreshCampaigns();
-    this.detailCampaignTitle.set('Campaign');
-    this.detailCampaignId.set(campaignId);
-  }
-
-  /**
-   * Reload on close as well as on create. Dispatch runs server-side and finishes
-   * after the create call returns, so the list fetched at creation time still shows
-   * a sent count of zero.
-   */
-  onDetailClosed(): void {
-    this.detailCampaignId.set(null);
-    this.refreshCampaigns();
+    // The detail page is where recipients get added and (for WhatsApp) the campaign is
+    // launched, so go straight there instead of leaving the agent on the list.
+    this.router.navigate(['/campaigns', campaignId]);
   }
 
   refreshCampaigns(): void {
     this.campaignsService.isLoaded.set(false);
     this.campaignsService.load();
-  }
-
-  openDetail(campaign: Campaign): void {
-    if (!this.isWhatsApp(campaign)) return;
-    this.detailCampaignTitle.set(campaign.title);
-    this.detailCampaignId.set(campaign.id);
   }
 
   getStatusColor(status: string) {

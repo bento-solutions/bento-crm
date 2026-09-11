@@ -339,14 +339,17 @@ export class ApiService extends BaseApiService {
     );
   }
 
+  // A large flat page rather than the default 20: both are used to populate selection UIs
+  // (the campaign recipient picker's "by type"/"by group" tabs) where a truncated list would
+  // silently under-enrol a campaign's audience.
   getPartnersByType(type: string): Observable<Partner[]> {
-    return this.get<PageResponse<Partner>>(`/partners/type/${type}`).pipe(
+    return this.get<PageResponse<Partner>>(`/partners/type/${type}`, { size: 1000 }).pipe(
       map(response => response.content || [])
     );
   }
 
   getPartnersByStage(stage: string): Observable<Partner[]> {
-    return this.get<PageResponse<Partner>>(`/partners/stage/${stage}`).pipe(
+    return this.get<PageResponse<Partner>>(`/partners/stage/${stage}`, { size: 1000 }).pipe(
       map(response => response.content || [])
     );
   }
@@ -544,6 +547,21 @@ export class ApiService extends BaseApiService {
     return this.delete(`/tickets/${id}`);
   }
 
+  /** The tasks raised for one ticket — same rows as GET /tasks filtered on the ticket link. */
+  getTicketTasks(ticketId: string): Observable<Task[]> {
+    return this.get<PageResponse<Task>>(`/tickets/${ticketId}/tasks`).pipe(
+      map(response => (response.content || []).map(fromBackendTask))
+    );
+  }
+
+  /**
+   * Raises a task from inside a ticket. Only `title` is required; the backend links the task to
+   * the ticket and fills assignee / priority / due date from the ticket when they are omitted.
+   */
+  createTicketTask(ticketId: string, task: unknown): Observable<Task> {
+    return this.post<Task>(`/tickets/${ticketId}/tasks`, toBackendTask(task)).pipe(map(fromBackendTask));
+  }
+
   // Invoices
   getInvoices(): Observable<Invoice[]> {
     return this.get<PageResponse<InvoiceResponse>>(`/invoices`).pipe(
@@ -632,6 +650,10 @@ export class ApiService extends BaseApiService {
 
   addCampaignRecipients(id: string, partnerIds: string[]): Observable<CampaignRecipient[]> {
     return this.post<CampaignRecipient[]>(`/campaigns/${id}/recipients`, { partnerIds });
+  }
+
+  removeCampaignRecipient(campaignId: string, recipientId: string): Observable<unknown> {
+    return this.delete(`/campaigns/${campaignId}/recipients/${recipientId}`);
   }
 
   cancelCampaignFollowups(id: string): Observable<{ cancelled: number }> {

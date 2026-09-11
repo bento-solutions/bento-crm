@@ -25,6 +25,13 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
   selector: 'app-sales',
   imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent],
   template: `
+    <!--
+      eslint-disable @angular-eslint/template/label-has-associated-control --
+      ~90 block-level <label>s in this template sit visually above their field but are not
+      programmatically associated (no for/id, not nested). Associating each one needs per-field
+      visual QA on this 3600-line template, so it is tracked as follow-up a11y work.
+      TODO(a11y): wire these labels to their controls and remove this directive.
+    -->
     <div class="space-y-8">
       @if (activeTab() !== 'deals') {
         <app-data-status-banner [loading]="activeTabLoading()" [error]="activeTabError()" />
@@ -123,12 +130,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </thead>
             <tbody class="bg-white divide-y divide-slate-100">
               @for (deal of paginatedDeals(); track deal.id) {
-                <tr (click)="openDealDrawer(deal)" class="hover:bg-zinc-50/80 cursor-pointer transition-colors">
+                <tr class="hover:bg-zinc-50/80 transition-colors">
                   <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
                     <input type="checkbox" [checked]="isDealSelected(deal.id)" (click)="toggleDealSelect(deal.id, $event)" class="cursor-pointer" />
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-semibold text-zinc-900">{{deal.title}}</div>
+                    <button (click)="openDealDrawer(deal)" class="table-name-link text-sm font-semibold text-zinc-900 text-left" [title]="'View ' + deal.title">{{deal.title}}</button>
                     @if (deal.dealNumber) {
                       <div class="text-meta text-zinc-400 font-sans font-medium">{{deal.dealNumber}}</div>
                     }
@@ -190,7 +197,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div class="w-px h-4 bg-white/20"></div>
             <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignDealOwner($event)">
               <option value="">Assign owner…</option>
-              @for (u of state.users(); track u.id) { <option [value]="u.name">{{u.name}}</option> }
+              @for (u of state.users(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
             </select>
             <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeDealStage($event)">
               <option value="">Change stage…</option>
@@ -385,9 +392,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </thead>
             <tbody class="bg-white divide-y divide-slate-200">
               @for (po of paginatedPOs(); track po.id) {
-                <tr (click)="openPODrawer(po)" class="hover:bg-zinc-50 cursor-pointer transition-colors">
+                <tr class="hover:bg-zinc-50 transition-colors">
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-semibold text-zinc-900 font-sans">#{{po.id}}</div>
+                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-zinc-900 font-sans text-left" [title]="'View PO #' + po.id">#{{po.id}}</button>
                     @if (po.sentVia) {
                       <span class="text-meta text-zinc-400 font-medium">Sent: {{po.sentVia}}</span>
                     }
@@ -799,11 +806,10 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs font-semibold text-zinc-500 mb-1">Sales Person</label>
-                      <select [(ngModel)]="newDeal.salesPerson" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                        @for (u of users(); track u.name) {
-                          @if (u.team === 'Sales') {
-                            <option [value]="u.name">{{u.name}}</option>
-                          }
+                      <select [(ngModel)]="newDeal.salesPersonUserId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                        <option value="">-- Unassigned --</option>
+                        @for (u of users(); track u.id) {
+                          <option [value]="u.id">{{u.displayName}}</option>
                         }
                       </select>
                     </div>
@@ -1531,7 +1537,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Slide-Over Drawer for Proposal Details -->
     @if (selectedProposal(); as prop) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="proposal-drawer-title" role="dialog" aria-modal="true">
-        <div (click)="closeProposalDrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closeProposalDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
             <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
@@ -1686,7 +1692,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Slide-Over Drawer for PO Details -->
     @if (selectedPO(); as po) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="po-drawer-title" role="dialog" aria-modal="true">
-        <div (click)="closePODrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closePODrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
             <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
@@ -1785,7 +1791,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     @if (selectedDeal(); as deal) {
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="deal-drawer-title" role="dialog" aria-modal="true">
         <!-- Backdrop -->
-        <div (click)="closeDealDrawer()" class="absolute inset-0 overflow-hidden bg-transparent"></div>
+        <div (click)="closeDealDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
           <div class="w-screen max-w-3xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
@@ -2421,13 +2427,13 @@ export class SalesComponent {
   bulkAssignDealOwner(event: Event) {
     const owner = (event.target as HTMLSelectElement).value;
     if (!owner) return;
-    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { salesPerson: owner }));
+    this.selectedDealIds().forEach(id => this.dealsService.patchDeal(id, { salesPersonUserId: owner }));
     (event.target as HTMLSelectElement).value = '';
   }
   bulkChangeDealStage(event: Event) {
     const stage = (event.target as HTMLSelectElement).value as Deal['stage'];
     if (!stage) return;
-    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { stage }));
+    this.selectedDealIds().forEach(id => this.dealsService.patchDeal(id, { stage }));
     (event.target as HTMLSelectElement).value = '';
   }
   bulkExportDeals() {
@@ -2650,7 +2656,7 @@ export class SalesComponent {
     contactPhone: '',
 
     // Sales & Ownership
-    salesPerson: '',
+    salesPersonUserId: '',
     salesRegion: '',
 
     // Commercial Basics
@@ -3066,7 +3072,9 @@ export class SalesComponent {
   // Deal Creation
   openCreateDealModal() {
     if (!this.canCreateDeal()) return;
-    const defaultCust = this.partnersService.customers()[0]?.id || '';
+    // Same source as the modal's <select>: the two partner stores are not guaranteed to be
+    // loaded together, and a default the dropdown cannot show leaves partnerId empty.
+    const defaultCust = this.customers()[0]?.id || '';
     const today = new Date().toISOString().split('T')[0];
     const deliveryDate = new Date();
     deliveryDate.setDate(deliveryDate.getDate() + 30);
@@ -3096,7 +3104,7 @@ export class SalesComponent {
       contactEmail: '',
       contactPhone: '',
 
-      salesPerson: this.users().find(u => u.team === 'Sales')?.name || 'Youssef El Alami',
+      salesPersonUserId: this.state.currentUserId(),
       salesRegion: 'Casablanca-Settat / Maroc',
 
       currency: 'MAD',
@@ -3202,7 +3210,7 @@ export class SalesComponent {
       contactPhone: this.newDeal.contactPhone,
 
       // Sales & Ownership
-      salesPerson: this.newDeal.salesPerson,
+      salesPersonUserId: this.newDeal.salesPersonUserId || undefined,
       salesRegion: this.newDeal.salesRegion,
 
       // Commercial Basics
@@ -3589,7 +3597,7 @@ export class SalesComponent {
         currency: 'MAD',
         paymentTerms: '30 Days Net',
         orderTotalAmount: prop.amount,
-        salesPerson: this.users().find(u => u.team === 'Sales')?.name || '',
+        salesPersonUserId: this.state.currentUserId(),
         salesRegion: 'Casablanca-Settat / Maroc'
       });
 

@@ -100,7 +100,9 @@ export class SimpleCampaignModalComponent {
     if (!this.title.trim()) return;
     const existing = this.campaign();
     if (existing) {
-      this.campaignsService.updateCampaign(existing.id, {
+      // patchCampaign merges onto the stored campaign — the backend's PATCH re-validates the
+      // whole record (channel is @NotNull), and this form never collects a channel to send.
+      this.campaignsService.patchCampaign(existing.id, {
         title: this.title.trim(),
         targetAudience: this.targetAudience.trim(),
         status: this.status

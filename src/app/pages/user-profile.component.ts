@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { CrmStateService, CrmUser, RoleId } from '../services/crm-state.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { RoleBadgeComponent } from '../shared/role-badge.component';
+import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslationService } from '../services/translation.service';
 
@@ -501,6 +502,8 @@ export class UserProfileComponent {
     const val = (event.target as HTMLSelectElement).value as 'light' | 'dark' | 'system';
     if (this.isSelf()) {
       this.state.updateOwnProfile({ theme: val });
+      // updateOwnProfile persists + applies via CrmStateService.setTheme;
+      // re-assert here so the switch feels instant even if state has no user yet.
       this.applyTheme(val);
       return;
     }
@@ -527,12 +530,9 @@ export class UserProfileComponent {
   }
 
   private applyTheme(theme: 'light' | 'dark' | 'system') {
-    const root = document.documentElement;
-    if (theme === 'system') {
-      root.removeAttribute('data-theme');
-    } else {
-      root.setAttribute('data-theme', theme);
-    }
+    // Single source of truth lives in CrmStateService (persist + DOM + signal);
+    // keep this thin wrapper so the template path never drifts from boot logic.
+    this.state.setTheme(theme);
   }
 
   updateUserRole(userId: string, event: Event) {
@@ -540,8 +540,8 @@ export class UserProfileComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.roleError.set(null);
-    } catch (err: any) {
-      this.roleError.set(err.message || 'Operation failed');
+    } catch (err: unknown) {
+      this.roleError.set(errorMessage(err, 'Operation failed'));
       // Reset select element visual state
       event.preventDefault();
     }
@@ -553,8 +553,8 @@ export class UserProfileComponent {
       this.showDeactivateConfirm.set(false);
       this.deactivateError.set(null);
       this.router.navigate(['/settings/users']);
-    } catch (err: any) {
-      this.deactivateError.set(err.message || 'Operation failed');
+    } catch (err: unknown) {
+      this.deactivateError.set(errorMessage(err, 'Operation failed'));
     }
   }
 

@@ -6,6 +6,7 @@ import { CrmStateService, CrmUser, RoleId } from '../services/crm-state.service'
 import { InvitationDto, InvitationRole, InvitationStatus } from '../core/services/invitation-api.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { RoleBadgeComponent } from '../shared/role-badge.component';
+import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { PaginatorComponent } from '../shared/paginator.component';
 
@@ -343,7 +344,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                       <app-user-avatar [userId]="user.id" [size]="36"></app-user-avatar>
                     </a>
                     <div>
-                      <a [routerLink]="['/settings/users', user.id]" class="font-bold text-xs text-zinc-800 hover:text-zinc-900 block transition-colors">
+                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link font-bold text-xs text-zinc-800 hover:text-zinc-900 block transition-colors">
                         {{ user.displayName }}
                       </a>
                       <span class="text-meta text-zinc-400 block font-medium mt-0.5">{{ user.jobTitle || 'No title' }}</span>
@@ -836,9 +837,9 @@ export class UsersComponent {
     try {
       this.state.updateUserRole(userId, val);
       this.cancelRoleEdit();
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.roleErrorUserId.set(userId);
-      this.roleErrorMessage.set(err.message || 'Operation failed');
+      this.roleErrorMessage.set(errorMessage(err, 'Operation failed'));
     }
   }
 
@@ -858,8 +859,8 @@ export class UsersComponent {
     try {
       this.state.deactivateUser(userId);
       this.cancelDeactivate();
-    } catch (err: any) {
-      this.deactivateErrorMessage.set(err.message || 'Deactivation failed');
+    } catch (err: unknown) {
+      this.deactivateErrorMessage.set(errorMessage(err, 'Deactivation failed'));
     }
   }
 

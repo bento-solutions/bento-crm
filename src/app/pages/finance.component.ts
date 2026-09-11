@@ -978,6 +978,8 @@ export class FinanceComponent {
     this.invoicesService.addInvoice({
       type:            this.newInvoiceData.type,
       partnerId:       this.newInvoiceData.partnerId,
+      // The line sum is tax-exclusive; the backend adds VAT and returns the real total as `amount`.
+      subtotal:        total,
       amount:          total,
       status:          status as 'Draft' | 'Pending',
       dueDate:         this.newInvoiceData.dueDate,

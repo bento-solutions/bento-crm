@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { CrmStateService, Lead, LeadActivity, LeadAttachment } from '../services/crm-state.service';
+import { CrmStateService, Lead, LeadActivity, LeadAttachment, CrmUser } from '../services/crm-state.service';
 import { PartnersService, Partner } from '../services/domains/partners.service';
 import { ApiService } from '../services/api.service';
 import { CommonModule } from '@angular/common';
@@ -186,7 +186,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                   </thead>
                   <tbody>
                     @for (lead of paginatedLeads(); track lead.id) {
-                      <tr (click)="selectLead(lead)" class="border-b border-white/10 hover:bg-white/30 transition-colors cursor-pointer group">
+                      <tr class="border-b border-white/10 hover:bg-white/30 transition-colors group">
                         <td class="px-3 py-2.5 whitespace-nowrap" (click)="$event.stopPropagation()">
                           <input type="checkbox" [checked]="isLeadSelected(lead.id)" (change)="toggleLeadSelect(lead.id, $event)" class="w-4 h-4 rounded border-zinc-300 cursor-pointer" />
                         </td>
@@ -196,7 +196,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                               {{ getInitials(lead.name) }}
                             </div>
                             <div class="min-w-0">
-                              <div class="text-xs font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors truncate max-w-[120px]">{{ lead.name }}</div>
+                              <button (click)="selectLead(lead)" class="table-name-link text-xs font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors truncate max-w-[120px] block text-left" [title]="'View ' + lead.name">{{ lead.name }}</button>
                               <div class="text-meta text-zinc-400">{{ lead.id }}</div>
                             </div>
                           </div>
@@ -205,8 +205,17 @@ import { PaginatorComponent } from '../shared/paginator.component';
                           <div class="text-xs font-semibold text-zinc-800 truncate max-w-[130px]">{{ lead.companyName }}</div>
                           <div class="text-meta text-zinc-400 truncate max-w-[130px]">{{ lead.company?.city || 'No city' }}, {{ lead.company?.country || 'No country' }}</div>
                         </td>
-                        <td class="px-3 py-2.5 whitespace-nowrap">
-                          <div class="flex items-center gap-1">
+                        <td class="px-3 py-2.5 whitespace-nowrap" (click)="$event.stopPropagation()">
+                          @if (canWrite()) {
+                            <select [ngModel]="lead.qualification" (ngModelChange)="onQualificationChange(lead.id, $event)" (click)="$event.stopPropagation()" [class]="getQualificationClass(lead.qualification)" class="px-1.5 py-0.5 text-meta font-bold uppercase rounded-md badge border cursor-pointer focus:outline-none" title="Change qualification">
+                              @for (q of leadQualificationOptions; track q) { <option [value]="q">{{ q }}</option> }
+                            </select>
+                          } @else {
+                            <span class="px-1.5 py-0.5 text-meta font-bold uppercase rounded-md badge border" [class]="getQualificationClass(lead.qualification)">
+                              {{ lead.qualification }}
+                            </span>
+                          }
+                          <div class="flex items-center gap-1 mt-1">
                             <span [class]="getPriorityBadge(lead.priority)" class="px-1.5 py-0.5 text-meta font-bold uppercase rounded-md badge">
                               {{ lead.priority }}
                             </span>
@@ -215,13 +224,20 @@ import { PaginatorComponent } from '../shared/paginator.component';
                             </span>
                           </div>
                         </td>
-                        <td class="px-3 py-2.5 whitespace-nowrap">
-                          <div class="flex items-center gap-1.5">
-                            <div class="w-10 bg-white/30 rounded-full h-1.5 overflow-hidden">
-                              <div [style.width.%]="lead.score" [class]="getScoreColor(lead.score)" class="h-full rounded-full"></div>
+                        <td class="px-3 py-2.5 whitespace-nowrap" (click)="$event.stopPropagation()">
+                          @if (canWrite() && scoreEditFor() === lead.id) {
+                            <div class="flex items-center gap-1.5">
+                              <input type="range" min="0" max="100" step="1" [ngModel]="scoreDraft()" (ngModelChange)="scoreDraft.set($event)" (change)="commitScore(lead.id)" class="w-20 accent-zinc-900 cursor-pointer" [attr.aria-label]="'Score for ' + lead.name">
+                              <span class="text-meta font-bold text-zinc-700 w-6 text-right">{{ scoreDraft() }}</span>
                             </div>
-                            <span class="text-meta font-bold text-zinc-700">{{ lead.score }}</span>
-                          </div>
+                          } @else {
+                            <button (click)="canWrite() && openScoreEditor(lead, $event)" class="flex items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-white/40 transition-colors" [title]="canWrite() ? 'Click to adjust score' : null">
+                              <div class="w-10 bg-white/30 rounded-full h-1.5 overflow-hidden">
+                                <div [style.width.%]="lead.score" [class]="getScoreColor(lead.score)" class="h-full rounded-full"></div>
+                              </div>
+                              <span class="text-meta font-bold text-zinc-700">{{ lead.score }}</span>
+                            </button>
+                          }
                         </td>
                         <td class="px-3 py-2.5 whitespace-nowrap">
                           <div class="flex items-center gap-1">
@@ -231,16 +247,34 @@ import { PaginatorComponent } from '../shared/paginator.component';
                           </div>
                           <div class="text-meta text-zinc-400 mt-0.5">{{ lead.campaigns?.[0]?.campaign || '—' }}</div>
                         </td>
-                        <td class="px-3 py-2.5 whitespace-nowrap">
-                          <div class="text-xs text-zinc-600 flex items-center gap-1 truncate max-w-[110px]">
-                            <mat-icon class="w-3 h-3 text-[12px]! text-zinc-400 shrink-0">person_outline</mat-icon>
-                            {{ lead.assignedSalesperson || 'Unassigned' }}
-                          </div>
+                        <td class="px-3 py-2.5 whitespace-nowrap" (click)="$event.stopPropagation()">
+                          @if (canWrite()) {
+                            <button (click)="openOwnerMenu(lead, $event)" class="flex items-center gap-1 rounded-lg px-1 py-0.5 hover:bg-white/40 transition-colors truncate max-w-[130px]" title="Assign owner">
+                              @if (lead.assignedToUserId) {
+                                <app-user-avatar [userId]="lead.assignedToUserId" [size]="20" />
+                              } @else {
+                                <mat-icon class="w-3 h-3 text-[12px]! text-zinc-400 shrink-0">person_outline</mat-icon>
+                              }
+                              <span class="text-xs text-zinc-600 truncate">{{ state.leadOwnerName(lead) || 'Unassigned' }}</span>
+                              <mat-icon class="w-3 h-3 text-[12px]! text-zinc-400 shrink-0">expand_more</mat-icon>
+                            </button>
+                          } @else {
+                            <div class="text-xs text-zinc-600 flex items-center gap-1 truncate max-w-[110px]">
+                              <mat-icon class="w-3 h-3 text-[12px]! text-zinc-400 shrink-0">person_outline</mat-icon>
+                              {{ state.leadOwnerName(lead) || 'Unassigned' }}
+                            </div>
+                          }
                         </td>
-                        <td class="px-3 py-2.5 whitespace-nowrap">
-                          <span [class]="getStatusClass(lead.status)" class="px-2 py-0.5 text-meta font-semibold rounded-full badge whitespace-nowrap">
-                            {{ lead.status }}
-                          </span>
+                        <td class="px-3 py-2.5 whitespace-nowrap" (click)="$event.stopPropagation()">
+                          @if (canWrite()) {
+                            <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" (click)="$event.stopPropagation()" [class]="getStatusClass(lead.status)" class="px-2 py-0.5 text-meta font-semibold rounded-full badge whitespace-nowrap border cursor-pointer focus:outline-none" title="Change status">
+                              @for (s of leadStatusOptions; track s) { <option [value]="s">{{ s }}</option> }
+                            </select>
+                          } @else {
+                            <span [class]="getStatusClass(lead.status)" class="px-2 py-0.5 text-meta font-semibold rounded-full badge whitespace-nowrap">
+                              {{ lead.status }}
+                            </span>
+                          }
                         </td>
                         <td class="px-3 py-2.5 whitespace-nowrap relative">
                           @if (lead.status !== 'Converted' && canWrite()) {
@@ -283,6 +317,35 @@ import { PaginatorComponent } from '../shared/paginator.component';
                 </table>
               </div>
 
+              <!-- Owner picker popover (fixed: avoids clipping by the table's overflow-x container) -->
+              @if (ownerMenuFor(); as menuLeadId) {
+                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+                <div class="fixed inset-0 z-[60]" (click)="closeOwnerMenu()" (window:scroll)="closeOwnerMenu()" (window:resize)="closeOwnerMenu()">
+                  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+                  <div class="fixed bg-white border border-zinc-200 rounded-xl shadow-xl py-1.5 w-64 max-h-72 overflow-y-auto" [style.left.px]="ownerMenuPos().x" [style.top.px]="ownerMenuPos().y" (click)="$event.stopPropagation()">
+                    <button (click)="chooseOwner(menuLeadId, null)" class="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-zinc-50 text-left text-xs font-semibold text-zinc-500">
+                      <span class="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center shrink-0"><mat-icon class="text-zinc-400 text-[16px]! w-4 h-4">person_off</mat-icon></span>
+                      Unassigned
+                    </button>
+                    <div class="border-t border-zinc-100 my-1"></div>
+                    @for (u of state.assignableMembers(); track u.id) {
+                      <button (click)="chooseOwner(menuLeadId, u.id)" class="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-zinc-50 text-left">
+                        <app-user-avatar [userId]="u.id" [size]="24" />
+                        <span class="flex-1 min-w-0">
+                          <span class="block text-xs font-semibold text-zinc-800 truncate">{{ u.displayName }}</span>
+                          <span class="block text-[10px] text-zinc-400 truncate">{{ memberTeamName(u) }}</span>
+                        </span>
+                        @if (state.isMarketingMember(u)) {
+                          <span class="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 shrink-0">Marketing</span>
+                        }
+                      </button>
+                    } @empty {
+                      <p class="px-3 py-2 text-xs text-zinc-400">No members found.</p>
+                    }
+                  </div>
+                </div>
+              }
+
               <!-- Pagination -->
               <div class="px-5 py-3 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-1.5 text-xs text-zinc-500">
@@ -321,7 +384,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
               <div class="w-px h-4 bg-white/20"></div>
               <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignLeadOwner($event)">
                 <option value="">Assign owner…</option>
-                @for (u of state.users(); track u.id) { <option [value]="u.name">{{u.name}}</option> }
+                @for (u of state.assignableMembers(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
               </select>
               <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeLeadStage($event)">
                 <option value="">Change stage…</option>
@@ -641,6 +704,103 @@ import { PaginatorComponent } from '../shared/paginator.component';
             </div>
           }
         } @else {
+          <!-- View toggle (cards / table) for non-Lead tabs -->
+          <div class="flex items-center justify-between px-1 pb-3">
+            <span class="text-xs text-zinc-400 font-semibold uppercase tracking-wider">{{ filteredPartners().length }} {{ activeTab() }}s</span>
+            <div class="flex items-center gap-1 bg-zinc-100 rounded-lg p-1">
+              <button (click)="partnerView.set('cards')" [class]="partnerView() === 'cards' ? 'bg-white shadow-xs text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'" class="p-1.5 rounded-md transition-colors" title="Card view">
+                <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">grid_view</mat-icon>
+              </button>
+              <button (click)="partnerView.set('table')" [class]="partnerView() === 'table' ? 'bg-white shadow-xs text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'" class="p-1.5 rounded-md transition-colors" title="Table view">
+                <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">table_rows</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          @if (partnerView() === 'table') {
+            <!-- Table view for non-Lead tabs -->
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="border-b border-white/20">
+                    <th scope="col" class="px-3 py-3 text-left w-8">
+                      <input type="checkbox" [checked]="paginatedPartners().length > 0 && selectedPartnerIds().size === paginatedPartners().length" (change)="toggleSelectAllPartners($event)" class="w-4 h-4 rounded border-zinc-300 cursor-pointer" />
+                    </th>
+                    <th scope="col" class="px-3 py-3 text-left text-meta font-bold text-zinc-400 uppercase tracking-wider">{{ activeTab() }}</th>
+                    <th scope="col" class="px-3 py-3 text-left text-meta font-bold text-zinc-400 uppercase tracking-wider">Contact</th>
+                    <th scope="col" class="px-3 py-3 text-left text-meta font-bold text-zinc-400 uppercase tracking-wider">Owner</th>
+                    <th scope="col" class="px-3 py-3 text-left text-meta font-bold text-zinc-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-3 py-3 text-left text-meta font-bold text-zinc-400 uppercase tracking-wider">Created</th>
+                    <th scope="col" class="px-3 py-3 text-right text-meta font-bold text-zinc-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (partner of paginatedPartners(); track partner.id) {
+                    <tr class="border-b border-white/10 hover:bg-white/30 transition-colors">
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <input type="checkbox" [checked]="isPartnerSelected(partner.id)" (change)="togglePartnerSelect(partner.id, $event)" class="w-4 h-4 rounded border-zinc-300 cursor-pointer" />
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                          <div class="h-8 w-8 bg-zinc-100 text-zinc-950 font-bold rounded-lg text-meta flex items-center justify-center shrink-0">
+                            {{ partner.name.substring(0, 2).toUpperCase() }}
+                          </div>
+                          <div class="min-w-0">
+                            @if (partner.type === 'Vendor') {
+                              <div class="text-xs font-semibold text-zinc-900 truncate max-w-[160px]">{{ partner.name }}</div>
+                            } @else {
+                              <button (click)="openPartnerPrimary(partner)" class="table-name-link text-xs font-semibold text-zinc-900 truncate max-w-[160px] block text-left" [title]="partner.type === 'Customer' ? 'View customer card' : 'Convert to customer'">{{ partner.name }}</button>
+                            }
+                            <div class="text-meta text-zinc-400 truncate max-w-[160px]">{{ partner.city || 'No city' }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <div class="text-xs text-zinc-700 truncate max-w-[180px]">{{ partner.email || '—' }}</div>
+                        <div class="text-meta text-zinc-400 font-mono">{{ partner.phone || '' }}</div>
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <div class="text-xs text-zinc-600 truncate max-w-[130px]">{{ partner.assignedTo ? getUserName(partner.assignedTo) : 'Unassigned' }}</div>
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <span [class]="getPartnerStatusClass(partner.status)" class="px-2 py-0.5 text-meta font-bold uppercase tracking-wider rounded-full border whitespace-nowrap">
+                          {{ partner.status || '—' }}
+                        </span>
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap">
+                        <app-created-by-badge [createdBy]="partner.createdBy" [createdAt]="partner.createdAt" />
+                      </td>
+                      <td class="px-3 py-2.5 whitespace-nowrap text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                          @if (partner.type === 'Customer') {
+                            <button (click)="openCustomerCard(partner.id)" title="View Customer Card" class="w-8 h-8 shrink-0 rounded-lg bg-white flex items-center justify-center text-[#378ADD] hover:text-[#2E5AAC] hover:bg-zinc-50 transition-all">
+                              <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">visibility</mat-icon>
+                            </button>
+                          }
+                          @if (partner.type === 'Prospect' && canWrite()) {
+                            <button (click)="openConvertModal(partner)" title="Convert to Customer" class="w-8 h-8 shrink-0 rounded-lg bg-white flex items-center justify-center text-zinc-700 hover:text-zinc-900 hover:bg-zinc-50 transition-all">
+                              <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">published_with_changes</mat-icon>
+                            </button>
+                          }
+                          @if (state.currentUserPermissions().canDeleteRecords) {
+                            <button (click)="deletePartner(partner)" title="Delete" class="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center bg-zinc-50 hover:bg-red-50 hover:text-red-600 border border-zinc-200 hover:border-red-200 text-zinc-500 transition-all">
+                              <mat-icon class="text-[16px] w-4 h-4">delete</mat-icon>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="px-6 py-12 text-center text-zinc-500">
+                        No {{activeTab()}}s found in the directory.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
           <!-- Card grid for non-Lead tabs -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             @for (partner of paginatedPartners(); track partner.id) {
@@ -755,6 +915,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
               </div>
             }
           </div>
+          }
 
           @if (filteredPartners().length > 0) {
             <app-paginator
@@ -928,6 +1089,13 @@ export class PartnersComponent {
   // Lead bulk selection
   selectedLeadIds = signal<Set<string>>(new Set());
   leadStatusOptions = ['New','Contacted','Attempted Contact','Meeting Scheduled','Qualified','Proposal Requested','Converted','Lost','Disqualified'];
+  leadQualificationOptions: Lead['qualification'][] = ['Qualified','Unqualified','Pending'];
+
+  // Inline table editors state (score slider / owner picker)
+  scoreEditFor = signal<string | null>(null);
+  scoreDraft = signal<number>(0);
+  ownerMenuFor = signal<string | null>(null);
+  ownerMenuPos = signal({ x: 0, y: 0 });
 
   // Partner (Customer/Prospect/Vendor) bulk selection
   selectedPartnerIds = signal<Set<string>>(new Set());
@@ -1079,13 +1247,14 @@ export class PartnersComponent {
   }
 
   bulkAssignLeadOwner(event: Event) {
-    const value = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    const value = select.value;
     if (!value) return;
     const ids = this.selectedLeadIds();
     for (const id of ids) {
-      this.state.updateLead(id, { assignedSalesperson: value });
+      this.state.assignLead(id, value);
     }
-    (event.target as HTMLSelectElement).value = '';
+    select.value = '';
   }
 
   bulkChangeLeadStage(event: Event) {
@@ -1154,6 +1323,22 @@ export class PartnersComponent {
     this.router.navigate(['/partners', partnerId, 'customer-card']);
   }
 
+  /** Table-view name click: same primary destination as the card's main button. Vendors have no detail view. */
+  openPartnerPrimary(partner: Partner | Lead) {
+    if (partner.type === 'Customer') this.openCustomerCard(partner.id);
+    else if (partner.type === 'Prospect') this.openConvertModal(partner);
+  }
+
+  getPartnerStatusClass(status?: string): string {
+    switch (status) {
+      case 'active': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'prospect': return 'bg-sky-50 text-sky-700 border-sky-200';
+      case 'inactive': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      case 'archived': return 'bg-zinc-100 text-zinc-400 border-zinc-200';
+      default: return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+    }
+  }
+
   newPartner = {
     id: '' as string | undefined,
     name: '',
@@ -1182,7 +1367,8 @@ export class PartnersComponent {
 
   partnersPage = signal(1);
   partnersPageSize = signal(20);
-  partnersTotalPages = computed(() => Math.max(1, Math.ceil(this.filteredPartners().length / this.partnersPageSize())));
+  /** Cards vs table layout for the Customer/Prospect/Vendor tabs. */
+  partnerView = signal<'cards' | 'table'>('cards');  partnersTotalPages = computed(() => Math.max(1, Math.ceil(this.filteredPartners().length / this.partnersPageSize())));
   paginatedPartners = computed(() => {
     const start = (this.partnersPage() - 1) * this.partnersPageSize();
     return this.filteredPartners().slice(start, start + this.partnersPageSize());
@@ -1278,6 +1464,9 @@ export class PartnersComponent {
       if (this.newPartner.id) {
         this.state.updatePartner(this.newPartner.id, { status: 'active' });
       } else {
+        const fiscal = this.newPartner.type === 'Customer'
+          ? { ice: this.newPartner.ICE, ifField: this.newPartner.IF, rc: this.newPartner.RC }
+          : undefined;
         this.state.addPartner({
           type: this.newPartner.type,
           name: this.newPartner.name,
@@ -1286,7 +1475,7 @@ export class PartnersComponent {
           city: this.newPartner.city,
           comments: this.newPartner.comments,
           status: 'active'
-        } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>);
+        } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>, fiscal);
       }
 
       this.activeTab.set(this.newPartner.type);
@@ -1331,6 +1520,7 @@ export class PartnersComponent {
 
   selectLead(lead: Lead) {
     this.selectedLead.set(lead);
+    this.state.loadLeadDetails(lead.id);
     this.activeDetailTab.set('info');
     this.newActivity = {
       type: 'Call',
@@ -1377,6 +1567,16 @@ export class PartnersComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !this.canWrite()) return;
+    if (!this.state.isPersistedPartnerId(leadId)) {
+      // Lead not yet persisted (local-only id): keep the attachment local-only.
+      this.state.addLeadAttachment(leadId, {
+        fileName: file.name,
+        fileSize: this.formatFileSize(file.size),
+        uploadedAt: new Date().toISOString().split('T')[0]
+      });
+      input.value = '';
+      return;
+    }
     this.uploading.set(true);
     this.api.uploadFile(file, 'PARTNER', leadId).subscribe({
       next: (dto) => {
@@ -1452,6 +1652,7 @@ export class PartnersComponent {
       return;
     }
     const randomScore = Math.floor(Math.random() * 40) + 50;
+    const assignee = this.state.users().find(u => u.name === this.newLead.assignedSalesperson);
     this.state.addLead({
       name: this.newLead.name,
       companyName: this.newLead.companyName,
@@ -1463,6 +1664,7 @@ export class PartnersComponent {
       temperature: this.newLead.temperature,
       stage: 'Discovery Meeting',
       assignedSalesperson: this.newLead.assignedSalesperson,
+      assignedToUserId: assignee?.id,
       salesTeam: 'Enterprise Sales',
       territory: this.newLead.country || 'International',
       businessUnit: 'Cloud Solutions',
@@ -1506,6 +1708,64 @@ export class PartnersComponent {
   getInitials(name: string): string {
     if (!name) return 'LD';
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  getQualificationClass(qualification: string): string {
+    switch (qualification) {
+      case 'Qualified': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Unqualified': return 'bg-red-50 text-red-600 border-red-200';
+      default: return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+  }
+
+  // Inline table editors (qualification / score / owner)
+  onQualificationChange(leadId: string, value: Lead['qualification']) {
+    if (!this.canWrite()) return;
+    this.state.updateLead(leadId, { qualification: value });
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  openScoreEditor(lead: Lead, event: Event) {
+    event.stopPropagation();
+    if (!this.canWrite()) return;
+    this.scoreDraft.set(lead.score);
+    this.scoreEditFor.set(lead.id);
+  }
+
+  commitScore(leadId: string) {
+    this.state.updateLead(leadId, { score: this.scoreDraft() });
+    this.scoreEditFor.set(null);
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  openOwnerMenu(lead: Lead, event: MouseEvent) {
+    event.stopPropagation();
+    if (!this.canWrite()) return;
+    const width = 256;
+    const height = 300;
+    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8));
+    const below = event.clientY + 12;
+    const y = below + height > window.innerHeight - 8 ? Math.max(8, event.clientY - height - 8) : below;
+    this.ownerMenuPos.set({ x, y });
+    this.scoreEditFor.set(null);
+    this.ownerMenuFor.set(lead.id);
+  }
+
+  closeOwnerMenu() {
+    this.ownerMenuFor.set(null);
+  }
+
+  chooseOwner(leadId: string, userId: string | null) {
+    this.state.assignLead(leadId, userId);
+    this.ownerMenuFor.set(null);
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  memberTeamName(user: CrmUser): string {
+    return this.state.teams().find(t => t.id === user.teamId)?.name || '';
   }
 
   getUserName(userId: string): string {
