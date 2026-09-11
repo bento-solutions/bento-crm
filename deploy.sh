@@ -57,7 +57,7 @@ fi
 
 export CRM_IMAGE_TAG="$IMAGE_TAG"
 dc pull "$SERVICE"
-dc up -d "$SERVICE"
+dc up -d --remove-orphans "$SERVICE"
 
 CONTAINER="$(dc ps -q "$SERVICE")"
 if [ -z "$CONTAINER" ]; then
