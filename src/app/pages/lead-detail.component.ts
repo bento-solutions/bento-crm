@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -332,6 +332,11 @@ export class LeadDetailComponent {
   }
 
   constructor() {
+    // Deep-link entry point (no selectLead ran): hydrate server sub-resources once.
+    effect(() => {
+      const id = this.route.snapshot.paramMap.get('id');
+      if (id) this.state.loadLeadDetails(id);
+    });
     if (typeof window !== 'undefined') {
       window.addEventListener('click', () => {
         this.showConvertMenu.set(false);
@@ -382,6 +387,16 @@ export class LeadDetailComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    if (!this.state.isPersistedPartnerId(leadId)) {
+      // Lead not yet persisted (local-only id): keep the attachment local-only.
+      this.state.addLeadAttachment(leadId, {
+        fileName: file.name,
+        fileSize: this.formatFileSize(file.size),
+        uploadedAt: new Date().toISOString().split('T')[0]
+      });
+      input.value = '';
+      return;
+    }
     this.uploading.set(true);
     this.api.uploadFile(file, 'PARTNER', leadId).subscribe({
       next: (dto) => {

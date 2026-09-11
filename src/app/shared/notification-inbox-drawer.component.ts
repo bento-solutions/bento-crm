@@ -74,9 +74,20 @@ import { CrmStateService } from '../services/crm-state.service';
             <div class="flex-1 overflow-y-auto">
               @if (drawerType() === 'notifications') {
                 <!-- Notifications List -->
+                @if (loading()) {
+                  <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+                    <p class="text-sm font-semibold text-zinc-500">Loading notifications…</p>
+                  </div>
+                } @else if (loadError()) {
+                  <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+                    <mat-icon class="text-zinc-300 text-[48px] w-12 h-12 mb-3">cloud_off</mat-icon>
+                    <p class="text-sm font-semibold text-zinc-500">Couldn't load notifications</p>
+                    <button (click)="retry()" class="mt-2 text-xs font-semibold text-zinc-900 hover:underline">Retry</button>
+                  </div>
+                }
                 @for (notif of notifications(); track notif.id) {
                   <button
-                    (click)="markNotificationRead(notif.id)"
+                    (click)="openNotification(notif.id)"
                     class="w-full text-left px-5 py-4 flex items-start gap-3.5 transition-colors hover:bg-zinc-50 border-b border-zinc-100 last:border-b-0 cursor-pointer"
                     [class]="notif.read ? '' : 'bg-zinc-100/40'"
                   >
@@ -156,9 +167,13 @@ export class NotificationInboxDrawerComponent {
   open = input(false);
   closed = output<void>();
   switchType = output<'notifications' | 'inbox'>();
+  /** Emitted when a notification is opened so the host can close the drawer / navigate. */
+  notificationOpened = output<string>();
 
   notifications = computed(() => this.state.notifications());
   inboxMessages = computed(() => this.state.inboxMessages());
+  loading = computed(() => this.state.notificationsLoading());
+  loadError = computed(() => this.state.notificationsError());
 
   unreadCount = computed(() =>
     this.drawerType() === 'notifications'
@@ -189,6 +204,16 @@ export class NotificationInboxDrawerComponent {
     this.state.markNotificationRead(id);
   }
 
+  openNotification(id: string) {
+    const notif = this.state.notifications().find(n => n.id === id);
+    if (notif) this.state.openNotification(notif);
+    this.notificationOpened.emit(id);
+  }
+
+  retry() {
+    this.state.refreshNotifications();
+  }
+
   markInboxRead(id: string) {
     this.state.markInboxMessageRead(id);
   }
@@ -196,9 +221,11 @@ export class NotificationInboxDrawerComponent {
   notifIcon(type: string): string {
     switch (type) {
       case 'deal': return 'monetization_on';
+      case 'lead': return 'person_add';
       case 'task': return 'task_alt';
       case 'ticket': return 'support_agent';
       case 'mention': return 'alternate_email';
+      case 'whatsapp': return 'chat';
       default: return 'circle_notifications';
     }
   }
@@ -206,9 +233,11 @@ export class NotificationInboxDrawerComponent {
   notifIconBg(type: string): string {
     switch (type) {
       case 'deal': return 'bg-zinc-100';
+      case 'lead': return 'bg-zinc-100';
       case 'task': return 'bg-zinc-100';
       case 'ticket': return 'bg-zinc-100';
       case 'mention': return 'bg-zinc-100';
+      case 'whatsapp': return 'bg-zinc-100';
       default: return 'bg-zinc-50';
     }
   }
@@ -216,9 +245,11 @@ export class NotificationInboxDrawerComponent {
   notifIconColor(type: string): string {
     switch (type) {
       case 'deal': return 'text-zinc-900';
+      case 'lead': return 'text-zinc-900';
       case 'task': return 'text-zinc-900';
       case 'ticket': return 'text-zinc-900';
       case 'mention': return 'text-zinc-900';
+      case 'whatsapp': return 'text-zinc-900';
       default: return 'text-zinc-500';
     }
   }

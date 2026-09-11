@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
 import { ToastService } from './toast.service';
 import { ApiService } from './api.service';
@@ -593,6 +594,8 @@ export interface Lead {
   city?: string;
   source?: 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral';
   assignedTo?: string;
+  /** Backend user id of the owner (mirrors partner.assigned_to_user_id). */
+  assignedToUserId?: string;
   createdAt?: string;
 }
 
@@ -904,14 +907,17 @@ export interface ProposalTemplate {
   lines: ProposalLine[];
 }
 
+export type NotificationType = 'deal' | 'lead' | 'task' | 'ticket' | 'system' | 'mention' | 'whatsapp';
+
 export interface Notification {
   id: string;
-  type: 'deal' | 'task' | 'ticket' | 'system' | 'mention';
+  type: NotificationType;
   title: string;
   message: string;
   timestamp: string;
   read: boolean;
   relatedId?: string;
+  relatedEntityType?: string;
 }
 
 export interface InboxMessage {
@@ -966,6 +972,7 @@ export class CrmStateService {
   // Per-domain loading states for lazy loading
   dealsLoaded = signal<boolean>(false);
   partnersLoaded = signal<boolean>(false);
+  leadsLoaded = signal<boolean>(false);
   proposalsLoaded = signal<boolean>(false);
   invoicesLoaded = signal<boolean>(false);
   purchaseOrdersLoaded = signal<boolean>(false);
@@ -1012,6 +1019,45 @@ export class CrmStateService {
   // Global currency setting — readable by all components, togglable from settings
   globalCurrency = signal<string>('MAD');
 
+  // ── Appearance theme ──
+  // The backend has no theme column, so the choice lives in localStorage
+  // (default: light) and is reflected on <html data-theme>. "system" clears
+  // the attribute so the CSS prefers-color-scheme block follows the OS.
+  private static readonly THEME_KEY = 'bento_theme';
+  private static readonly THEMES = ['light', 'dark', 'system'] as const;
+
+  private loadSavedTheme(): CrmUser['preferences']['theme'] {
+    if (typeof localStorage === 'undefined') return 'light';
+    const saved = localStorage.getItem(CrmStateService.THEME_KEY);
+    return (CrmStateService.THEMES as readonly string[]).includes(saved as string)
+      ? (saved as CrmUser['preferences']['theme'])
+      : 'light';
+  }
+
+  /** Persist + apply a theme choice. Central helper so every entry point stays in sync. */
+  setTheme(theme: CrmUser['preferences']['theme']): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(CrmStateService.THEME_KEY, theme);
+    }
+    CrmStateService.applyThemeToDom(theme);
+    const id = this.currentUserId();
+    if (id) {
+      this.users.update(list => list.map(u =>
+        u.id === id ? { ...u, preferences: { ...u.preferences, theme } } : u
+      ));
+    }
+  }
+
+  static applyThemeToDom(theme: CrmUser['preferences']['theme']): void {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    if (theme === 'system') {
+      root.removeAttribute('data-theme');
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+  }
+
   // Computeds
   activeUsers = computed(() => this.users().filter(u => u.isActive));
 
@@ -1050,7 +1096,9 @@ export class CrmStateService {
   }
 
   deriveInitials(name: string): string {
-    const parts = name.trim().split(' ');
+    const clean = (name || '').trim();
+    if (!clean) return 'U';
+    const parts = clean.split(/\s+/);
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
@@ -1110,7 +1158,9 @@ export class CrmStateService {
       jobTitle: dto.job_title,
       preferences: {
         language: (dto.language as CrmUser['preferences']['language']) || 'en',
-        theme: 'light',
+        // Backend has no theme field: keep the already-known choice (or the
+        // persisted default of light) so an API round-trip never resets it.
+        theme: this.users().find(u => u.id === dto.id)?.preferences.theme || this.loadSavedTheme(),
         notifyOnLeadAssign: true,
         notifyOnDealUpdate: true,
         notifyOnMention: true
@@ -1265,6 +1315,7 @@ export class CrmStateService {
     });
 
     this.loadNotifications();
+    this.loadLeadsFromApi();
   }
 
   // Lazy-load: Deals
@@ -1309,6 +1360,114 @@ export class CrmStateService {
         this.partnersError.set('Failed to load partners from the server. Showing local data.');
       }
     });
+  }
+
+  // Lazy-load: Leads. leadsData starts empty on every boot and every lead
+  // page reads it, so without this the leads registered in a previous
+  // session (persisted as partners of type LEAD) vanished on refresh.
+  loadLeadsFromApi(): void {
+    if (this.leadsLoaded()) return;
+    this.api.getPartnersByType('LEAD').subscribe({
+      next: (dtos) => {
+        this.leadsData.set((dtos || []).map(d => this.leadFromPartnerDto(d)));
+        this.leadsLoaded.set(true);
+      },
+      error: (err) => {
+        console.warn('Failed to load leads from API, using local data:', err);
+        this.leadsLoaded.set(true);
+      }
+    });
+  }
+
+  /**
+   * Hydrates one lead's server-persisted sub-resources (activities, contacts,
+   * status history) into the locally-hydrated lead. Runs at most once per
+   * lead per session; the merge keeps local-only (not yet persisted) entries
+   * so an in-flight create can never be wiped by an earlier read.
+   */
+  private leadDetailsLoaded = new Set<string>();
+
+  loadLeadDetails(leadId: string): void {
+    if (!this.isAuthenticated() || !this.isPersistedPartnerId(leadId) || this.leadDetailsLoaded.has(leadId)) return;
+    this.leadDetailsLoaded.add(leadId);
+    forkJoin({
+      activities: this.api.getLeadActivities(leadId),
+      contacts: this.api.getLeadContacts(leadId),
+      history: this.api.getLeadStatusHistory(leadId)
+    }).subscribe({
+      next: ({ activities, contacts, history }) => {
+        const serverActivities = (activities || []).map(a => this.leadActivityFromDto(a));
+        const serverContacts = (contacts || []).map(c => this.leadContactFromDto(c));
+        const serverHistory = (history || []).map(h => this.leadStatusHistoryFromDto(h));
+        this.leadsData.update(list => list.map(l => {
+          if (l.id !== leadId) return l;
+          return {
+            ...l,
+            activities: this.mergeServerFirst(serverActivities, l.activities),
+            contacts: this.mergeServerFirst(serverContacts, l.contacts),
+            statusHistory: this.mergeServerFirst(serverHistory, l.statusHistory)
+          };
+        }));
+      },
+      error: (err) => {
+        console.warn('Failed to load lead details from API:', err);
+        this.leadDetailsLoaded.delete(leadId);
+      }
+    });
+  }
+
+  /** Server rows win; local-only temp-id entries (in-flight creates) are kept. */
+  private mergeServerFirst<T>(server: T[], local: T[] | undefined): T[] {
+    const idOf = (item: T): unknown => (item as { id?: unknown })?.id;
+    const serverIds = new Set(server.map(idOf));
+    return [
+      ...server,
+      ...(local || []).filter(l => {
+        const id = idOf(l);
+        return !id || (!serverIds.has(id) && (typeof id !== 'string' || !this.isPersistedPartnerId(id)));
+      })
+    ];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private leadActivityFromDto(dto: any): LeadActivity {
+    const rawType = String(dto.type || 'NOTE');
+    const type = (rawType.charAt(0) + rawType.slice(1).toLowerCase()) as LeadActivity['type'];
+    return {
+      id: dto.id,
+      type: ['Call', 'Email', 'Meeting', 'Note', 'Task'].includes(type) ? type : 'Note',
+      date: dto.occurred_at ? new Date(dto.occurred_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      summary: dto.summary ?? '',
+      detail: dto.detail,
+      assignedTo: dto.assigned_to_user_id,
+      nextFollowUp: dto.next_follow_up_at
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private leadContactFromDto(dto: any): LeadContact {
+    return {
+      id: dto.id,
+      name: dto.name ?? '',
+      jobTitle: dto.job_title,
+      email: dto.email,
+      phone: dto.phone,
+      mobile: dto.mobile,
+      website: dto.website,
+      linkedin: dto.linkedin
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private leadStatusHistoryFromDto(dto: any): LeadStatusHistory {
+    const changedBy = dto.changed_by_user_id
+      ? this.users().find(u => u.id === dto.changed_by_user_id)?.displayName || dto.changed_by_user_id
+      : 'System';
+    return {
+      status: dto.status ?? '',
+      timestamp: dto.changed_at ? new Date(dto.changed_at).toLocaleString() : '',
+      user: changedBy
+    };
   }
 
   // Lazy-load: Proposals
@@ -1653,6 +1812,12 @@ export class CrmStateService {
     const id = this.currentUserId();
     const current = this.users().find(u => u.id === id);
     if (!current) return;
+    // Theme isn't persisted server-side: apply + persist locally right away so
+    // the UI updates instantly and survives the API round-trip below (whose
+    // DTO carries no theme and must not reset the choice).
+    if (patch.theme === 'light' || patch.theme === 'dark' || patch.theme === 'system') {
+      this.setTheme(patch.theme as CrmUser['preferences']['theme']);
+    }
     const payload = {
       display_name: patch.displayName,
       phone: patch.phone,
@@ -1663,6 +1828,11 @@ export class CrmStateService {
     this.api.updateOwnProfile(payload).subscribe({
       next: (dto) => {
         const updated = this.userFromDto(dto);
+        // userFromDto already preserves the known theme, but re-assert the
+        // requested one in case the list changed mid-flight.
+        if (patch.theme === 'light' || patch.theme === 'dark' || patch.theme === 'system') {
+          updated.preferences.theme = patch.theme as CrmUser['preferences']['theme'];
+        }
         this.users.update(list => list.map(u => u.id === id ? updated : u));
         this.toast.show(`Profile updated`, { type: 'info' });
       },
@@ -1928,8 +2098,8 @@ export class CrmStateService {
             displayName: user.display_name,
             name: user.display_name,
             email: user.email,
-            initials: user.initials,
-            avatarColor: user.avatar_color,
+            initials: user.initials || this.deriveInitials(user.display_name || 'U U'),
+            avatarColor: user.avatar_color || this.getAvatarColor(user.id),
             // The backend sends UserRole in SCREAMING_CASE ("ADMIN"); RoleId is lowercase.
             // Casting straight across silently produced a roleId no permission table has an
             // entry for, so every lookup fell through to the viewer defaults and hid the
@@ -1943,7 +2113,10 @@ export class CrmStateService {
             jobTitle: user.job_title || undefined,
             preferences: {
               language: isSupportedLanguage(user.language) ? user.language : 'en',
-              theme: 'light',
+              // Backend has no theme field: preserve the persisted choice so a
+              // refresh never drops a dark/system selection back to light-only
+              // state without applying it to the DOM.
+              theme: this.users().find(u => u.id === user.id)?.preferences.theme || this.loadSavedTheme(),
               notifyOnLeadAssign: true,
               notifyOnDealUpdate: true,
               notifyOnMention: true,
@@ -1952,15 +2125,24 @@ export class CrmStateService {
             lastActiveAt: new Date(),
           };
 
-          // Update the current user in the users list
+          // The token is the identity: adopt the server-side user id so a stale
+          // bento_current_user_id (e.g. a seed id from an older session) can
+          // never point the profile at the wrong user after a refresh.
+          this.setCurrentUser(user.id);
+
+          // Update the current user in the users list. This MUST produce a new
+          // array reference: signals skip notification on Object.is-equal
+          // values, so mutating the array in place and returning it silently
+          // left `currentUser` stuck at undefined (profile "?", lost info)
+          // whenever GET /users failed or resolved in the "wrong" order --
+          // e.g. for roles without USERS_READ, where /auth/me is the only
+          // source of the current user.
           this.users.update(users => {
             const index = users.findIndex(u => u.id === user.id);
             if (index >= 0) {
-              users[index] = { ...users[index], ...crmUser };
-            } else {
-              users.push(crmUser);
+              return users.map(u => u.id === user.id ? { ...u, ...crmUser } : u);
             }
-            return users;
+            return [...users, crmUser];
           });
         },
         error: (err) => {
@@ -2762,6 +2944,75 @@ export class CrmStateService {
     CAMPAIGN: 'Marketing campaign', REFERRAL: 'Referral'
   };
 
+  private static readonly PARTNER_STAGE_TO_LEAD_STATUS: Record<string, Lead['status']> = {
+    NEW: 'New', CONTACTED: 'Contacted', ATTEMPTED_CONTACT: 'Attempted Contact',
+    MEETING_SCHEDULED: 'Meeting Scheduled', QUALIFIED: 'Qualified',
+    PROPOSAL_SENT: 'Proposal Requested', CONFIRMED: 'Converted',
+    CUSTOMER: 'Converted', LOST: 'Lost', DISQUALIFIED: 'Disqualified'
+  };
+
+  private static readonly PARTNER_TEMP_TO_LEAD: Record<string, Lead['temperature']> = {
+    COLD: 'Cold', WARM: 'Warm', HOT: 'Hot'
+  };
+
+  private static readonly PARTNER_PRIORITY_TO_LEAD: Record<string, Lead['priority']> = {
+    LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High'
+  };
+
+  private static readonly PARTNER_QUALIF_TO_LEAD: Record<string, Lead['qualification']> = {
+    QUALIFIED: 'Qualified', UNQUALIFIED: 'Unqualified', PENDING: 'Pending'
+  };
+
+  /**
+   * Inverse of leadToPartnerPayload: rebuilds the local Lead shape from the
+   * raw backend Partner JSON (snake_case, SCREAMING_CASE enums) so leads
+   * survive a page refresh. Sub-resources hydrate separately via
+   * loadLeadDetails() when a lead is opened.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private leadFromPartnerDto(dto: any): Lead {
+    const createdDate = dto.created_at
+      ? new Date(dto.created_at).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    return {
+      id: dto.id,
+      name: dto.name ?? '',
+      companyName: dto.company_name ?? '',
+      status: CrmStateService.PARTNER_STAGE_TO_LEAD_STATUS[dto.stage] || 'New',
+      qualification: CrmStateService.PARTNER_QUALIF_TO_LEAD[dto.qualification] || 'Pending',
+      priority: CrmStateService.PARTNER_PRIORITY_TO_LEAD[dto.priority] || 'Medium',
+      score: dto.score ?? 0,
+      temperature: CrmStateService.PARTNER_TEMP_TO_LEAD[dto.temperature] || 'Cold',
+      stage: dto.stage ?? '',
+      email: dto.email,
+      phone: dto.phone,
+      city: dto.city,
+      comments: dto.comments,
+      source: dto.source ? CrmStateService.PARTNER_SOURCE_FROM_BACKEND[dto.source] : undefined,
+      estimatedDealValue: dto.estimated_deal_value,
+      probability: dto.probability,
+      expectedCloseDate: dto.expected_close_date,
+      notes: dto.notes,
+      company: dto.company,
+      productInterests: dto.product_interests,
+      campaigns: dto.campaigns,
+      assignedToUserId: dto.assigned_to_user_id,
+      assignedSalesperson: dto.assigned_to_user_id
+        ? this.users().find(u => u.id === dto.assigned_to_user_id)?.displayName
+        : undefined,
+      createdDate,
+      modifiedDate: dto.updated_at
+        ? new Date(dto.updated_at).toISOString().split('T')[0]
+        : createdDate,
+      modifiedBy: this.currentUserId(),
+      contacts: [],
+      activities: [],
+      attachments: [],
+      statusHistory: [],
+      type: 'Lead'
+    };
+  }
+
   private leadToPartnerPayload(lead: Partial<Lead> & { name: string }): unknown {
     return {
       type: 'LEAD',
@@ -2777,6 +3028,7 @@ export class CrmStateService {
       priority: lead.priority?.toUpperCase(),
       qualification: lead.qualification?.toUpperCase(),
       stage: lead.status ? this.leadStatusToPartnerStage(lead.status) : undefined,
+      assigned_to_user_id: lead.assignedToUserId || undefined,
       estimated_deal_value: lead.estimatedDealValue,
       probability: lead.probability,
       expected_close_date: lead.expectedCloseDate,
@@ -2786,6 +3038,17 @@ export class CrmStateService {
       campaigns: lead.campaigns,
       notes: lead.notes
     };
+  }
+
+  /**
+   * Backend partner ids are UUIDs. Newly created leads carry a local-only
+   * `LEAD-XXXXXX` id until `POST /partners` resolves and remaps it. Any
+   * server call made with such a local id is rejected with
+   * "Parameter 'partnerId' has an invalid value", so callers must skip the
+   * HTTP round-trip and keep the change local-only in that case.
+   */
+  isPersistedPartnerId(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '');
   }
 
   addLead(lead: Omit<Lead, 'id' | 'createdDate' | 'createdBy' | 'createdAt' | 'modifiedDate' | 'modifiedBy' | 'statusHistory'>) {
@@ -2827,7 +3090,7 @@ export class CrmStateService {
       undo: () => {
         const current = this.leadsData().find(l => l === newLead || l.name === leadName);
         this.leadsData.update(list => list.filter(l => l !== current));
-        if (current) {
+        if (current && this.isPersistedPartnerId(current.id)) {
           this.api.deletePartner(current.id).subscribe({ error: () => { /* ignore error */ } });
         }
       }
@@ -2847,6 +3110,11 @@ export class CrmStateService {
     const removed = this.leadsData().find(l => l.id === leadId);
     if (!removed) return;
     this.leadsData.update(list => list.filter(l => l.id !== leadId));
+    if (!this.isPersistedPartnerId(leadId)) {
+      // Never reached the server (local-only LEAD-XXXXXX id): nothing to delete remotely.
+      this.toast.show(`Lead <strong>${removed.name}</strong> deleted`);
+      return;
+    }
     this.api.deletePartner(leadId).subscribe({
       error: () => {
         this.leadsData.update(list => [...list, removed]);
@@ -2865,6 +3133,13 @@ export class CrmStateService {
     const currentUser = this.users().find(u => u.id === this.currentUserId());
     const currentUserName = currentUser?.displayName || 'Achraf';
     const lead = this.leadsData().find(l => l.id === leadId);
+    // Optimistic echo; reconciled with the server row on POST success (by
+    // identity -- history entries carry no id to match on).
+    const echo: LeadStatusHistory = {
+      status,
+      timestamp: new Date().toLocaleString(),
+      user: currentUserName
+    };
     this.leadsData.update(list => list.map(l => {
       if (l.id === leadId) {
         prevStatus = l.status;
@@ -2876,17 +3151,27 @@ export class CrmStateService {
           modifiedBy: this.currentUserId(),
           statusHistory: [
             ...history,
-            {
-              status,
-              timestamp: new Date().toLocaleString(),
-              user: currentUserName
-            }
+            echo
           ]
         };
       }
       return l;
     }));
+    if (!this.isPersistedPartnerId(leadId)) {
+      // Lead not yet persisted (local-only id): keep the status change local-only.
+      this.toast.show(`Lead <strong>${lead?.name || leadId}</strong> status changed to ${status}`);
+      return;
+    }
     this.api.createLeadStatusHistory(leadId, { status }).subscribe({
+      // Write-through: swap the optimistic echo for the server row so a later
+      // loadLeadDetails() merge can never show both (duplicate).
+      next: (dto) => {
+        const saved = this.leadStatusHistoryFromDto(dto);
+        this.leadsData.update(list => list.map(l => l.id !== leadId ? l : {
+          ...l,
+          statusHistory: [...(l.statusHistory || []).filter(h => h !== echo), saved]
+        }));
+      },
       error: () => this.toast.show('Failed to record status change on the server', { type: 'error' })
     });
     this.api.updatePartner(leadId, this.leadToPartnerPayload({ ...(lead || { name: leadId }), status })).subscribe({
@@ -2930,31 +3215,83 @@ export class CrmStateService {
     const updatedLead = this.leadsData().find(l => l.id === leadId);
     if (updatedLead) {
       setTimeout(() => this.evaluateRules('LeadUpdated', updatedLead as unknown as Record<string, unknown>, `Lead: ${updatedLead.name} (${updatedLead.companyName})`), 0);
-      this.api.updatePartner(leadId, this.leadToPartnerPayload(updatedLead)).subscribe({
-        error: () => this.toast.show('Failed to sync lead update to the server', { type: 'error' })
-      });
+      if (this.isPersistedPartnerId(leadId)) {
+        this.api.updatePartner(leadId, this.leadToPartnerPayload(updatedLead)).subscribe({
+          error: () => this.toast.show('Failed to sync lead update to the server', { type: 'error' })
+        });
+      }
     }
     this.toast.show(`Lead <strong>${updatedLead?.name || leadId}</strong> updated`, { type: 'info' });
   }
 
+  /**
+   * Assigns a lead to an organization member (or unassigns with null).
+   * Single choke point for the table owner picker, bulk assign and imports,
+   * so the display name and the persisted backend user id can never diverge.
+   */
+  assignLead(leadId: string, userId: string | null): void {
+    if (!userId) {
+      this.updateLead(leadId, { assignedToUserId: undefined, assignedSalesperson: '' });
+      return;
+    }
+    const user = this.users().find(u => u.id === userId);
+    this.updateLead(leadId, { assignedToUserId: userId, assignedSalesperson: user?.displayName || '' });
+  }
+
+  /** Display name of a lead's owner, resolving the stored user id first. */
+  leadOwnerName(lead: Lead): string {
+    if (lead.assignedToUserId) {
+      const found = this.users().find(u => u.id === lead.assignedToUserId);
+      if (found) return found.displayName;
+    }
+    return lead.assignedSalesperson || '';
+  }
+
+  /** Id of the team whose name mentions marketing, if the org has one. */
+  marketingTeamId(): string | null {
+    return this.teams().find(t => t.name.toLowerCase().includes('market'))?.id ?? null;
+  }
+
+  isMarketingMember(user: CrmUser): boolean {
+    const marketingId = this.marketingTeamId();
+    return !!marketingId && user.teamId === marketingId;
+  }
+
+  /**
+   * Active org members for owner pickers: marketing-team members first (they
+   * qualify inbound leads), then everyone else alphabetically.
+   */
+  assignableMembers(): CrmUser[] {
+    return [...this.activeUsers()].sort((a, b) => {
+      const rank = (u: CrmUser) => this.isMarketingMember(u) ? 0 : 1;
+      return rank(a) - rank(b) || a.displayName.localeCompare(b.displayName);
+    });
+  }
+
   addLeadActivity(leadId: string, activity: Omit<LeadActivity, 'id'>) {
     const lead = this.leadsData().find(l => l.id === leadId);
+    const echo: LeadActivity = {
+      ...activity,
+      id: 'la-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7)
+    };
     this.leadsData.update(list => list.map(l => {
       if (l.id === leadId) {
         const activities = l.activities || [];
-        const newAct = {
-          ...activity,
-          id: 'la-' + (activities.length + 1) + '-' + Date.now()
-        };
         return {
           ...l,
-          activities: [...activities, newAct],
+          activities: [...activities, echo],
           modifiedDate: new Date().toISOString().split('T')[0],
           modifiedBy: this.currentUserId()
         };
       }
       return l;
     }));
+    if (!this.isPersistedPartnerId(leadId)) {
+      // Lead not yet persisted (local-only id): keep the activity local-only
+      // instead of POSTing /partners/LEAD-XXXXXX/activities (400).
+      this.toast.show(`${activity.type} added to <strong>${lead?.name || leadId}</strong>`);
+      return;
+    }
     this.api.createLeadActivity(leadId, {
       type: activity.type.toUpperCase(),
       summary: activity.summary,
@@ -2962,6 +3299,15 @@ export class CrmStateService {
       occurred_at: activity.date ? new Date(activity.date).toISOString() : undefined,
       next_follow_up_at: activity.nextFollowUp ? new Date(activity.nextFollowUp).toISOString() : undefined
     }).subscribe({
+      // Write-through: swap the optimistic echo for the server row so a later
+      // loadLeadDetails() merge can never show both (duplicate).
+      next: (dto) => {
+        const saved = this.leadActivityFromDto(dto);
+        this.leadsData.update(list => list.map(l => l.id !== leadId ? l : {
+          ...l,
+          activities: (l.activities || []).map(a => a.id === echo.id ? saved : a)
+        }));
+      },
       error: () => this.toast.show('Failed to save activity to the server', { type: 'error' })
     });
     this.toast.show(`${activity.type} added to <strong>${lead?.name || leadId}</strong>`);
@@ -3130,36 +3476,62 @@ export class CrmStateService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private mapNotificationDto(dto: any): Notification {
+    const rawType = String(dto.type || 'system').toLowerCase();
+    const known: NotificationType[] = ['deal', 'lead', 'task', 'ticket', 'system', 'mention', 'whatsapp'];
     return {
       id: dto.id,
-      type: (dto.type || 'system').toLowerCase(),
+      type: (known.includes(rawType as NotificationType) ? rawType : 'system') as NotificationType,
       title: dto.title,
       message: dto.message,
       timestamp: dto.createdAt,
       read: !!dto.isRead,
-      relatedId: dto.relatedEntityId || undefined
+      relatedId: dto.relatedEntityId || undefined,
+      relatedEntityType: dto.relatedEntityType || undefined
     };
   }
 
   loadNotifications(): void {
     if (this.notificationsLoaded()) return;
+    this.refreshNotifications();
+  }
+
+  /** Force-reload the inbox (used on bell open + polling so new assignments appear). */
+  refreshNotifications(): void {
     this.notificationsLoading.set(true);
     this.notificationsError.set(null);
     this.api.getNotifications().subscribe({
       next: (notifications) => {
-        if (notifications && notifications.length > 0) {
-          this.notifications.set(notifications.map(n => this.mapNotificationDto(n)));
-        }
+        // Empty inbox is valid — clear stale rows instead of keeping them.
+        this.notifications.set((notifications || []).map(n => this.mapNotificationDto(n)));
         this.notificationsLoaded.set(true);
         this.notificationsLoading.set(false);
       },
       error: (err) => {
-        console.warn('Failed to load notifications from API, using seed data:', err);
+        console.warn('Failed to load notifications from API:', err);
+        // Keep previously loaded rows; only flag the error.
         this.notificationsLoaded.set(true);
         this.notificationsLoading.set(false);
-        this.notificationsError.set('Failed to load notifications from the server. Showing local data.');
+        this.notificationsError.set('Failed to load notifications from the server.');
       }
     });
+  }
+
+  /** Route for a notification's "view" action — single place mapping type → page (SRP). */
+  notificationRoute(n: Notification): string[] | null {
+    const entity = (n.relatedEntityType || n.type || '').toUpperCase();
+    switch (entity) {
+      case 'LEAD': return n.relatedId ? ['/partners/lead', n.relatedId] : ['/partners'];
+      case 'TASK': return ['/tasks'];
+      case 'TICKET': return ['/tickets'];
+      case 'DEAL': return n.relatedId ? ['/sales/deals', n.relatedId] : ['/sales'];
+      default: return null;
+    }
+  }
+
+  openNotification(n: Notification): void {
+    this.markNotificationRead(n.id);
+    const route = this.notificationRoute(n);
+    if (route) this.router.navigate(route);
   }
 
   markNotificationRead(notifId: string) {
@@ -4201,6 +4573,18 @@ export class CrmStateService {
       if (lang && lang !== this.translation.currentLang()) {
         this.translation.setLanguage(lang).subscribe();
       }
+    });
+
+    // Enforce the saved appearance on every boot and whenever the current
+    // user's theme preference changes. Without this, <html> keeps whatever
+    // index.html set (or nothing), so a dark OS leaks dark CSS variables
+    // into a light-default session until the user toggles the switch.
+    CrmStateService.applyThemeToDom(this.loadSavedTheme());
+    effect(() => {
+      const id = this.currentUserId();
+      const user = this.users().find(u => u.id === id);
+      const theme = user?.preferences.theme || this.loadSavedTheme();
+      CrmStateService.applyThemeToDom(theme);
     });
   }
 

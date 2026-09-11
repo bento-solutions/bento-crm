@@ -502,6 +502,8 @@ export class UserProfileComponent {
     const val = (event.target as HTMLSelectElement).value as 'light' | 'dark' | 'system';
     if (this.isSelf()) {
       this.state.updateOwnProfile({ theme: val });
+      // updateOwnProfile persists + applies via CrmStateService.setTheme;
+      // re-assert here so the switch feels instant even if state has no user yet.
       this.applyTheme(val);
       return;
     }
@@ -528,12 +530,9 @@ export class UserProfileComponent {
   }
 
   private applyTheme(theme: 'light' | 'dark' | 'system') {
-    const root = document.documentElement;
-    if (theme === 'system') {
-      root.removeAttribute('data-theme');
-    } else {
-      root.setAttribute('data-theme', theme);
-    }
+    // Single source of truth lives in CrmStateService (persist + DOM + signal);
+    // keep this thin wrapper so the template path never drifts from boot logic.
+    this.state.setTheme(theme);
   }
 
   updateUserRole(userId: string, event: Event) {

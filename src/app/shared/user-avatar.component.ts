@@ -40,7 +40,10 @@ export class UserAvatarComponent {
   getInitials(): string {
     if (this.userId) {
       const user = this.state.users().find(u => u.id === this.userId);
-      return user?.initials || '?';
+      // Last-resort derivation: a user with no stored initials (null/blank)
+      // still renders a meaningful badge instead of "?".
+      if (user?.initials) return user.initials;
+      if (user?.displayName?.trim()) return this.state.deriveInitials(user.displayName);
     }
     return this.initials || '?';
   }

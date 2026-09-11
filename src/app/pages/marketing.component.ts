@@ -99,14 +99,14 @@ import { SimpleCampaignModalComponent } from '../shared/simple-campaign-modal.co
           </thead>
           <tbody class="bg-white divide-y divide-slate-200">
             @for (campaign of paginatedCampaigns(); track campaign.id) {
-              <tr class="hover:bg-zinc-50 transition-colors"
-                  [class.cursor-pointer]="isWhatsApp(campaign)"
-                  (click)="openDetail(campaign)">
+              <tr class="hover:bg-zinc-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-zinc-900 flex items-center gap-2">
-                    {{campaign.title}}
                     @if (isWhatsApp(campaign)) {
+                      <button (click)="openDetail(campaign)" class="table-name-link text-left" [title]="'View ' + campaign.title">{{campaign.title}}</button>
                       <mat-icon class="text-zinc-300 text-[16px]! w-4 h-4 leading-none!">chevron_right</mat-icon>
+                    } @else {
+                      {{campaign.title}}
                     }
                   </div>
                 </td>

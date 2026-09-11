@@ -2,14 +2,15 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { CrmStateService, Lead, LeadActivity, LeadAttachment } from '../services/crm-state.service';
+import { CrmStateService, Lead, LeadActivity, LeadAttachment, CrmUser } from '../services/crm-state.service';
 import { ApiService } from '../services/api.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
+import { UserAvatarComponent } from '../shared/user-avatar.component';
 
 @Component({
   selector: 'app-leads',
-  imports: [CommonModule, FormsModule, MatIconModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatIconModule, TranslatePipe, UserAvatarComponent],
   template: `
     <div class="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-200">
       <!-- Page Header -->
@@ -129,7 +130,7 @@ import { TranslationService } from '../services/translation.service';
             </thead>
             <tbody class="divide-y divide-slate-200/80 bg-white">
               @for (lead of filteredLeads(); track lead.id) {
-                <tr (click)="selectLead(lead)" class="hover:bg-zinc-100/20 transition-colors cursor-pointer group">
+                <tr class="hover:bg-zinc-100/20 transition-colors group">
                   <td class="px-6 py-4 whitespace-nowrap" (click)="toggleLeadSelect(lead.id, $event)">
                     <input type="checkbox" [checked]="isLeadSelected(lead.id)" class="rounded border-zinc-300 cursor-pointer">
                   </td>
@@ -139,7 +140,7 @@ import { TranslationService } from '../services/translation.service';
                         {{ getInitials(lead.name) }}
                       </div>
                       <div>
-                        <div class="text-sm font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors">{{ lead.name }}</div>
+                        <button (click)="selectLead(lead)" class="table-name-link text-sm font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors text-left" [title]="'View ' + lead.name">{{ lead.name }}</button>
                         <div class="text-xs text-zinc-400">{{ lead.id }}</div>
                       </div>
                     </div>
@@ -148,8 +149,11 @@ import { TranslationService } from '../services/translation.service';
                     <div class="text-sm font-medium text-zinc-800">{{ lead.companyName }}</div>
                     <div class="text-xs text-zinc-400">{{ lead.company?.city || ('leads.noCity' | translate) }}, {{ lead.company?.country || ('leads.noCountry' | translate) }}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-1.5">
+                  <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
+                    <select [ngModel]="lead.qualification" (ngModelChange)="onQualificationChange(lead.id, $event)" (click)="$event.stopPropagation()" [class]="getQualificationClass(lead.qualification)" class="px-2 py-0.5 text-meta font-bold uppercase rounded-md border cursor-pointer focus:outline-none" title="Change qualification">
+                      @for (q of leadQualificationOptions; track q) { <option [value]="q">{{ q }}</option> }
+                    </select>
+                    <div class="flex items-center gap-1.5 mt-1">
                       <span [class]="getPriorityBadge(lead.priority)" class="px-2 py-0.5 text-meta font-bold uppercase rounded-md">
                         {{ lead.priority }}
                       </span>
@@ -158,13 +162,20 @@ import { TranslationService } from '../services/translation.service';
                       </span>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                      <div class="w-12 bg-zinc-100 rounded-full h-1.5 overflow-hidden">
-                        <div [style.width.%]="lead.score" [class]="getScoreColor(lead.score)" class="h-full rounded-full"></div>
+                  <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
+                    @if (scoreEditFor() === lead.id) {
+                      <div class="flex items-center gap-2">
+                        <input type="range" min="0" max="100" step="1" [ngModel]="scoreDraft()" (ngModelChange)="scoreDraft.set($event)" (change)="commitScore(lead.id)" class="w-28 accent-zinc-900 cursor-pointer" [attr.aria-label]="'Score for ' + lead.name">
+                        <span class="text-xs font-bold text-zinc-700 w-7 text-right">{{ scoreDraft() }}</span>
                       </div>
-                      <span class="text-xs font-bold text-zinc-700">{{ lead.score }}</span>
-                    </div>
+                    } @else {
+                      <button (click)="openScoreEditor(lead, $event)" class="flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-zinc-100 transition-colors" [title]="'Click to adjust score'">
+                        <div class="w-12 bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                          <div [style.width.%]="lead.score" [class]="getScoreColor(lead.score)" class="h-full rounded-full"></div>
+                        </div>
+                        <span class="text-xs font-bold text-zinc-700">{{ lead.score }}</span>
+                      </button>
+                    }
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center gap-1.5">
@@ -174,16 +185,21 @@ import { TranslationService } from '../services/translation.service';
                     </div>
                     <div class="text-xs text-zinc-400 mt-0.5">{{ lead.campaigns?.[0]?.campaign || '—' }}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-600 flex items-center gap-1.5">
-                      <mat-icon class="w-4 h-4 text-[16px]! text-zinc-400">person_outline</mat-icon>
-                      {{ lead.assignedSalesperson || ('leads.unassigned' | translate) }}
-                    </div>
+                  <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
+                    <button (click)="openOwnerMenu(lead, $event)" class="flex items-center gap-1.5 rounded-lg px-1.5 py-1 hover:bg-zinc-100 transition-colors max-w-[160px]" title="Assign owner">
+                      @if (lead.assignedToUserId) {
+                        <app-user-avatar [userId]="lead.assignedToUserId" [size]="20" />
+                      } @else {
+                        <mat-icon class="w-4 h-4 text-[16px]! text-zinc-400">person_outline</mat-icon>
+                      }
+                      <span class="text-sm text-zinc-600 truncate">{{ state.leadOwnerName(lead) || ('leads.unassigned' | translate) }}</span>
+                      <mat-icon class="w-3.5 h-3.5 text-[14px]! text-zinc-400 shrink-0">expand_more</mat-icon>
+                    </button>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span [class]="getStatusClass(lead.status)" class="px-2.5 py-1 text-xs font-semibold rounded-full shadow-xs">
-                      {{ lead.status }}
-                    </span>
+                  <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
+                    <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" (click)="$event.stopPropagation()" [class]="getStatusClass(lead.status)" class="px-2.5 py-1 text-xs font-semibold rounded-full border cursor-pointer focus:outline-none shadow-xs" title="Change status">
+                      @for (s of leadStatusOptions; track s) { <option [value]="s">{{ s }}</option> }
+                    </select>
                   </td>
                 </tr>
               } @empty {
@@ -200,13 +216,42 @@ import { TranslationService } from '../services/translation.service';
         </div>
       </div>
 
+      <!-- Owner picker popover (fixed: avoids clipping by the table's overflow-x container) -->
+      @if (ownerMenuFor(); as menuLeadId) {
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+        <div class="fixed inset-0 z-[60]" (click)="closeOwnerMenu()" (window:scroll)="closeOwnerMenu()" (window:resize)="closeOwnerMenu()">
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+          <div class="fixed bg-white border border-zinc-200 rounded-xl shadow-xl py-1.5 w-64 max-h-72 overflow-y-auto" [style.left.px]="ownerMenuPos().x" [style.top.px]="ownerMenuPos().y" (click)="$event.stopPropagation()">
+            <button (click)="chooseOwner(menuLeadId, null)" class="flex items-center gap-2.5 w-full px-3 py-2 hover:bg-zinc-50 text-left text-xs font-semibold text-zinc-500">
+              <span class="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center shrink-0"><mat-icon class="text-zinc-400 text-[16px]! w-4 h-4">person_off</mat-icon></span>
+              {{ 'leads.unassigned' | translate }}
+            </button>
+            <div class="border-t border-zinc-100 my-1"></div>
+            @for (u of state.assignableMembers(); track u.id) {
+              <button (click)="chooseOwner(menuLeadId, u.id)" class="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-zinc-50 text-left">
+                <app-user-avatar [userId]="u.id" [size]="24" />
+                <span class="flex-1 min-w-0">
+                  <span class="block text-xs font-semibold text-zinc-800 truncate">{{ u.displayName }}</span>
+                  <span class="block text-[10px] text-zinc-400 truncate">{{ memberTeamName(u) }}</span>
+                </span>
+                @if (state.isMarketingMember(u)) {
+                  <span class="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 shrink-0">Marketing</span>
+                }
+              </button>
+            } @empty {
+              <p class="px-3 py-2 text-xs text-zinc-400">No members found.</p>
+            }
+          </div>
+        </div>
+      }
+
       @if (selectedLeadIds().size > 0) {
         <div class="bulk-action-bar">
           <span class="text-body font-semibold">{{ selectedLeadIds().size }} {{ 'leads.selected' | translate }}</span>
           <div class="w-px h-4 bg-white/20"></div>
           <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignLeadOwner($event)">
             <option value="">{{ 'leads.assignOwner' | translate }}</option>
-            @for (u of state.users(); track u.id) { <option [value]="u.name">{{u.name}}</option> }
+            @for (u of state.assignableMembers(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
           </select>
           <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeLeadStage($event)">
             <option value="">{{ 'leads.changeStage' | translate }}</option>
@@ -744,6 +789,13 @@ export class LeadsComponent {
   // Bulk selection state
   selectedLeadIds = signal<Set<string>>(new Set());
   leadStatusOptions = ['New','Contacted','Attempted Contact','Meeting Scheduled','Qualified','Proposal Requested','Converted','Lost','Disqualified'];
+  leadQualificationOptions: Lead['qualification'][] = ['Qualified','Unqualified','Pending'];
+
+  // Inline table editors state
+  scoreEditFor = signal<string | null>(null);
+  scoreDraft = signal<number>(0);
+  ownerMenuFor = signal<string | null>(null);
+  ownerMenuPos = signal({ x: 0, y: 0 });
 
   // Forms state
   newActivity = {
@@ -844,10 +896,12 @@ export class LeadsComponent {
   }
 
   bulkAssignLeadOwner(event: Event) {
-    const value = (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    const value = select.value;
+    select.value = '';
     if (!value) return;
     for (const id of this.selectedLeadIds()) {
-      this.state.updateLead(id, { assignedSalesperson: value });
+      this.state.assignLead(id, value);
     }
   }
 
@@ -886,6 +940,7 @@ export class LeadsComponent {
   // Lifecycle/Selection actions
   selectLead(lead: Lead) {
     this.selectedLead.set(lead);
+    this.state.loadLeadDetails(lead.id);
     this.activeDetailTab.set('info');
     // reset activity form
     this.newActivity = {
@@ -940,6 +995,16 @@ export class LeadsComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    if (!this.state.isPersistedPartnerId(leadId)) {
+      // Lead not yet persisted (local-only id): keep the attachment local-only.
+      this.state.addLeadAttachment(leadId, {
+        fileName: file.name,
+        fileSize: this.formatFileSize(file.size),
+        uploadedAt: new Date().toISOString().split('T')[0]
+      });
+      input.value = '';
+      return;
+    }
     this.uploading.set(true);
     this.api.uploadFile(file, 'PARTNER', leadId).subscribe({
       next: (dto) => {
@@ -1014,6 +1079,7 @@ export class LeadsComponent {
     }
 
     const randomScore = Math.floor(Math.random() * 40) + 50; // 50 to 90
+    const assignee = this.state.users().find(u => u.name === this.newLead.assignedSalesperson);
     this.state.addLead({
       name: this.newLead.name,
       companyName: this.newLead.companyName,
@@ -1025,6 +1091,7 @@ export class LeadsComponent {
       temperature: this.newLead.temperature,
       stage: 'Discovery Meeting',
       assignedSalesperson: this.newLead.assignedSalesperson,
+      assignedToUserId: assignee?.id,
       salesTeam: 'Enterprise Sales',
       territory: this.newLead.country || 'International',
       businessUnit: 'Cloud Solutions',
@@ -1065,10 +1132,65 @@ export class LeadsComponent {
     this.addLeadModalOpen.set(false);
   }
 
+  // Inline table editors (qualification / score / status / owner)
+  onQualificationChange(leadId: string, value: Lead['qualification']) {
+    this.state.updateLead(leadId, { qualification: value });
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  openScoreEditor(lead: Lead, event: Event) {
+    event.stopPropagation();
+    this.scoreDraft.set(lead.score);
+    this.scoreEditFor.set(lead.id);
+  }
+
+  commitScore(leadId: string) {
+    this.state.updateLead(leadId, { score: this.scoreDraft() });
+    this.scoreEditFor.set(null);
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  openOwnerMenu(lead: Lead, event: MouseEvent) {
+    event.stopPropagation();
+    const width = 256;
+    const height = 300;
+    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8));
+    const below = event.clientY + 12;
+    const y = below + height > window.innerHeight - 8 ? Math.max(8, event.clientY - height - 8) : below;
+    this.ownerMenuPos.set({ x, y });
+    this.scoreEditFor.set(null);
+    this.ownerMenuFor.set(lead.id);
+  }
+
+  closeOwnerMenu() {
+    this.ownerMenuFor.set(null);
+  }
+
+  chooseOwner(leadId: string, userId: string | null) {
+    this.state.assignLead(leadId, userId);
+    this.ownerMenuFor.set(null);
+    const updated = this.state.leadsData().find(l => l.id === leadId);
+    if (updated) this.selectedLead.set(updated);
+  }
+
+  memberTeamName(user: CrmUser): string {
+    return this.state.teams().find(t => t.id === user.teamId)?.name || '';
+  }
+
   // Helpers
   getInitials(name: string): string {
     if (!name) return 'LD';
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  getQualificationClass(qualification: string): string {
+    switch (qualification) {
+      case 'Qualified': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Unqualified': return 'bg-red-50 text-red-600 border-red-200';
+      default: return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
   }
 
   getStatusClass(status: string): string {

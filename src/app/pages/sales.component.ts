@@ -130,12 +130,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </thead>
             <tbody class="bg-white divide-y divide-slate-100">
               @for (deal of paginatedDeals(); track deal.id) {
-                <tr (click)="openDealDrawer(deal)" class="hover:bg-zinc-50/80 cursor-pointer transition-colors">
+                <tr class="hover:bg-zinc-50/80 transition-colors">
                   <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
                     <input type="checkbox" [checked]="isDealSelected(deal.id)" (click)="toggleDealSelect(deal.id, $event)" class="cursor-pointer" />
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-semibold text-zinc-900">{{deal.title}}</div>
+                    <button (click)="openDealDrawer(deal)" class="table-name-link text-sm font-semibold text-zinc-900 text-left" [title]="'View ' + deal.title">{{deal.title}}</button>
                     @if (deal.dealNumber) {
                       <div class="text-meta text-zinc-400 font-sans font-medium">{{deal.dealNumber}}</div>
                     }
@@ -392,9 +392,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </thead>
             <tbody class="bg-white divide-y divide-slate-200">
               @for (po of paginatedPOs(); track po.id) {
-                <tr (click)="openPODrawer(po)" class="hover:bg-zinc-50 cursor-pointer transition-colors">
+                <tr class="hover:bg-zinc-50 transition-colors">
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-semibold text-zinc-900 font-sans">#{{po.id}}</div>
+                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-zinc-900 font-sans text-left" [title]="'View PO #' + po.id">#{{po.id}}</button>
                     @if (po.sentVia) {
                       <span class="text-meta text-zinc-400 font-medium">Sent: {{po.sentVia}}</span>
                     }

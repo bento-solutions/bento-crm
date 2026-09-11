@@ -344,7 +344,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                       <app-user-avatar [userId]="user.id" [size]="36"></app-user-avatar>
                     </a>
                     <div>
-                      <a [routerLink]="['/settings/users', user.id]" class="font-bold text-xs text-zinc-800 hover:text-zinc-900 block transition-colors">
+                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link font-bold text-xs text-zinc-800 hover:text-zinc-900 block transition-colors">
                         {{ user.displayName }}
                       </a>
                       <span class="text-meta text-zinc-400 block font-medium mt-0.5">{{ user.jobTitle || 'No title' }}</span>

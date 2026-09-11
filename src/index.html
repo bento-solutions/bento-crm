@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="utf-8" />
@@ -8,10 +8,29 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <base href="/" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <link rel="icon" type="image/webp" href="/crm.webp" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // Restore the saved appearance before styles paint. Default is light,
+    // so a dark OS must never force dark mode unless the user chose "system".
+    // First run (nothing saved) enforces light.
+    try {
+      var saved = localStorage.getItem('bento_theme');
+      var root = document.documentElement;
+      if (saved === 'dark') {
+        root.setAttribute('data-theme', 'dark');
+      } else if (saved === 'system') {
+        root.removeAttribute('data-theme');
+      } else {
+        root.setAttribute('data-theme', 'light');
+      }
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  </script>
 </head>
 
 <body>

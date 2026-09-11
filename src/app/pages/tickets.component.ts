@@ -84,27 +84,27 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                 <td (click)="toggleTicketSelect(ticket.id, $event); $event.stopPropagation()" class="px-6 py-4 whitespace-nowrap">
                   <input type="checkbox" [checked]="isTicketSelected(ticket.id)" (click)="$event.stopPropagation()" (change)="toggleTicketSelect(ticket.id, $event)" class="cursor-pointer" />
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 whitespace-nowrap cursor-pointer">
+                <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <mat-icon [class]="getPriorityColor(ticket.priority)" class="text-[18px] w-5 h-5">flag</mat-icon>
                     <span [class]="getPriorityColor(ticket.priority)" class="ml-1.5 text-meta font-semibold">{{ getPriorityLabel(ticket.priority) }}</span>
                   </div>
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 cursor-pointer">
-                  <div class="text-sm font-medium text-zinc-900">{{ticket.title}}</div>
+                <td class="px-6 py-4">
+                  <button (click)="openEditTicketModal(ticket)" class="table-name-link text-sm font-medium text-zinc-900 text-left" [title]="'View ' + ticket.title">{{ticket.title}}</button>
                   @if (ticket.description) {
                     <div class="text-meta text-zinc-500 font-medium mt-0.5 truncate max-w-xs" [title]="ticket.description">{{ticket.description}}</div>
                   }
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 whitespace-nowrap cursor-pointer text-sm text-zinc-600">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600">
                   <span class="px-2 py-0.5 text-body bg-zinc-100 text-zinc-700 rounded-md border border-zinc-200 font-medium">
                     {{ticket.type || 'N/A'}}
                   </span>
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 whitespace-nowrap cursor-pointer text-sm text-zinc-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500">
                   {{getPartnerName(ticket.relatedPartnerId)}}
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 whitespace-nowrap cursor-pointer text-sm text-zinc-600">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600">
                   <div class="flex items-center gap-2">
                     <div class="h-5 w-5 bg-zinc-100 border border-zinc-200 rounded-full flex items-center justify-center text-meta font-bold text-zinc-900 uppercase">
                       {{getAssigneeInitials(ticket.assignedToUserId)}}
@@ -112,7 +112,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                     {{getAssigneeDisplayName(ticket.assignedToUserId)}}
                   </div>
                 </td>
-                <td (click)="openEditTicketModal(ticket)" class="px-6 py-4 whitespace-nowrap cursor-pointer">
+                <td class="px-6 py-4 whitespace-nowrap">
                   <span [class]="getStatusColor(ticket.status)" class="px-2.5 py-1 text-body font-semibold rounded-full border">
                     {{ getStatusLabel(ticket.status) }}
                   </span>
