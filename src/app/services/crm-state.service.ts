@@ -296,7 +296,7 @@ export type DealStage = 'New' | 'Proposal sent' | 'Confirmed' | 'Awaiting Invoic
 export type InvoiceStatus = 'Pending' | 'Paid' | 'Overdue' | 'Draft';
 export type CampaignType = 'WhatsApp' | 'SMS' | 'Email';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
-export type TicketPriority = 'URGENT' | 'MEDIUM' | 'LOW';
+export type TicketPriority = 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Workflow Automation Types
@@ -613,6 +613,14 @@ export interface Partner {
   assignedTo?: string;
   createdBy?: string;
   createdAt: string;
+  /**
+   * Raw backend enum (NEW/CONTACTED/…/QUALIFIED/LOST/DISQUALIFIED/CUSTOMER…). Present on
+   * partners loaded through `PartnersService` (its mapper spreads the raw response, so `stage`
+   * rides along untouched) — but NOT on ones loaded through `CrmStateService.partners`, whose
+   * hand-picked `partnerFromDto` mapper drops it. Used to resolve the audience-group presets
+   * ("Valid Leads", "Lost Prospects"…) on a campaign's recipient picker.
+   */
+  stage?: string;
 }
 
 export interface Task {
@@ -748,6 +756,8 @@ export interface Deal {
   contactPhone?: string;
 
   // Sales & Ownership
+  /** Persisted on the backend. `salesPerson` below is the display name resolved from it. */
+  salesPersonUserId?: string;
   salesPerson?: string;
   salesRegion?: string;
 
@@ -801,6 +811,11 @@ export interface Invoice {
   createdBy?: string;
   createdAt: string;
   invoiceNumber?: string;
+  invoiceDate?: string;
+  sentAt?: string;
+  /** Tax-exclusive line sum; `amount` is the tax-inclusive total from the backend. */
+  subtotal?: number;
+  tax?: number;
   // Customer administrative information
   customerAccount?: string;   // Unique account code / ERP ID
   customerName?: string;      // Official corporate name
@@ -814,11 +829,22 @@ export interface Campaign {
   id: string;
   title: string;
   type: CampaignType;
-  status: 'Draft' | 'Active' | 'Completed';
+  status: 'Draft' | 'Scheduled' | 'Sending' | 'Active' | 'Completed';
   targetAudience: string;
   sentCount: number;
   createdBy?: string;
   createdAt: string;
+  updatedAt?: string;
+  /** The message template this campaign sends — a `ProposalTemplate` row with a matching channel. */
+  templateId?: string;
+  // WhatsApp only — read-only here; set at creation through the WhatsApp composer.
+  templateName?: string;
+  templateLang?: string;
+  templateParams?: string[];
+  bodyPreview?: string;
+  followupEnabled?: boolean;
+  followupDelayDays?: number;
+  launchedAt?: string;
 }
 
 export interface Ticket {
@@ -832,8 +858,14 @@ export interface Ticket {
   assignedByUserId: string;
   relatedPartnerId?: string;
   partnerId?: string;
+  relatedEntityType?: RelatedEntityType;
+  relatedEntityId?: string;
   assignedTo?: string;
   deadline?: string;
+  resolution?: string;
+  /** Tasks raised for this ticket (from the API); the Tasks store is the live source once loaded. */
+  taskCount?: number;
+  taskDoneCount?: number;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -905,6 +937,13 @@ export interface ProposalTemplate {
   subject: string;
   body: string;
   lines: ProposalLine[];
+  /**
+   * Which kind of send this template is for. Raw passthrough (getProposalTemplates does no
+   * per-item mapping), so it's present on every template the API returns even though most of
+   * this store's callers (Proposals) only ever create 'PROPOSAL' ones. Marketing campaigns use
+   * the same store, filtered to 'EMAIL' / 'WHATSAPP' / 'SMS'.
+   */
+  channel?: 'PROPOSAL' | 'EMAIL' | 'WHATSAPP' | 'SMS';
 }
 
 export type NotificationType = 'deal' | 'lead' | 'task' | 'ticket' | 'system' | 'mention' | 'whatsapp';
@@ -1613,13 +1652,22 @@ export class CrmStateService {
     });
   }
 
-  addProposalTemplate(template: Omit<ProposalTemplate, 'id'>) {
+  /**
+   * Returns an optimistic row (a temp id, reconciled once the create call resolves) so a caller
+   * can show it in a list immediately. That temp id is a local placeholder only — it is NOT a
+   * real UUID, so it must never be sent onward in another request (e.g. as a campaign's
+   * `templateId`, which the backend rejects since it deserializes that field as UUID). A caller
+   * that needs to act on the persisted template — not just display it — must use `onDone`, which
+   * fires with the real, server-assigned row once the create actually completes.
+   */
+  addProposalTemplate(template: Omit<ProposalTemplate, 'id'>, onDone?: (created: ProposalTemplate) => void) {
     const tempId = 'tpl' + (this.proposalTemplates().length + 1) + '_' + Date.now();
     const newTemplate = { ...template, id: tempId };
     this.proposalTemplates.update(list => [...list, newTemplate]);
     this.api.createProposalTemplate(template).subscribe({
       next: (dto) => {
         this.proposalTemplates.update(list => list.map(t => t === newTemplate ? dto : t));
+        onDone?.(dto);
       },
       error: () => {
         this.proposalTemplates.update(list => list.filter(t => t !== newTemplate));
@@ -1867,7 +1915,12 @@ export class CrmStateService {
       next: (dto) => {
         const created = this.teamFromDto(dto);
         this.teams.update(list => [...list, created]);
-        this.updateUser(draft.leadUserId, { teamId: created.id, roleId: 'manager' });
+        // Leading a team makes a Salesperson/Support/Viewer a Manager, but must never demote an
+        // Admin — a fresh organization's only admin is its most likely first team lead.
+        const lead = this.users().find(u => u.id === draft.leadUserId);
+        this.updateUser(draft.leadUserId, lead?.roleId === 'admin'
+          ? { teamId: created.id }
+          : { teamId: created.id, roleId: 'manager' });
         draft.memberUserIds.filter(mid => mid !== draft.leadUserId).forEach(mid => {
           this.updateUser(mid, { teamId: created.id });
         });
@@ -1887,7 +1940,9 @@ export class CrmStateService {
         this.teams.update(list => list.map(t => t.id === id ? updated : t));
         if (patch.leadUserId) {
           this.addTeamMember(id, patch.leadUserId);
-          this.updateUser(patch.leadUserId, { roleId: 'manager' });
+          if (this.users().find(u => u.id === patch.leadUserId)?.roleId !== 'admin') {
+            this.updateUser(patch.leadUserId, { roleId: 'manager' });
+          }
         }
         this.toast.show(`Team <strong>${updated.name}</strong> updated`, { type: 'info' });
       },
@@ -3522,7 +3577,7 @@ export class CrmStateService {
     switch (entity) {
       case 'LEAD': return n.relatedId ? ['/partners/lead', n.relatedId] : ['/partners'];
       case 'TASK': return ['/tasks'];
-      case 'TICKET': return ['/tickets'];
+      case 'TICKET': return n.relatedId ? ['/tickets', n.relatedId] : ['/tickets'];
       case 'DEAL': return n.relatedId ? ['/sales/deals', n.relatedId] : ['/sales'];
       default: return null;
     }
@@ -3913,7 +3968,11 @@ export class CrmStateService {
     });
   }
 
-  addPartner(partner: Omit<Partner, 'id' | 'createdBy' | 'createdAt'> & { createdBy?: string; createdAt?: string }) {
+  addPartner(
+    partner: Omit<Partner, 'id' | 'createdBy' | 'createdAt'> & { createdBy?: string; createdAt?: string },
+    /** Moroccan fiscal identifiers collected by the customer form; stored on the customer card. */
+    fiscal?: { ice: string; ifField: string; rc: string }
+  ) {
     // Return value is used synchronously by some callers (e.g. inline vendor creation),
     // so we optimistically add a local placeholder immediately and reconcile it with the
     // persisted record once the API responds (matched by object identity, not id).
@@ -3930,6 +3989,20 @@ export class CrmStateService {
       next: (dto) => {
         const created = this.partnerFromDto(dto);
         this.partners.update(pList => pList.map(p => p === newPartner ? created : p));
+        if (fiscal) {
+          // The partner row has no fiscal columns; ICE / IF / RC live on the customer card,
+          // which the form used to require and then silently drop.
+          this.api.saveCustomerCard(created.id, {
+            name: created.name,
+            ice: fiscal.ice,
+            if_field: fiscal.ifField,
+            rc: fiscal.rc,
+            corporate_email: created.email || undefined,
+            main_phone: created.phone || undefined
+          }).subscribe({
+            error: () => this.toast.show('Partner saved, but its fiscal identifiers (ICE/IF/RC) could not be stored', { type: 'error' })
+          });
+        }
       },
       error: () => {
         this.partners.update(pList => pList.filter(p => p !== newPartner));

@@ -197,7 +197,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div class="w-px h-4 bg-white/20"></div>
             <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignDealOwner($event)">
               <option value="">Assign owner…</option>
-              @for (u of state.users(); track u.id) { <option [value]="u.name">{{u.name}}</option> }
+              @for (u of state.users(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
             </select>
             <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeDealStage($event)">
               <option value="">Change stage…</option>
@@ -806,11 +806,10 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs font-semibold text-zinc-500 mb-1">Sales Person</label>
-                      <select [(ngModel)]="newDeal.salesPerson" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
-                        @for (u of users(); track u.name) {
-                          @if (u.team === 'Sales') {
-                            <option [value]="u.name">{{u.name}}</option>
-                          }
+                      <select [(ngModel)]="newDeal.salesPersonUserId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                        <option value="">-- Unassigned --</option>
+                        @for (u of users(); track u.id) {
+                          <option [value]="u.id">{{u.displayName}}</option>
                         }
                       </select>
                     </div>
@@ -2428,13 +2427,13 @@ export class SalesComponent {
   bulkAssignDealOwner(event: Event) {
     const owner = (event.target as HTMLSelectElement).value;
     if (!owner) return;
-    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { salesPerson: owner }));
+    this.selectedDealIds().forEach(id => this.dealsService.patchDeal(id, { salesPersonUserId: owner }));
     (event.target as HTMLSelectElement).value = '';
   }
   bulkChangeDealStage(event: Event) {
     const stage = (event.target as HTMLSelectElement).value as Deal['stage'];
     if (!stage) return;
-    this.selectedDealIds().forEach(id => this.dealsService.updateDeal(id, { stage }));
+    this.selectedDealIds().forEach(id => this.dealsService.patchDeal(id, { stage }));
     (event.target as HTMLSelectElement).value = '';
   }
   bulkExportDeals() {
@@ -2657,7 +2656,7 @@ export class SalesComponent {
     contactPhone: '',
 
     // Sales & Ownership
-    salesPerson: '',
+    salesPersonUserId: '',
     salesRegion: '',
 
     // Commercial Basics
@@ -3073,7 +3072,9 @@ export class SalesComponent {
   // Deal Creation
   openCreateDealModal() {
     if (!this.canCreateDeal()) return;
-    const defaultCust = this.partnersService.customers()[0]?.id || '';
+    // Same source as the modal's <select>: the two partner stores are not guaranteed to be
+    // loaded together, and a default the dropdown cannot show leaves partnerId empty.
+    const defaultCust = this.customers()[0]?.id || '';
     const today = new Date().toISOString().split('T')[0];
     const deliveryDate = new Date();
     deliveryDate.setDate(deliveryDate.getDate() + 30);
@@ -3103,7 +3104,7 @@ export class SalesComponent {
       contactEmail: '',
       contactPhone: '',
 
-      salesPerson: this.users().find(u => u.team === 'Sales')?.name || 'Youssef El Alami',
+      salesPersonUserId: this.state.currentUserId(),
       salesRegion: 'Casablanca-Settat / Maroc',
 
       currency: 'MAD',
@@ -3209,7 +3210,7 @@ export class SalesComponent {
       contactPhone: this.newDeal.contactPhone,
 
       // Sales & Ownership
-      salesPerson: this.newDeal.salesPerson,
+      salesPersonUserId: this.newDeal.salesPersonUserId || undefined,
       salesRegion: this.newDeal.salesRegion,
 
       // Commercial Basics
@@ -3596,7 +3597,7 @@ export class SalesComponent {
         currency: 'MAD',
         paymentTerms: '30 Days Net',
         orderTotalAmount: prop.amount,
-        salesPerson: this.users().find(u => u.team === 'Sales')?.name || '',
+        salesPersonUserId: this.state.currentUserId(),
         salesRegion: 'Casablanca-Settat / Maroc'
       });
 

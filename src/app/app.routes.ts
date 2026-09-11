@@ -14,10 +14,12 @@ export const routes: Routes = [
   { path: 'sales', canActivate: [authGuard], loadComponent: () => import('./pages/sales.component').then(m => m.SalesComponent) },
   { path: 'sales/deals/:dealId', canActivate: [authGuard], loadComponent: () => import('./pages/deal-detail.component').then(m => m.DealDetailComponent) },
   { path: 'marketing', canActivate: [authGuard], loadComponent: () => import('./pages/marketing.component').then(m => m.MarketingComponent) },
+  { path: 'campaigns/:id', canActivate: [authGuard], loadComponent: () => import('./pages/campaign-detail.component').then(m => m.CampaignDetailComponent) },
   { path: 'partners', canActivate: [authGuard], loadComponent: () => import('./pages/partners.component').then(m => m.PartnersComponent) },
   { path: 'partners/lead/:id', canActivate: [authGuard], loadComponent: () => import('./pages/lead-detail.component').then(m => m.LeadDetailComponent) },
   { path: 'finance', canActivate: [authGuard], loadComponent: () => import('./pages/finance.component').then(m => m.FinanceComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
+  { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },
   { path: 'automation', canActivate: [authGuard], loadComponent: () => import('./pages/automation.component').then(m => m.AutomationComponent) },
   { path: 'partners/:id/customer-card', canActivate: [authGuard], loadComponent: () => import('./pages/customer-card.component').then(m => m.CustomerCardComponent) },
   {

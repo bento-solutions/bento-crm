@@ -1485,8 +1485,7 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'ticket': {
-        this.state.pendingQuickAction.set({ id: 'open-ticket', payload: item.entityId });
-        this.router.navigate(['/tickets']);
+        this.router.navigate(['/tickets', item.entityId]);
         return;
       }
       case 'invoice': {

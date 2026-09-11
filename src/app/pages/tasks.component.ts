@@ -87,6 +87,16 @@ import { EntityLink } from '../shared/related-entity.model';
           <mat-icon class="text-[18px] w-[18px] h-[18px]">view_column</mat-icon>
           {{ 'tasks.kanban' | translate }}
         </button>
+        <div class="ml-auto flex items-center gap-2 py-2">
+          <mat-icon class="text-[16px] w-4 h-4 text-zinc-500">link</mat-icon>
+          <select [ngModel]="linkFilter()" (ngModelChange)="linkFilter.set($event); tasksPage.set(1)" class="input-field rounded-lg px-2 py-1.5 text-xs focus:outline-blue-600 cursor-pointer" aria-label="Filter tasks by linked record">
+            <option value="">All tasks</option>
+            <option value="TICKET">Ticket tasks</option>
+            <option value="DEAL">Deal tasks</option>
+            <option value="PARTNER">Partner tasks</option>
+            <option value="NONE">Unlinked</option>
+          </select>
+        </div>
       </div>
 
       @if (tasksService.isLoading$()) {
@@ -114,10 +124,17 @@ import { EntityLink } from '../shared/related-entity.model';
                 <p class="text-xs text-zinc-500 mb-3">{{task.description}}</p>
 
                 @if (getRelatedLabel(task); as label) {
-                  <div class="text-xs text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg p-1.5 px-2 mb-4 inline-flex items-center gap-1 font-medium">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">link</mat-icon>
-                    {{label}}
-                  </div>
+                  @if (ticketRoute(task); as route) {
+                    <a [routerLink]="route" class="text-xs text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg p-1.5 px-2 mb-4 inline-flex items-center gap-1 font-medium transition-colors" title="Open ticket">
+                      <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                      {{label}}
+                    </a>
+                  } @else {
+                    <div class="text-xs text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg p-1.5 px-2 mb-4 inline-flex items-center gap-1 font-medium">
+                      <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                      {{label}}
+                    </div>
+                  }
                 }
               </div>
 
@@ -216,10 +233,17 @@ import { EntityLink } from '../shared/related-entity.model';
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
                   @if (getRelatedLabel(task); as label) {
-                    <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
-                      <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{label}}</span>
-                    </div>
+                    @if (ticketRoute(task); as route) {
+                      <a [routerLink]="route" (mousedown)="$event.stopPropagation()" class="text-meta text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium transition-colors" title="Open ticket">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </a>
+                    } @else {
+                      <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </div>
+                    }
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
                     @if (task.assignedToUserId) {
@@ -270,10 +294,17 @@ import { EntityLink } from '../shared/related-entity.model';
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
                   @if (getRelatedLabel(task); as label) {
-                    <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
-                      <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{label}}</span>
-                    </div>
+                    @if (ticketRoute(task); as route) {
+                      <a [routerLink]="route" (mousedown)="$event.stopPropagation()" class="text-meta text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium transition-colors" title="Open ticket">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </a>
+                    } @else {
+                      <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </div>
+                    }
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
                     @if (task.assignedToUserId) {
@@ -324,10 +355,17 @@ import { EntityLink } from '../shared/related-entity.model';
                   </div>
                   <h4 class="text-sm font-semibold text-zinc-900 mb-2 leading-snug">{{task.title}}</h4>
                   @if (getRelatedLabel(task); as label) {
-                    <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
-                      <mat-icon class="text-[12px] w-3 h-3 leading-none">link</mat-icon>
-                      <span class="truncate max-w-[180px]">{{label}}</span>
-                    </div>
+                    @if (ticketRoute(task); as route) {
+                      <a [routerLink]="route" (mousedown)="$event.stopPropagation()" class="text-meta text-zinc-900 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium transition-colors" title="Open ticket">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </a>
+                    } @else {
+                      <div class="text-meta text-zinc-900 bg-zinc-100 border border-zinc-200 rounded-lg px-2 py-1 mb-2 inline-flex items-center gap-1 font-medium">
+                        <mat-icon class="text-[12px] w-3 h-3 leading-none">{{ getRelatedIcon(task) }}</mat-icon>
+                        <span class="truncate max-w-[180px]">{{label}}</span>
+                      </div>
+                    }
                   }
                   <div class="flex items-center gap-2 text-meta text-zinc-500 pt-2 border-t border-zinc-100">
                     @if (task.assignedToUserId) {
@@ -447,11 +485,17 @@ export class TasksComponent {
   activeView = signal<'list' | 'kanban'>('list');
   activePriorityFilter = signal<'Urgent' | 'Medium' | 'Low' | null>(null);
 
-  /** All tasks, filtered by priority if a filter is active */
+  /** Narrow the board to tasks linked to one kind of record ('NONE' = unlinked, '' = all). */
+  linkFilter = signal<'' | 'TICKET' | 'DEAL' | 'PARTNER' | 'NONE'>('');
+
+  /** All tasks, filtered by priority and/or linked record if a filter is active */
   filteredTasks = computed(() => {
-    const filter = this.activePriorityFilter();
-    if (!filter) return this.tasksService.allTasks();
-    return this.tasksService.allTasks().filter(t => t.priority === filter);
+    const priority = this.activePriorityFilter();
+    const link = this.linkFilter();
+    return this.tasksService.allTasks().filter(t =>
+      (!priority || t.priority === priority) &&
+      (!link || (link === 'NONE' ? !t.relatedEntityType : t.relatedEntityType === link))
+    );
   });
 
   pendingTasks = computed(() => this.filteredTasks().filter(t => t.status === 'Pending'));
@@ -502,6 +546,8 @@ export class TasksComponent {
 
   constructor() {
     this.tasksService.load();
+    // Ticket tasks show their ticket's title on the chip, which needs the tickets list.
+    this.state.loadTickets();
     const filter = this.state.taskFilter();
     if (filter?.priority && ['Urgent', 'Medium', 'Low'].includes(filter.priority)) {
       this.activePriorityFilter.set(filter.priority as 'Urgent' | 'Medium' | 'Low');
@@ -519,6 +565,19 @@ export class TasksComponent {
       relatedEntityType: task.relatedEntityType,
       relatedEntityId: task.relatedEntityId
     }) || '';
+  }
+
+  getRelatedIcon(task: Task): string {
+    return this.related.iconOfLink({
+      relatedEntityType: task.relatedEntityType,
+      relatedEntityId: task.relatedEntityId
+    });
+  }
+
+  /** Ticket tasks link through to their ticket page; other kinds have no page of their own here. */
+  ticketRoute(task: Task): string[] | null {
+    return task.relatedEntityType === 'TICKET' && task.relatedEntityId
+      ? ['/tickets', task.relatedEntityId] : null;
   }
 
   getTeamName(teamId?: string): string {

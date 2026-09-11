@@ -25,9 +25,14 @@ export class AuthInterceptor implements HttpInterceptor {
   private refresh$: Observable<string> | null = null;
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    const authedRequest = this.applyHeaders(request, token);
     const isAuthEndpoint = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
+    const isSignup = request.method === 'POST' && /\/organizations\/?$/.test(request.url.split('?')[0]);
+    // A login or signup must never carry a leftover token: the backend scopes the request to
+    // that token's organization, and logging into a different one then fails its
+    // cross-tenant write guard (500) instead of simply signing the user in.
+    const token = typeof localStorage !== 'undefined' && !isAuthEndpoint && !isSignup
+      ? localStorage.getItem('accessToken') : null;
+    const authedRequest = this.applyHeaders(request, token);
 
     return next.handle(authedRequest).pipe(
       catchError((error: HttpErrorResponse) => {

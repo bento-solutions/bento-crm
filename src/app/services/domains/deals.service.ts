@@ -33,7 +33,7 @@ export class DealsService {
     this.api.getDeals().subscribe({
       next: (deals) => {
         if (deals && deals.length > 0) {
-          this.deals.set(deals);
+          this.deals.set(deals.map(d => this.withSalesPersonName(d)));
         }
         this.isLoaded.set(true);
         this.isLoading.set(false);
@@ -57,7 +57,8 @@ export class DealsService {
     const optimistic: Deal = { ...deal, id: localId, createdAt: new Date().toISOString() } as Deal;
     this.deals.update(deals => [...deals, optimistic]);
     this.api.createDeal(deal).subscribe({
-      next: (created) => {
+      next: (raw) => {
+        const created = this.withSalesPersonName(raw);
         this.deals.update(deals => deals.map(d => d.id === localId ? created : d));
         this.toast.show(`Deal <strong>${created.title}</strong> created`);
         setTimeout(() => this.state.evaluateRules('DealCreated', created as unknown as Record<string, unknown>, `Deal: ${created.title}`), 0);
@@ -70,9 +71,29 @@ export class DealsService {
     return optimistic;
   }
 
+  /**
+   * The backend's PATCH /deals/{id} re-validates the whole deal (title, partnerId, stage are
+   * all required on the shared create/update DTO), so a partial body such as `{ stage }` is
+   * rejected with 400. Bulk actions and other "change one field" callers go through here:
+   * the change is merged onto the stored deal and the full record is sent.
+   */
+  patchDeal(id: string, changes: Partial<Deal>): void {
+    const current = this.getDealById(id);
+    if (!current) return;
+    this.updateDeal(id, { ...current, ...changes });
+  }
+
+  /** The backend stores the salesperson as a user id; derive the name the UI displays. */
+  private withSalesPersonName(deal: Deal): Deal {
+    if (!deal.salesPersonUserId) return deal;
+    const user = this.state.users().find(u => u.id === deal.salesPersonUserId);
+    return user ? { ...deal, salesPerson: user.displayName } : deal;
+  }
+
   updateDeal(id: string, deal: Partial<Deal>): void {
     this.api.updateDeal(id, deal as unknown).subscribe({
-      next: (updated) => {
+      next: (raw) => {
+        const updated = this.withSalesPersonName(raw);
         this.deals.update(deals =>
           deals.map(d => d.id === id ? updated : d)
         );

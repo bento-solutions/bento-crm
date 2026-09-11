@@ -1464,6 +1464,9 @@ export class PartnersComponent {
       if (this.newPartner.id) {
         this.state.updatePartner(this.newPartner.id, { status: 'active' });
       } else {
+        const fiscal = this.newPartner.type === 'Customer'
+          ? { ice: this.newPartner.ICE, ifField: this.newPartner.IF, rc: this.newPartner.RC }
+          : undefined;
         this.state.addPartner({
           type: this.newPartner.type,
           name: this.newPartner.name,
@@ -1472,7 +1475,7 @@ export class PartnersComponent {
           city: this.newPartner.city,
           comments: this.newPartner.comments,
           status: 'active'
-        } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>);
+        } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>, fiscal);
       }
 
       this.activeTab.set(this.newPartner.type);

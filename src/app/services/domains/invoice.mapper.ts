@@ -21,6 +21,10 @@ export interface InvoiceResponse {
   createdBy?: string;
   createdAt?: string;
   invoiceNumber?: string;
+  invoiceDate?: string;
+  sentAt?: string;
+  subtotal?: number | string | null;
+  tax?: number | string | null;
   customerAccount?: string;
   customerName?: string;
   deliveryAddress?: string;
@@ -70,6 +74,10 @@ export function invoiceFromApi(dto: InvoiceResponse): Invoice {
     createdBy: dto.createdBy ?? undefined,
     createdAt: dto.createdAt ?? new Date().toISOString(),
     invoiceNumber: dto.invoiceNumber ?? undefined,
+    invoiceDate: dto.invoiceDate ?? undefined,
+    subtotal: dto.subtotal !== undefined && dto.subtotal !== null ? Number(dto.subtotal) : undefined,
+    tax: dto.tax !== undefined && dto.tax !== null ? Number(dto.tax) : undefined,
+    sentAt: dto.sentAt ?? undefined,
     customerAccount: dto.customerAccount ?? undefined,
     customerName: dto.customerName ?? undefined,
     deliveryAddress: dto.deliveryAddress ?? undefined,
@@ -88,7 +96,9 @@ export function invoiceToApi(invoice: Partial<Invoice>): Record<string, unknown>
   const payload: Record<string, unknown> = {};
   if (invoice.type !== undefined) payload['type'] = TYPE_TO_API[invoice.type];
   if (invoice.partnerId !== undefined) payload['partnerId'] = invoice.partnerId;
-  if (invoice.amount !== undefined) payload['total'] = invoice.amount;
+  // The form's line sum is tax-exclusive; the backend derives VAT and the total from it.
+  if (invoice.subtotal !== undefined) payload['subtotal'] = invoice.subtotal;
+  else if (invoice.amount !== undefined) payload['total'] = invoice.amount;
   if (invoice.status !== undefined) payload['status'] = STATUS_TO_API[invoice.status];
   if (invoice.dueDate !== undefined) payload['dueDate'] = invoice.dueDate;
   if (invoice.dealId !== undefined) payload['dealId'] = invoice.dealId;

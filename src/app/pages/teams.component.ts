@@ -77,7 +77,7 @@ import { MatIconModule } from '@angular/material/icon';
                 [(ngModel)]="newTeamLeadId"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
               >
-                <option value="">-- Select a Manager --</option>
+                <option value="">-- Select a team lead --</option>
                 @for (mgr of getAvailableLeads(); track mgr.id) {
                   <option [value]="mgr.id">{{ mgr.displayName }} ({{ mgr.jobTitle || 'Manager' }})</option>
                 }
@@ -381,8 +381,9 @@ export class TeamsComponent {
 
   // Filters leads
   getAvailableLeads(): CrmUser[] {
-    // Lead must have manager role
-    return this.state.users().filter(u => u.isActive && u.roleId === 'manager');
+    // A lead must be a Manager or an Admin. A fresh organization only has its Admin, and
+    // restricting leads to Managers meant it could not create its first team at all.
+    return this.state.users().filter(u => u.isActive && (u.roleId === 'manager' || u.roleId === 'admin'));
   }
 
   canCreate(): boolean {

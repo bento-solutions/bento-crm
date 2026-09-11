@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Ticket, TicketStatus, TicketPriority } from '../services/crm-state.service';
-import { TicketsService } from '../services/domains';
+import { TasksService, TicketsService } from '../services/domains';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
@@ -32,7 +32,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
         </div>
         <select [ngModel]="priorityFilter()" (ngModelChange)="priorityFilter.set($event)" class="input-field rounded-lg p-2 text-sm focus:outline-blue-600 cursor-pointer w-40">
           <option [ngValue]="null">All Priorities</option>
-          <option value="URGENT">High</option>
+          <option value="URGENT">Urgent</option>
+          <option value="HIGH">High</option>
           <option value="MEDIUM">Medium</option>
           <option value="LOW">Low</option>
         </select>
@@ -59,7 +60,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
       </div>
 
       @if (ticketsService.isLoading$()) {
-        <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="9" [rows]="8" />
+        <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="10" [rows]="8" />
       } @else {
       <div class="card rounded-2xl overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
@@ -72,6 +73,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Subject / Title</th>
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Type</th>
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Related Partner</th>
+              <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Tasks</th>
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Assignee</th>
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Status</th>
               <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Created By</th>
@@ -91,7 +93,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                   </div>
                 </td>
                 <td class="px-6 py-4">
-                  <button (click)="openEditTicketModal(ticket)" class="table-name-link text-sm font-medium text-zinc-900 text-left" [title]="'View ' + ticket.title">{{ticket.title}}</button>
+                  <a [routerLink]="['/tickets', ticket.id]" class="table-name-link text-sm font-medium text-zinc-900 text-left" [title]="'Open ' + ticket.title">{{ticket.title}}</a>
                   @if (ticket.description) {
                     <div class="text-meta text-zinc-500 font-medium mt-0.5 truncate max-w-xs" [title]="ticket.description">{{ticket.description}}</div>
                   }
@@ -102,7 +104,23 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500">
-                  {{getPartnerName(ticket.relatedPartnerId)}}
+                  {{getPartnerName(ticket.relatedPartnerId || ticket.partnerId)}}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  @if (taskProgress(ticket); as p) {
+                    @if (p.total > 0) {
+                      <a [routerLink]="['/tickets', ticket.id]" class="inline-flex items-center gap-2 group" [title]="p.done + ' of ' + p.total + ' tasks done'">
+                        <span class="text-xs font-semibold tabular-nums" [class]="p.done === p.total ? 'text-emerald-600' : 'text-zinc-700'">{{ p.done }}/{{ p.total }}</span>
+                        <span class="h-1.5 w-16 bg-zinc-100 rounded-full overflow-hidden">
+                          <span class="block h-full rounded-full" [class]="p.done === p.total ? 'bg-emerald-500' : 'bg-zinc-900'" [style.width.%]="p.percent"></span>
+                        </span>
+                      </a>
+                    } @else {
+                      <a [routerLink]="['/tickets', ticket.id]" class="text-xs text-zinc-400 hover:text-zinc-700 inline-flex items-center gap-1" title="Add tasks">
+                        <mat-icon class="text-[14px] w-3.5 h-3.5">add_task</mat-icon>Add
+                      </a>
+                    }
+                  }
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600">
                   <div class="flex items-center gap-2">
@@ -121,6 +139,11 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                   <app-created-by-badge [createdBy]="ticket.createdBy" [createdAt]="ticket.createdAt" />
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  @if (canWrite()) {
+                    <button (click)="openEditTicketModal(ticket)" class="text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 p-1.5 rounded-lg transition-colors" title="Edit Ticket">
+                      <mat-icon class="text-[18px] w-4.5 h-4.5">edit</mat-icon>
+                    </button>
+                  }
                   @if (state.currentUserPermissions().canDeleteRecords) {
                     <button (click)="openDeleteModal(ticket)" class="text-zinc-700 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors" title="Delete Ticket">
                       <mat-icon class="text-[18px] w-4.5 h-4.5">delete</mat-icon>
@@ -130,7 +153,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
               </tr>
             } @empty {
               <tr>
-                <td colspan="9" class="px-6 py-12 text-center text-zinc-400 text-sm">
+                <td colspan="10" class="px-6 py-12 text-center text-zinc-400 text-sm">
                   <mat-icon class="text-[40px]! w-10 h-10 mb-2 text-zinc-300 block mx-auto">support_agent</mat-icon>
                   No tickets found. Create one to get started.
                 </td>
@@ -157,7 +180,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
           <div class="w-px h-4 bg-white/20"></div>
           <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignTicketOwner($event)">
             <option value="">Assign owner…</option>
-            @for (u of state.users(); track u.id) { <option [value]="u.name">{{u.name}}</option> }
+            @for (u of state.users(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
           </select>
           <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeTicketStatus($event)">
             <option value="">Change stage…</option>
@@ -229,7 +252,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
                 <select id="priority" [(ngModel)]="newTicket.priority" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
-                  <option value="URGENT">High</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
                 </select>
               </div>
               <div>
@@ -307,6 +331,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 export class TicketsComponent {
   state = inject(CrmStateService);
   ticketsService = inject(TicketsService);
+  tasksService = inject(TasksService);
 
   canCreate(): boolean { return this.state.hasAuthority('TICKETS_CREATE'); }
   canWrite(): boolean { return this.state.hasAuthority('TICKETS_WRITE'); }
@@ -379,7 +404,7 @@ export class TicketsComponent {
     if (!value) return;
     const ids = this.selectedTicketIds();
     for (const id of ids) {
-      this.ticketsService.updateTicket(id, { assignedTo: value });
+      this.ticketsService.patchTicket(id, { assignedToUserId: value });
     }
   }
 
@@ -388,7 +413,7 @@ export class TicketsComponent {
     if (!value) return;
     const ids = this.selectedTicketIds();
     for (const id of ids) {
-      this.ticketsService.updateTicket(id, { status: value as TicketStatus });
+      this.ticketsService.patchTicket(id, { status: value as TicketStatus });
     }
   }
 
@@ -430,10 +455,30 @@ export class TicketsComponent {
     this.typeFilter.set(null);
   }
 
+  /**
+   * "2/5 tasks" for a row. Once the Tasks store is loaded it is the live source (a task
+   * completed on the board is reflected here at once); before that, the counts the ticket
+   * API returned with the row are used.
+   */
+  taskProgress(ticket: Ticket): { total: number; done: number; percent: number } {
+    let total: number; let done: number;
+    if (this.tasksService.isLoaded()) {
+      const tasks = this.tasksService.relatedTo({ relatedEntityType: 'TICKET', relatedEntityId: ticket.id });
+      total = tasks.length;
+      done = tasks.filter(t => t.status === 'Completed').length;
+    } else {
+      total = ticket.taskCount ?? 0;
+      done = ticket.taskDoneCount ?? 0;
+    }
+    return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
+  }
+
   constructor() {
     this.ticketsService.load();
+    this.tasksService.load();
+    this.state.loadPartners();
     const filter = this.state.ticketFilter();
-    if (filter?.priority && ['URGENT', 'MEDIUM', 'LOW'].includes(filter.priority)) {
+    if (filter?.priority && ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].includes(filter.priority)) {
       this.priorityFilter.set(filter.priority as TicketPriority);
       this.state.ticketFilter.set(null);
     }
@@ -514,7 +559,7 @@ export class TicketsComponent {
     this.newTicket = {
       title: ticket.title,
       description: ticket.description || '',
-      relatedPartnerId: ticket.relatedPartnerId || '',
+      relatedPartnerId: ticket.relatedPartnerId || ticket.partnerId || '',
       assignedToUserId: ticket.assignedToUserId || '',
       priority: ticket.priority,
       status: ticket.status,
@@ -528,21 +573,29 @@ export class TicketsComponent {
     if (!allowed || !this.newTicket.title.trim()) return;
 
     if (this.isEditing() && this.editingTicketId()) {
-      this.ticketsService.updateTicket(this.editingTicketId()!, {
+      this.ticketsService.patchTicket(this.editingTicketId()!, {
         title: this.newTicket.title,
         description: this.newTicket.description,
-        relatedPartnerId: this.newTicket.relatedPartnerId,
-        assignedToUserId: this.newTicket.assignedToUserId,
+        relatedPartnerId: this.newTicket.relatedPartnerId || undefined,
+        partnerId: this.newTicket.relatedPartnerId || undefined,
+        relatedEntityType: this.newTicket.relatedPartnerId ? 'PARTNER' : undefined,
+        relatedEntityId: this.newTicket.relatedPartnerId || undefined,
+        assignedToUserId: this.newTicket.assignedToUserId || undefined,
         priority: this.newTicket.priority,
         status: this.newTicket.status,
         type: this.newTicket.type
       });
     } else {
+      const partnerId = this.newTicket.relatedPartnerId || undefined;
       this.ticketsService.addTicket({
         title: this.newTicket.title,
         description: this.newTicket.description,
-        relatedPartnerId: this.newTicket.relatedPartnerId,
-        assignedToUserId: this.newTicket.assignedToUserId,
+        // The backend reads the partner from `partnerId` / the generic link pair, not from
+        // `relatedPartnerId` (a frontend-only alias kept for the table's existing readers).
+        partnerId,
+        relatedEntityType: partnerId ? 'PARTNER' : undefined,
+        relatedEntityId: partnerId,
+        assignedToUserId: this.newTicket.assignedToUserId || undefined,
         status: this.newTicket.status,
         priority: this.newTicket.priority,
         type: this.newTicket.type,
@@ -567,7 +620,8 @@ export class TicketsComponent {
 
   getPriorityLabel(priority: TicketPriority): string {
     switch(priority) {
-      case 'URGENT': return 'High';
+      case 'URGENT': return 'Urgent';
+      case 'HIGH': return 'High';
       case 'MEDIUM': return 'Medium';
       case 'LOW': return 'Low';
     }
@@ -584,7 +638,8 @@ export class TicketsComponent {
 
   getPriorityColor(priority: TicketPriority) {
     switch(priority) {
-      case 'URGENT': return 'text-red-500';
+      case 'URGENT': return 'text-red-600';
+      case 'HIGH': return 'text-orange-500';
       case 'MEDIUM': return 'text-green-500';
       case 'LOW': return 'text-blue-400';
     }
