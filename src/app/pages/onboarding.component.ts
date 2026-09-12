@@ -311,10 +311,14 @@ export class OnboardingComponent {
         let serverMsg = '';
         if (typeof errorData === 'string') {
           serverMsg = errorData;
+        } else if (errorData?.detail) {
+          serverMsg = errorData.detail;
         } else if (errorData?.message) {
           serverMsg = errorData.message;
         } else if (errorData?.error) {
           serverMsg = errorData.error;
+        } else if (Array.isArray(errorData?.validation_errors) && errorData.validation_errors.length > 0) {
+          serverMsg = errorData.validation_errors[0]?.message || errorData.validation_errors[0];
         } else if (Array.isArray(errorData?.errors) && errorData.errors.length > 0) {
           serverMsg = errorData.errors[0]?.defaultMessage || errorData.errors[0];
         }
