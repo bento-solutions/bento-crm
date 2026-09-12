@@ -83,12 +83,13 @@ const LOGO_COLORS = ['#7F77DD', '#2563EB', '#059669', '#DC2626', '#D97706', '#7C
                 [(ngModel)]="adminPassword"
                 name="adminPassword"
                 type="password"
-                placeholder="At least 8 characters"
+                placeholder="At least 12 characters with letters & numbers"
                 autocomplete="new-password"
                 required
-                minlength="8"
+                minlength="12"
                 class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all"
               />
+              <p class="text-[11px] text-zinc-400 mt-1">Minimum 12 characters, including at least one letter and one number</p>
             </div>
 
             <div>
@@ -230,8 +231,12 @@ export class OnboardingComponent {
       this.error.set('Please fill in all fields');
       return;
     }
-    if (this.adminPassword().length < 8) {
-      this.error.set('Password must be at least 8 characters');
+    if (this.adminPassword().length < 12) {
+      this.error.set('Password must be at least 12 characters');
+      return;
+    }
+    if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(this.adminPassword())) {
+      this.error.set('Password must contain at least one letter and one number');
       return;
     }
     if (this.adminPassword() !== this.confirmPassword()) {
@@ -302,7 +307,18 @@ export class OnboardingComponent {
       error: (err) => {
         console.error('Organization creation failed:', err);
         this.loading.set(false);
-        this.error.set('Could not create your workspace. Please check your details and try again.');
+        const errorData = err?.error;
+        let serverMsg = '';
+        if (typeof errorData === 'string') {
+          serverMsg = errorData;
+        } else if (errorData?.message) {
+          serverMsg = errorData.message;
+        } else if (errorData?.error) {
+          serverMsg = errorData.error;
+        } else if (Array.isArray(errorData?.errors) && errorData.errors.length > 0) {
+          serverMsg = errorData.errors[0]?.defaultMessage || errorData.errors[0];
+        }
+        this.error.set(serverMsg || 'Could not create your workspace. Please check your details and try again.');
       }
     });
   }
