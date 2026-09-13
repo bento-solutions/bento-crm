@@ -24,9 +24,11 @@ export interface CreateInvitationRequest {
 export interface InvitationDto {
   id: string;
   organization_id: string;
+  organization_name?: string | null;
   email: string;
   role: InvitationRole;
   team_id: string | null;
+  team_name?: string | null;
   display_name: string | null;
   job_title: string | null;
   language: string;
@@ -40,13 +42,18 @@ export interface InvitationDto {
   invited_by: string | null;
   invited_by_name: string | null;
   created_at: string;
+  token?: string | null;
+  invitation_url?: string | null;
 }
 
 /** What the acceptance page can learn from a token before an account exists. */
 export interface InvitationPreview {
+  id?: string;
   email: string;
   organization_name: string;
   role: InvitationRole;
+  team_id?: string | null;
+  team_name?: string | null;
   display_name: string | null;
   job_title: string | null;
   invited_by_name: string | null;
@@ -118,5 +125,18 @@ export class InvitationApiService extends BaseApiService {
   /** Returns a full session: accepting signs the new user straight in. */
   accept(request: AcceptInvitationRequest): Observable<LoginResponse> {
     return this.post<LoginResponse>(API_CONFIG.endpoints.invitations.accept, request);
+  }
+
+  /**
+   * For an already authenticated user, accepts an invitation addressed to their email
+   * and links them into the target organization without re-entering a password.
+   */
+  acceptLoggedIn(invitationId: string): Observable<LoginResponse> {
+    return this.post<LoginResponse>(API_CONFIG.endpoints.invitations.acceptLoggedIn(invitationId), {});
+  }
+
+  /** Retrieves all pending invitations across organizations for the authenticated user's email. */
+  getMyPendingInvitations(): Observable<InvitationDto[]> {
+    return this.get<InvitationDto[]>(API_CONFIG.endpoints.invitations.myPending);
   }
 }

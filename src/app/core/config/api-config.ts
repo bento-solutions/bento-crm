@@ -20,6 +20,8 @@ export const API_CONFIG = {
       update: (id: string) => `/invitations/${id}`,
       resend: (id: string) => `/invitations/${id}/resend`,
       revoke: (id: string) => `/invitations/${id}/revoke`,
+      myPending: '/invitations/my-pending',
+      acceptLoggedIn: (id: string) => `/invitations/${id}/accept-logged-in`,
       // Unauthenticated -- the invitation token is the only credential the invitee has.
       preview: '/public/invitations',
       accept: '/public/invitations/accept',

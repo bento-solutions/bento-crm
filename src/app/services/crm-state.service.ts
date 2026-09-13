@@ -946,7 +946,7 @@ export interface ProposalTemplate {
   channel?: 'PROPOSAL' | 'EMAIL' | 'WHATSAPP' | 'SMS';
 }
 
-export type NotificationType = 'deal' | 'lead' | 'task' | 'ticket' | 'system' | 'mention' | 'whatsapp';
+export type NotificationType = 'deal' | 'lead' | 'task' | 'ticket' | 'system' | 'mention' | 'whatsapp' | 'invitation';
 
 export interface Notification {
   id: string;
@@ -1760,7 +1760,18 @@ export class CrmStateService {
     }).subscribe({
       next: (invitation) => {
         this.invitations.update(list => [invitation, ...list]);
-        this.toast.show(`Invitation sent to <strong>${invitation.email}</strong>`, { type: 'success' });
+        const link = invitation.invitation_url || (invitation.token ? `${window.location.origin}/invite/accept?token=${invitation.token}` : null);
+        this.toast.show(`Invitation sent to <strong>${invitation.email}</strong>`, {
+          type: 'success',
+          duration: 6000,
+          action: link ? {
+            label: 'Copy link',
+            onClick: () => {
+              navigator.clipboard.writeText(link);
+              this.toast.show('Invitation link copied to clipboard', { type: 'success' });
+            }
+          } : undefined
+        });
       },
       // The backend returns 409 for "already a user" and "already invited"; both are worth
       // showing verbatim, since the admin's next action differs (nothing to do vs. resend).
@@ -1772,7 +1783,18 @@ export class CrmStateService {
     this.invitationApi.resend(id).subscribe({
       next: (invitation) => {
         this.invitations.update(list => list.map(i => i.id === id ? invitation : i));
-        this.toast.show(`Invitation resent to <strong>${invitation.email}</strong>`, { type: 'success' });
+        const link = invitation.invitation_url || (invitation.token ? `${window.location.origin}/invite/accept?token=${invitation.token}` : null);
+        this.toast.show(`Invitation resent to <strong>${invitation.email}</strong>`, {
+          type: 'success',
+          duration: 6000,
+          action: link ? {
+            label: 'Copy link',
+            onClick: () => {
+              navigator.clipboard.writeText(link);
+              this.toast.show('Invitation link copied to clipboard', { type: 'success' });
+            }
+          } : undefined
+        });
       },
       error: (err) => this.toast.show(this.invitationErrorMessage(err, 'Failed to resend invitation'), { type: 'error' })
     });
@@ -3532,7 +3554,7 @@ export class CrmStateService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private mapNotificationDto(dto: any): Notification {
     const rawType = String(dto.type || 'system').toLowerCase();
-    const known: NotificationType[] = ['deal', 'lead', 'task', 'ticket', 'system', 'mention', 'whatsapp'];
+    const known: NotificationType[] = ['deal', 'lead', 'task', 'ticket', 'system', 'mention', 'whatsapp', 'invitation'];
     return {
       id: dto.id,
       type: (known.includes(rawType as NotificationType) ? rawType : 'system') as NotificationType,
@@ -3579,12 +3601,22 @@ export class CrmStateService {
       case 'TASK': return ['/tasks'];
       case 'TICKET': return n.relatedId ? ['/tickets', n.relatedId] : ['/tickets'];
       case 'DEAL': return n.relatedId ? ['/sales/deals', n.relatedId] : ['/sales'];
+      case 'INVITATION': return ['/invite/accept'];
       default: return null;
     }
   }
 
   openNotification(n: Notification): void {
     this.markNotificationRead(n.id);
+    const entity = (n.relatedEntityType || n.type || '').toUpperCase();
+    if (entity === 'INVITATION') {
+      if (n.relatedId) {
+        this.router.navigate(['/invite/accept'], { queryParams: { invitationId: n.relatedId } });
+      } else {
+        this.router.navigate(['/invite/accept']);
+      }
+      return;
+    }
     const route = this.notificationRoute(n);
     if (route) this.router.navigate(route);
   }

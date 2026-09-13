@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CrmStateService, CrmUser, RoleId } from '../services/crm-state.service';
+import { ToastService } from '../services/toast.service';
 import { InvitationDto, InvitationRole, InvitationStatus } from '../core/services/invitation-api.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { RoleBadgeComponent } from '../shared/role-badge.component';
@@ -221,6 +222,14 @@ import { PaginatorComponent } from '../shared/paginator.component';
                     <td class="px-6 py-4 whitespace-nowrap text-right text-xs">
                       @if (canWrite() && isOutstanding(invite)) {
                         <div class="flex items-center justify-end gap-2">
+                          <button
+                            (click)="copyInvitationLink(invite)"
+                            title="Copy invitation link"
+                            class="bg-white border border-zinc-200 text-zinc-600 px-2.5 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <mat-icon class="text-[14px] w-3.5 h-3.5">content_copy</mat-icon>
+                            {{ copiedInviteId() === invite.id ? 'Copied' : 'Copy link' }}
+                          </button>
                           <button
                             (click)="editInvitation(invite)"
                             class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
@@ -507,6 +516,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
 })
 export class UsersComponent {
   state = inject(CrmStateService);
+  private toast = inject(ToastService);
 
   // Filters signals
   searchTerm = signal<string>('');
@@ -523,6 +533,7 @@ export class UsersComponent {
   // Invitations
   showResolvedInvitations = signal<boolean>(false);
   revokeConfirmId = signal<string | null>(null);
+  copiedInviteId = signal<string | null>(null);
 
   formDisplayName = '';
   formEmail = '';
@@ -809,6 +820,26 @@ export class UsersComponent {
 
   private formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  copyInvitationLink(invite: InvitationDto) {
+    const link = invite.invitation_url || (invite.token ? `${window.location.origin}/invite/accept?token=${invite.token}` : null);
+    if (link) {
+      navigator.clipboard.writeText(link).then(() => {
+        this.copiedInviteId.set(invite.id);
+        this.toast.show('Invitation link copied to clipboard', { type: 'success' });
+        setTimeout(() => {
+          if (this.copiedInviteId() === invite.id) {
+            this.copiedInviteId.set(null);
+          }
+        }, 2500);
+      }).catch(() => {
+        this.toast.show('Failed to copy link to clipboard', { type: 'error' });
+      });
+    } else {
+      this.resendInvitation(invite.id);
+      this.toast.show('Fresh invitation link generated. You can now copy it.', { type: 'info' });
+    }
   }
 
   resendInvitation(id: string) {

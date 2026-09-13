@@ -226,6 +226,7 @@ export class NotificationInboxDrawerComponent {
       case 'ticket': return 'support_agent';
       case 'mention': return 'alternate_email';
       case 'whatsapp': return 'chat';
+      case 'invitation': return 'group_add';
       default: return 'circle_notifications';
     }
   }
@@ -238,6 +239,7 @@ export class NotificationInboxDrawerComponent {
       case 'ticket': return 'bg-zinc-100';
       case 'mention': return 'bg-zinc-100';
       case 'whatsapp': return 'bg-zinc-100';
+      case 'invitation': return 'bg-blue-50';
       default: return 'bg-zinc-50';
     }
   }
@@ -250,6 +252,7 @@ export class NotificationInboxDrawerComponent {
       case 'ticket': return 'text-zinc-900';
       case 'mention': return 'text-zinc-900';
       case 'whatsapp': return 'text-zinc-900';
+      case 'invitation': return 'text-blue-600';
       default: return 'text-zinc-500';
     }
   }
