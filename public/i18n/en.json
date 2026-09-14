@@ -76,6 +76,7 @@
   "login.singleOrgTitle": "Single Workspace Notice",
   "login.singleOrgNotice": "You can only belong to one organization. Selecting this workspace will leave your other organization(s).",
   "login.joinedDate": "Joined",
+  "login.lastActive": "Last active",
   "login.backToLogin": "Back to sign in",
   "invite.leaveOldOrgNotice": "Joining this workspace will leave your current organization. You can only belong to one organization at a time.",
   "orgSettings.uploadLogo": "Upload Logo",

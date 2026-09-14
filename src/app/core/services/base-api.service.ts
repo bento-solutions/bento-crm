@@ -24,6 +24,8 @@ export interface ApiErrorBody {
   instance?: string;
   timestamp?: string;
   validationErrors?: ApiFieldError[];
+  organizations?: any[];
+  [key: string]: unknown;
 }
 
 /**
@@ -36,7 +38,9 @@ export class ApiClientError extends Error {
   readonly detail?: string;
   readonly title?: string;
   readonly validationErrors: ApiFieldError[];
+  readonly organizations?: any[];
   readonly body?: ApiErrorBody;
+  readonly error?: any;
 
   constructor(status: number, message: string, body?: ApiErrorBody) {
     super(message);
@@ -45,7 +49,9 @@ export class ApiClientError extends Error {
     this.detail = body?.detail;
     this.title = body?.title;
     this.validationErrors = body?.validationErrors ?? [];
+    this.organizations = body?.organizations;
     this.body = body;
+    this.error = body;
   }
 }
 
@@ -117,8 +123,17 @@ export class BaseApiService {
       return throwError(() => new ApiClientError(0, error.error.message || 'Network error'));
     }
 
+    let rawBody: any = error.error;
+    if (typeof rawBody === 'string') {
+      try {
+        rawBody = JSON.parse(rawBody);
+      } catch {
+        // preserve non-JSON string
+      }
+    }
+
     const body: ApiErrorBody | undefined =
-      error.error && typeof error.error === 'object' ? (error.error as ApiErrorBody) : undefined;
+      rawBody && typeof rawBody === 'object' ? (rawBody as ApiErrorBody) : undefined;
 
     // Prefer the server's human-readable detail, then its title, then Angular's
     // own message. The status and validationErrors ride along on ApiClientError.

@@ -16,6 +16,7 @@ export interface OrganizationChoice {
   role?: string;
   joined_at?: string;
   last_active_at?: string;
+  logo_url?: string;
 }
 
 export interface LoginResponse {

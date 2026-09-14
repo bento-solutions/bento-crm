@@ -283,6 +283,14 @@ import { TranslationService } from '../services/translation.service';
       font-weight: 700;
       font-size: 14px;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .org-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
     }
 
     .org-item-content {
@@ -438,7 +446,11 @@ import { TranslationService } from '../services/translation.service';
                 [disabled]="loading()"
               >
                 <div class="org-item-avatar">
-                  {{ (org.organization_name ? org.organization_name.charAt(0) : 'W').toUpperCase() }}
+                  @if (org.logo_url) {
+                    <img [src]="resolveLogoUrl(org.logo_url)" [alt]="org.organization_name" class="org-avatar-img" />
+                  } @else {
+                    {{ (org.organization_name ? org.organization_name.charAt(0) : 'W').toUpperCase() }}
+                  }
                 </div>
                 <div class="org-item-content">
                   <div class="org-item-name">{{ org.organization_name }}</div>
@@ -448,6 +460,9 @@ import { TranslationService } from '../services/translation.service';
                     }
                     @if (org.joined_at) {
                       <span class="org-item-date">{{ 'login.joinedDate' | translate }}: {{ org.joined_at | date:'mediumDate' }}</span>
+                    }
+                    @if (org.last_active_at) {
+                      <span class="org-item-date">• {{ 'login.lastActive' | translate }}: {{ org.last_active_at | date:'mediumDate' }}</span>
                     }
                   </div>
                 </div>
@@ -562,6 +577,10 @@ export class LoginComponent {
     this.error.set('');
   }
 
+  resolveLogoUrl(url?: string): string {
+    return this.state.resolveLogoUrl(url);
+  }
+
   onLogin(): void {
     const email = this.email().trim();
     // Do not trim the password: leading/trailing spaces are valid characters and
@@ -580,9 +599,26 @@ export class LoginComponent {
       next: (response) => {
         this.handleLoginSuccess(response);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Login failed:', err);
-        const orgs = err?.error?.organizations;
+
+        // Robustly extract organizations whether err is ApiClientError or HttpErrorResponse
+        let orgs: OrganizationChoice[] | undefined;
+        if (Array.isArray(err?.organizations)) {
+          orgs = err.organizations;
+        } else if (Array.isArray(err?.body?.organizations)) {
+          orgs = err.body.organizations;
+        } else if (Array.isArray(err?.error?.organizations)) {
+          orgs = err.error.organizations;
+        } else if (typeof err?.error === 'string') {
+          try {
+            const parsed = JSON.parse(err.error);
+            if (Array.isArray(parsed?.organizations)) {
+              orgs = parsed.organizations;
+            }
+          } catch {}
+        }
+
         if (Array.isArray(orgs) && orgs.length > 0) {
           this.availableOrgs.set(orgs);
           this.loading.set(false);
@@ -595,7 +631,8 @@ export class LoginComponent {
         } else if (err.status === 0 || err.status >= 500) {
           this.error.set(this.translation.t('login.errorServer'));
         } else {
-          this.error.set(err?.error?.detail || this.translation.t('login.errorInvalid'));
+          const detail = err?.detail || err?.body?.detail || err?.error?.detail;
+          this.error.set(detail || this.translation.t('login.errorInvalid'));
         }
         this.loading.set(false);
       }
@@ -614,11 +651,12 @@ export class LoginComponent {
       next: (response) => {
         this.handleLoginSuccess(response);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Organization login failed:', err);
         this.loading.set(false);
         this.selectedOrgId.set(null);
-        this.error.set(err?.error?.detail || this.translation.t('login.errorInvalid'));
+        const detail = err?.detail || err?.body?.detail || err?.error?.detail;
+        this.error.set(detail || this.translation.t('login.errorInvalid'));
       }
     });
   }

@@ -76,6 +76,7 @@
   "login.singleOrgTitle": "تنبيه مساحة العمل الفردية",
   "login.singleOrgNotice": "يمكنك الانتماء إلى مؤسسة واحدة فقط. اختيار مساحة العمل هذه سيؤدي إلى مغادرة مؤسساتك الأخرى.",
   "login.joinedDate": "تاريخ الانضمام",
+  "login.lastActive": "آخر نشاط",
   "login.backToLogin": "العودة لتسجيل الدخول",
   "invite.leaveOldOrgNotice": "الانضمام إلى مساحة العمل هذه سيؤدي إلى مغادرة مؤسستك الحالية. يمكنك الانتماء إلى مؤسسة واحدة فقط في كل مرة.",
   "orgSettings.uploadLogo": "رفع الشعار",
