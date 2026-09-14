@@ -263,6 +263,12 @@ export class ApiService extends BaseApiService {
     return this.patch(`/organizations/me`, patch);
   }
 
+  uploadOrganizationLogo(file: File): Observable<Organization> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.post<Organization>('/organizations/me/logo', formData);
+  }
+
   // Users
   getUsers(): Observable<CrmUser[]> {
     return this.get<PageResponse<CrmUser>>(`/users`).pipe(

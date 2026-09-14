@@ -907,8 +907,12 @@ const SEARCH_ITEMS: SearchItem[] = [
           <!-- Logo + collapse toggle -->
           <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
           <div class="sidebar-logo" (click)="onLogoClick()">
-            <img src="logo.webp" alt="Bento Logo" />
-            <span>Bento</span>
+            @if (orgLogoUrl()) {
+              <img [src]="orgLogoUrl()" [alt]="state.organization().name || 'Logo'" />
+            } @else {
+              <img src="logo.webp" alt="Bento Logo" />
+            }
+            <span>{{ state.organization().name || 'Bento' }}</span>
             <button
               class="sidebar-collapse-btn"
               (click)="toggleCollapse($event)"
@@ -1198,6 +1202,10 @@ export class App implements OnInit, OnDestroy {
 
   // Sidebar collapse
   sidebarCollapsed = signal(false);
+
+  orgLogoUrl = computed(() => {
+    return this.state.resolveLogoUrl(this.state.organization().logoUrl);
+  });
 
   onLogoClick() {
     if (this.sidebarCollapsed()) {

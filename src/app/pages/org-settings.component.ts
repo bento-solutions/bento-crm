@@ -50,16 +50,74 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           }
         </div>
 
-        <div class="flex items-center gap-4">
-          <div
-            [style.background-color]="state.organization().logoColor"
-            class="w-16 h-16 rounded-2xl text-white font-extrabold text-2xl flex items-center justify-center uppercase shadow-sm shrink-0"
-          >
-            {{ state.organization().logoInitials }}
+        <div class="flex flex-col sm:flex-row sm:items-center gap-5 p-4 rounded-xl bg-zinc-50 border border-zinc-200/60">
+          <div class="relative group shrink-0">
+            @if (state.organization().logoUrl) {
+              <img
+                [src]="resolvedLogoUrl()"
+                [alt]="state.organization().name"
+                class="w-16 h-16 rounded-2xl object-contain bg-white border border-zinc-200 p-1 shadow-xs"
+              />
+            } @else {
+              <div
+                [style.background-color]="state.organization().logoColor"
+                class="w-16 h-16 rounded-2xl text-white font-extrabold text-2xl flex items-center justify-center uppercase shadow-xs"
+              >
+                {{ state.organization().logoInitials }}
+              </div>
+            }
           </div>
+
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Workspace Logo</span>
+              @if (isUploadingLogo()) {
+                <span class="text-xs text-blue-600 flex items-center gap-1">
+                  <mat-icon class="text-[13px] w-3.5 h-3.5 animate-spin">refresh</mat-icon>
+                  Uploading...
+                </span>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <input
+                #fileInput
+                type="file"
+                class="hidden"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                (change)="onLogoFileSelected($event)"
+              />
+              <button
+                type="button"
+                (click)="fileInput.click()"
+                [disabled]="!isAdmin() || isUploadingLogo()"
+                class="px-3 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <mat-icon class="text-sm w-4 h-4 text-zinc-500">upload</mat-icon>
+                <span>{{ state.organization().logoUrl ? 'Change Logo' : 'Upload Logo' }}</span>
+              </button>
+              @if (state.organization().logoUrl && isAdmin()) {
+                <button
+                  type="button"
+                  (click)="removeLogo()"
+                  [disabled]="isUploadingLogo()"
+                  class="px-3 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <mat-icon class="text-sm w-4 h-4 text-red-500">delete_outline</mat-icon>
+                  <span>Remove</span>
+                </button>
+              }
+            </div>
+            <p class="text-[11px] text-zinc-400 pt-0.5">PNG, JPG, SVG or WebP up to 5MB.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
           <div class="flex-1 min-w-0">
             @if (isEditing()) {
+              <label for="org_name" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Organization Name</label>
               <input
+                id="org_name"
                 [(ngModel)]="editName"
                 placeholder="Organization Name"
                 class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-blue-600 font-semibold text-zinc-800"
@@ -332,6 +390,11 @@ export class OrgSettingsComponent {
   orgTab = signal('profile');
   isEditing = signal<boolean>(false);
   showSuccess = signal<boolean>(false);
+  isUploadingLogo = signal<boolean>(false);
+
+  resolvedLogoUrl = computed(() => {
+    return this.state.resolveLogoUrl(this.state.organization().logoUrl);
+  });
 
   editName = '';
   editIndustry = '';
@@ -384,6 +447,39 @@ export class OrgSettingsComponent {
     setTimeout(() => {
       this.showSuccess.set(false);
     }, 2000);
+  }
+
+  onLogoFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+
+    // Maximum 5MB validation
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File is too large. Maximum size is 5MB.');
+      input.value = '';
+      return;
+    }
+
+    this.isUploadingLogo.set(true);
+    this.state.uploadOrganizationLogo(
+      file,
+      () => {
+        this.isUploadingLogo.set(false);
+        input.value = '';
+      },
+      () => {
+        this.isUploadingLogo.set(false);
+        input.value = '';
+      }
+    );
+  }
+
+  removeLogo() {
+    if (!this.isAdmin()) return;
+    if (confirm('Are you sure you want to remove the organization logo?')) {
+      this.state.updateOrganization({ logoUrl: '' });
+    }
   }
 
   getMonthName(val: number): string {

@@ -14,6 +14,7 @@ export interface OrganizationChoice {
   organization_id: string;
   organization_name: string;
   role?: string;
+  joined_at?: string;
   last_active_at?: string;
 }
 

@@ -45,4 +45,10 @@ export class OrganizationApiService extends BaseApiService {
   update(request: Partial<CreateOrganizationRequest>): Observable<OrganizationResponse> {
     return this.patch<OrganizationResponse>(API_CONFIG.endpoints.organizations.update, request);
   }
+
+  uploadLogo(file: File): Observable<OrganizationResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.post<OrganizationResponse>(API_CONFIG.endpoints.organizations.logo, formData);
+  }
 }

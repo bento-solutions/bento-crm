@@ -337,6 +337,44 @@ import { TranslationService } from '../services/translation.service';
       to { transform: rotate(360deg); }
     }
 
+    .org-item-date {
+      font-size: 11px;
+      color: #71717A;
+    }
+
+    .org-warning-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #92400E;
+      line-height: 1.4;
+      text-align: start;
+    }
+
+    .org-warning-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #D97706;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .org-warning-text {
+      flex: 1;
+    }
+
+    .org-warning-title {
+      font-weight: 700;
+      margin-inline-end: 4px;
+    }
+
     .back-btn {
       display: flex;
       align-items: center;
@@ -379,6 +417,14 @@ import { TranslationService } from '../services/translation.service';
             <p>{{ 'login.multipleWorkspacesDesc' | translate }}</p>
           </div>
 
+          <div class="org-warning-box">
+            <mat-icon class="org-warning-icon">info</mat-icon>
+            <div class="org-warning-text">
+              <span class="org-warning-title">{{ 'login.singleOrgTitle' | translate }}:</span>
+              {{ 'login.singleOrgNotice' | translate }}
+            </div>
+          </div>
+
           @if (error()) {
             <div class="error-msg">{{ error() }}</div>
           }
@@ -396,11 +442,14 @@ import { TranslationService } from '../services/translation.service';
                 </div>
                 <div class="org-item-content">
                   <div class="org-item-name">{{ org.organization_name }}</div>
-                  @if (org.role) {
-                    <div class="org-item-meta">
+                  <div class="org-item-meta">
+                    @if (org.role) {
                       <span class="org-item-role">{{ org.role }}</span>
-                    </div>
-                  }
+                    }
+                    @if (org.joined_at) {
+                      <span class="org-item-date">{{ 'login.joinedDate' | translate }}: {{ org.joined_at | date:'mediumDate' }}</span>
+                    }
+                  </div>
                 </div>
                 @if (loading() && selectedOrgId() === org.organization_id) {
                   <div class="spinner"></div>

@@ -9,12 +9,15 @@ import { TicketsService } from './domains/tickets.service';
 import { isSupportedLanguage } from '../core/i18n/language';
 import { InvitationApiService, InvitationDto, InvitationRole } from '../core/services/invitation-api.service';
 import { RelatedEntityType } from '../shared/related-entity.model';
+import { environment } from '../../environments/environment';
 
 export interface Organization {
   id: string;
   name: string;
   logoInitials: string;
   logoColor: string;
+  logoUrl?: string;
+  logo_url?: string;
   industry: string;
   timezone: string;
   fiscalYearStart: number;
@@ -1345,7 +1348,7 @@ export class CrmStateService {
     this.api.getOrganization().subscribe({
       next: (org) => {
         if (org) {
-          this.organization.set(org);
+          this.organization.set(this.normalizeOrganization(org));
         }
       },
       error: (err) => {
@@ -1710,18 +1713,67 @@ export class CrmStateService {
     });
   }
 
+  normalizeOrganization(raw: any): Organization {
+    if (!raw) return this.organization();
+    const current = this.organization();
+    const name = raw.name || current.name || '';
+    const initials = name
+      ? name.trim().split(/\s+/).map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+      : (current.logoInitials || 'OR');
+    const logo = raw.logoUrl || raw.logo_url || current.logoUrl || '';
+
+    return {
+      id: raw.id || current.id,
+      name: name,
+      logoInitials: initials,
+      logoColor: current.logoColor || '#09090B',
+      logoUrl: logo,
+      logo_url: logo,
+      industry: raw.industry !== undefined ? raw.industry : current.industry,
+      timezone: raw.timezone !== undefined ? raw.timezone : current.timezone,
+      fiscalYearStart: raw.fiscalYearStart || raw.fiscal_year_start_month || current.fiscalYearStart || 1,
+      createdAt: raw.createdAt || (raw.created_at ? new Date(raw.created_at) : current.createdAt)
+    };
+  }
+
+  resolveLogoUrl(url?: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    const base = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+
   // State mutations
   updateOrganization(patch: Partial<Organization>): void {
     this.api.updateOrganization(patch).subscribe({
       next: (updated) => {
         if (updated) {
-          this.organization.set(updated);
+          this.organization.set(this.normalizeOrganization({ ...this.organization(), ...updated, ...patch }));
         }
         this.toast.show('Organization updated', { type: 'info' });
       },
       error: (err) => {
         console.warn('Failed to update organization:', err);
         this.toast.show('Failed to update organization', { type: 'error' });
+      }
+    });
+  }
+
+  uploadOrganizationLogo(file: File, onSuccess?: () => void, onError?: (err: unknown) => void): void {
+    this.api.uploadOrganizationLogo(file).subscribe({
+      next: (updated) => {
+        if (updated) {
+          this.organization.set(this.normalizeOrganization(updated));
+        }
+        this.toast.show('Organization logo updated', { type: 'info' });
+        onSuccess?.();
+      },
+      error: (err) => {
+        console.warn('Failed to upload organization logo:', err);
+        this.toast.show('Failed to upload organization logo', { type: 'error' });
+        onError?.(err);
       }
     });
   }

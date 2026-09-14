@@ -13,6 +13,7 @@ export const API_CONFIG = {
       create: '/organizations',
       me: '/organizations/me',
       update: '/organizations/me',
+      logo: '/organizations/me/logo',
     },
     invitations: {
       list: '/invitations',

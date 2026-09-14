@@ -106,6 +106,15 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
             <p class="text-meta text-zinc-500 leading-relaxed">{{ roleBlurb() }}</p>
           </div>
 
+          <!-- Single Workspace Notice -->
+          <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 mb-4 flex items-start gap-2.5 text-xs leading-relaxed">
+            <mat-icon class="text-amber-600 text-base w-4 h-4 shrink-0 mt-0.5">info</mat-icon>
+            <div>
+              <strong class="font-semibold">Single Organization Notice:</strong>
+              Joining <strong>{{ invite.organization_name }}</strong> will leave any current workspace. Bento accounts are associated with one organization at a time.
+            </div>
+          </div>
+
           @if (error()) {
             <div class="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg px-3 py-2 mb-4 text-center">
               {{ error() }}
