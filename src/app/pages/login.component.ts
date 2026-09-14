@@ -112,6 +112,47 @@ import { TranslationService } from '../services/translation.service';
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .password-input {
+      padding-inline-end: 38px;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      inset-inline-end: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 4px;
+      margin: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #71717A;
+      border-radius: 6px;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+
+    .password-toggle-btn:hover {
+      color: #09090B;
+      background-color: #F4F4F5;
+    }
+
+    .toggle-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+
     .login-btn {
       width: 100%;
       padding: 10px 16px;
@@ -213,16 +254,27 @@ import { TranslationService } from '../services/translation.service';
 
           <div class="form-group">
             <label for="password">{{ 'login.password' | translate }}</label>
-            <input
-              id="password"
-              type="password"
-              [(ngModel)]="password"
-              name="password"
-              class="form-input"
-              [placeholder]="'login.passwordPlaceholder' | translate"
-              autocomplete="current-password"
-              required
-            />
+            <div class="password-input-wrapper">
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                [(ngModel)]="password"
+                name="password"
+                class="form-input password-input"
+                [placeholder]="'login.passwordPlaceholder' | translate"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle-btn"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | translate"
+                tabindex="-1"
+              >
+                <mat-icon class="toggle-icon">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </div>
             <a class="forgot-link">{{ 'login.forgotPassword' | translate }}</a>
           </div>
 
@@ -251,8 +303,13 @@ export class LoginComponent {
 
   email = signal('');
   password = signal('');
+  showPassword = signal(false);
   loading = signal(false);
   error = signal('');
+
+  togglePasswordVisibility(): void {
+    this.showPassword.update(v => !v);
+  }
 
   onLogin(): void {
     const email = this.email().trim();

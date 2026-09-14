@@ -60,6 +60,8 @@
   "login.emailPlaceholder": "Enter your email",
   "login.password": "Password",
   "login.passwordPlaceholder": "Enter your password",
+  "login.showPassword": "Show password",
+  "login.hidePassword": "Hide password",
   "login.forgotPassword": "Forgot password?",
   "login.signIn": "Sign in",
   "login.signingIn": "Signing in...",
