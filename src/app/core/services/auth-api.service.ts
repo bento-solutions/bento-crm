@@ -7,6 +7,14 @@ import { API_CONFIG } from '../config/api-config';
 export interface LoginRequest {
   email: string;
   password: string;
+  organization_id?: string;
+}
+
+export interface OrganizationChoice {
+  organization_id: string;
+  organization_name: string;
+  role?: string;
+  last_active_at?: string;
 }
 
 export interface LoginResponse {

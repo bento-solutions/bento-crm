@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
-import { AuthApiService } from '../core/services/auth-api.service';
+import { AuthApiService, OrganizationChoice } from '../core/services/auth-api.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 
@@ -219,6 +219,151 @@ import { TranslationService } from '../services/translation.service';
     .signup-link a:hover {
       color: var(--color-accent);
     }
+
+    .org-selection-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .org-selection-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #09090B;
+      margin: 0;
+    }
+
+    .org-selection-header p {
+      font-size: 13px;
+      color: #71717A;
+      margin: 6px 0 0;
+      line-height: 1.4;
+    }
+
+    .org-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .org-item-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      background: #FAFAFA;
+      border: 1px solid #E4E4E7;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: start;
+      transition: all 150ms ease;
+    }
+
+    .org-item-card:hover:not(:disabled) {
+      background: #F4F4F5;
+      border-color: #D4D4D8;
+      transform: translateY(-1px);
+    }
+
+    .org-item-card:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .org-item-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #09090B;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .org-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .org-item-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #09090B;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .org-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .org-item-role {
+      font-size: 11px;
+      font-weight: 600;
+      color: #52525B;
+      background: #E4E4E7;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .org-item-arrow {
+      color: #A1A1AA;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #E4E4E7;
+      border-top-color: #09090B;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px 14px;
+      background: transparent;
+      border: 1px solid #E4E4E7;
+      border-radius: 8px;
+      color: #71717A;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .back-btn:hover:not(:disabled) {
+      background: #FAFAFA;
+      color: #09090B;
+    }
+
+    .back-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   `],
   template: `
     <div class="login-container">
@@ -228,69 +373,118 @@ import { TranslationService } from '../services/translation.service';
           <span>Bento</span>
         </div>
 
-        <div class="login-title">
-          <h1>{{ 'login.title' | translate }}</h1>
-          <p>{{ 'login.subtitle' | translate }}</p>
-        </div>
-
-        @if (error()) {
-          <div class="error-msg">{{ error() }}</div>
-        }
-
-        <form (ngSubmit)="onLogin()">
-          <div class="form-group">
-            <label for="email">{{ 'login.email' | translate }}</label>
-            <input
-              id="email"
-              type="email"
-              [(ngModel)]="email"
-              name="email"
-              class="form-input"
-              [placeholder]="'login.emailPlaceholder' | translate"
-              autocomplete="email"
-              required
-            />
+        @if (availableOrgs().length > 0) {
+          <div class="org-selection-header">
+            <h2>{{ 'login.selectWorkspace' | translate }}</h2>
+            <p>{{ 'login.multipleWorkspacesDesc' | translate }}</p>
           </div>
 
-          <div class="form-group">
-            <label for="password">{{ 'login.password' | translate }}</label>
-            <div class="password-input-wrapper">
-              <input
-                id="password"
-                [type]="showPassword() ? 'text' : 'password'"
-                [(ngModel)]="password"
-                name="password"
-                class="form-input password-input"
-                [placeholder]="'login.passwordPlaceholder' | translate"
-                autocomplete="current-password"
-                required
-              />
+          @if (error()) {
+            <div class="error-msg">{{ error() }}</div>
+          }
+
+          <div class="org-list">
+            @for (org of availableOrgs(); track org.organization_id) {
               <button
                 type="button"
-                class="password-toggle-btn"
-                (click)="togglePasswordVisibility()"
-                [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | translate"
-                tabindex="-1"
+                class="org-item-card"
+                (click)="selectOrganizationAndLogin(org.organization_id)"
+                [disabled]="loading()"
               >
-                <mat-icon class="toggle-icon">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                <div class="org-item-avatar">
+                  {{ (org.organization_name ? org.organization_name.charAt(0) : 'W').toUpperCase() }}
+                </div>
+                <div class="org-item-content">
+                  <div class="org-item-name">{{ org.organization_name }}</div>
+                  @if (org.role) {
+                    <div class="org-item-meta">
+                      <span class="org-item-role">{{ org.role }}</span>
+                    </div>
+                  }
+                </div>
+                @if (loading() && selectedOrgId() === org.organization_id) {
+                  <div class="spinner"></div>
+                } @else {
+                  <mat-icon class="org-item-arrow">chevron_right</mat-icon>
+                }
               </button>
-            </div>
-            <a class="forgot-link">{{ 'login.forgotPassword' | translate }}</a>
+            }
           </div>
 
           <button
-            type="submit"
-            class="login-btn"
+            type="button"
+            class="back-btn"
+            (click)="resetToLoginForm()"
             [disabled]="loading()"
           >
-            {{ loading() ? ('login.signingIn' | translate) : ('login.signIn' | translate) }}
+            <mat-icon class="back-icon">arrow_back</mat-icon>
+            <span>{{ 'login.backToLogin' | translate }}</span>
           </button>
-        </form>
+        } @else {
+          <div class="login-title">
+            <h1>{{ 'login.title' | translate }}</h1>
+            <p>{{ 'login.subtitle' | translate }}</p>
+          </div>
 
-        <p class="signup-link">
-          {{ 'login.newToBento' | translate }}
-          <a routerLink="/onboarding">{{ 'login.createOrg' | translate }}</a>
-        </p>
+          @if (error()) {
+            <div class="error-msg">{{ error() }}</div>
+          }
+
+          <form (ngSubmit)="onLogin()">
+            <div class="form-group">
+              <label for="email">{{ 'login.email' | translate }}</label>
+              <input
+                id="email"
+                type="email"
+                [(ngModel)]="email"
+                name="email"
+                class="form-input"
+                [placeholder]="'login.emailPlaceholder' | translate"
+                autocomplete="email"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="password">{{ 'login.password' | translate }}</label>
+              <div class="password-input-wrapper">
+                <input
+                  id="password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  [(ngModel)]="password"
+                  name="password"
+                  class="form-input password-input"
+                  [placeholder]="'login.passwordPlaceholder' | translate"
+                  autocomplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="password-toggle-btn"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="(showPassword() ? 'login.hidePassword' : 'login.showPassword') | translate"
+                  tabindex="-1"
+                >
+                  <mat-icon class="toggle-icon">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+              </div>
+              <a class="forgot-link">{{ 'login.forgotPassword' | translate }}</a>
+            </div>
+
+            <button
+              type="submit"
+              class="login-btn"
+              [disabled]="loading()"
+            >
+              {{ loading() ? ('login.signingIn' | translate) : ('login.signIn' | translate) }}
+            </button>
+          </form>
+
+          <p class="signup-link">
+            {{ 'login.newToBento' | translate }}
+            <a routerLink="/onboarding">{{ 'login.createOrg' | translate }}</a>
+          </p>
+        }
       </div>
     </div>
   `
@@ -304,11 +498,19 @@ export class LoginComponent {
   email = signal('');
   password = signal('');
   showPassword = signal(false);
+  availableOrgs = signal<OrganizationChoice[]>([]);
+  selectedOrgId = signal<string | null>(null);
   loading = signal(false);
   error = signal('');
 
   togglePasswordVisibility(): void {
     this.showPassword.update(v => !v);
+  }
+
+  resetToLoginForm(): void {
+    this.availableOrgs.set([]);
+    this.selectedOrgId.set(null);
+    this.error.set('');
   }
 
   onLogin(): void {
@@ -327,27 +529,60 @@ export class LoginComponent {
 
     this.authApi.login({ email, password }).subscribe({
       next: (response) => {
-        localStorage.setItem('accessToken', response.access_token);
-        if (response.refresh_token) {
-          localStorage.setItem('refreshToken', response.refresh_token);
-        }
-        localStorage.setItem('bento_auth', 'true');
-        this.loading.set(false);
-        this.state.setCurrentUser(response.user.id);
-        this.router.navigate(['/']);
+        this.handleLoginSuccess(response);
       },
       error: (err) => {
         console.error('Login failed:', err);
+        const orgs = err?.error?.organizations;
+        if (Array.isArray(orgs) && orgs.length > 0) {
+          this.availableOrgs.set(orgs);
+          this.loading.set(false);
+          this.error.set('');
+          return;
+        }
+
         if (err.status === 429) {
           this.error.set(this.translation.t('login.errorRateLimit'));
         } else if (err.status === 0 || err.status >= 500) {
           this.error.set(this.translation.t('login.errorServer'));
         } else {
-          this.error.set(this.translation.t('login.errorInvalid'));
+          this.error.set(err?.error?.detail || this.translation.t('login.errorInvalid'));
         }
         this.loading.set(false);
       }
     });
+  }
+
+  selectOrganizationAndLogin(orgId: string): void {
+    const email = this.email().trim();
+    const password = this.password();
+
+    this.selectedOrgId.set(orgId);
+    this.loading.set(true);
+    this.error.set('');
+
+    this.authApi.login({ email, password, organization_id: orgId }).subscribe({
+      next: (response) => {
+        this.handleLoginSuccess(response);
+      },
+      error: (err) => {
+        console.error('Organization login failed:', err);
+        this.loading.set(false);
+        this.selectedOrgId.set(null);
+        this.error.set(err?.error?.detail || this.translation.t('login.errorInvalid'));
+      }
+    });
+  }
+
+  private handleLoginSuccess(response: any): void {
+    localStorage.setItem('accessToken', response.access_token);
+    if (response.refresh_token) {
+      localStorage.setItem('refreshToken', response.refresh_token);
+    }
+    localStorage.setItem('bento_auth', 'true');
+    this.loading.set(false);
+    this.state.setCurrentUser(response.user.id);
+    this.router.navigate(['/']);
   }
 
 }

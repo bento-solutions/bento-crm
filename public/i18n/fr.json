@@ -71,6 +71,9 @@
   "login.errorInvalid": "E-mail ou mot de passe invalide. Veuillez réessayer.",
   "login.errorRateLimit": "Trop de tentatives de connexion. Veuillez patienter avant de réessayer.",
   "login.errorServer": "Le serveur est temporairement inaccessible. Veuillez réessayer dans un instant.",
+  "login.selectWorkspace": "Sélectionner l'espace de travail",
+  "login.multipleWorkspacesDesc": "Votre compte est associé à plusieurs espaces de travail. Choisissez-en un pour vous connecter :",
+  "login.backToLogin": "Retour à la connexion",
 
   "leads.addNew": "Ajouter un nouveau lead",
   "leads.totalLeads": "Total des leads",

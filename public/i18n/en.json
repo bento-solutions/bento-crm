@@ -71,6 +71,9 @@
   "login.errorInvalid": "Invalid email or password. Please try again.",
   "login.errorRateLimit": "Too many login attempts. Please wait a moment before trying again.",
   "login.errorServer": "Server is temporarily unreachable. Please try again shortly.",
+  "login.selectWorkspace": "Select Workspace",
+  "login.multipleWorkspacesDesc": "Your account is associated with multiple workspaces. Choose one to sign in:",
+  "login.backToLogin": "Back to sign in",
 
   "leads.addNew": "Add New Lead",
   "leads.totalLeads": "Total Leads",
