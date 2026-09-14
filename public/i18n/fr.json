@@ -67,6 +67,8 @@
   "login.createOrg": "Créer une organisation",
   "login.errorRequired": "Veuillez entrer l'e-mail et le mot de passe",
   "login.errorInvalid": "E-mail ou mot de passe invalide. Veuillez réessayer.",
+  "login.errorRateLimit": "Trop de tentatives de connexion. Veuillez patienter avant de réessayer.",
+  "login.errorServer": "Le serveur est temporairement inaccessible. Veuillez réessayer dans un instant.",
 
   "leads.addNew": "Ajouter un nouveau lead",
   "leads.totalLeads": "Total des leads",

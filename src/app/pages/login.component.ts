@@ -281,7 +281,13 @@ export class LoginComponent {
       },
       error: (err) => {
         console.error('Login failed:', err);
-        this.error.set(this.translation.t('login.errorInvalid'));
+        if (err.status === 429) {
+          this.error.set(this.translation.t('login.errorRateLimit'));
+        } else if (err.status === 0 || err.status >= 500) {
+          this.error.set(this.translation.t('login.errorServer'));
+        } else {
+          this.error.set(this.translation.t('login.errorInvalid'));
+        }
         this.loading.set(false);
       }
     });
