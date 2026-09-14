@@ -18,6 +18,7 @@ import { CrmStateService } from '../services/crm-state.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { UserPickerComponent } from '../shared/user-picker.component';
+import { ApiService } from '../services/api.service';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
@@ -331,6 +332,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 <button (click)="openProposalDrawer(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-900 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="View Details">
                   <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">visibility</mat-icon>
                 </button>
+                <button (click)="downloadProposalPdf(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-900 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Download Proposal PDF">
+                  <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">picture_as_pdf</mat-icon>
+                </button>
                 <button (click)="openEditProposalModal(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-650 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Edit Proposal">
                   <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">edit</mat-icon>
                 </button>
@@ -423,6 +427,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-1.5">
                     <button (click)="$event.stopPropagation(); openPODrawer(po)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100" title="View Details">
                       <mat-icon class="text-[14px] w-3.5 h-3.5 flex items-center justify-center">visibility</mat-icon>
+                    </button>
+                    <button (click)="$event.stopPropagation(); downloadPOPdf(po)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100" title="Download PO PDF">
+                      <mat-icon class="text-[14px] w-3.5 h-3.5 flex items-center justify-center">picture_as_pdf</mat-icon>
                     </button>
                     <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100 flex items-center gap-1 ml-auto" title="Assign Task">
                       <mat-icon class="text-[14px] w-3.5 h-3.5">assignment</mat-icon> Assign
@@ -2334,6 +2341,21 @@ export class SalesComponent {
   state = inject(CrmStateService);
   private router = inject(Router);
   translation = inject(TranslationService);
+  private api = inject(ApiService);
+
+  downloadProposalPdf(prop: Proposal): void {
+    this.api.downloadProposalPdf(prop.id).subscribe({
+      next: (blob) => this.api.downloadBlob(blob, `proposition-${prop.id.substring(0, 8)}.pdf`),
+      error: () => console.error('Failed to download proposal PDF')
+    });
+  }
+
+  downloadPOPdf(po: PurchaseOrder): void {
+    this.api.downloadPurchaseOrderPdf(po.id).subscribe({
+      next: (blob) => this.api.downloadBlob(blob, `bon-commande-${po.orderNumber || po.id.substring(0, 8)}.pdf`),
+      error: () => console.error('Failed to download purchase order PDF')
+    });
+  }
 
   setActiveTab(tab: 'deals' | 'proposals' | 'pos', labelKey: string): void {
     this.activeTab.set(tab);

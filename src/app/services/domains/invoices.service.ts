@@ -21,14 +21,14 @@ export class InvoicesService {
   isLoading$ = computed(() => this.isLoading());
   error$ = computed(() => this.error());
 
-  load(): void {
-    if (this.isLoaded()) return;
+  load(params?: Record<string, string | number | boolean>, force = false): void {
+    if (this.isLoaded() && !params && !force) return;
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.api.getInvoices().subscribe({
+    this.api.getInvoices(params).subscribe({
       next: (invoices) => {
-        if (invoices && invoices.length > 0) {
+        if (invoices) {
           this.invoices.set(invoices);
         }
         this.isLoaded.set(true);

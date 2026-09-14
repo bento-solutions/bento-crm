@@ -11,6 +11,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
+import { ApiService } from '../services/api.service';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -110,6 +111,9 @@ interface InvoiceLine {
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-1">
+                      <button (click)="downloadPdf(invoice)" title="Download PDF" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-700 px-2 py-1.5 rounded-lg transition-colors">
+                        <mat-icon class="text-[16px] w-4 h-4 align-middle">picture_as_pdf</mat-icon>
+                      </button>
                       <button (click)="openInvoiceAttachments(invoice)" title="Attachments" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-500 px-2 py-1.5 rounded-lg transition-colors">
                         <mat-icon class="text-[16px] w-4 h-4 align-middle">attach_file</mat-icon>
                       </button>
@@ -253,6 +257,13 @@ interface InvoiceLine {
                     <div class="bg-zinc-100 border border-zinc-300 rounded-lg p-3 text-xs text-zinc-950 flex items-start gap-1.5">
                       <mat-icon class="text-zinc-900 text-[16px] w-4 h-4 mt-0.5">check_circle</mat-icon>
                       <span>{{successMessage()}}</span>
+                    </div>
+                  }
+
+                  @if (errorMessage()) {
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-800 flex items-start gap-1.5">
+                      <mat-icon class="text-red-700 text-[16px] w-4 h-4 mt-0.5">error</mat-icon>
+                      <span>{{errorMessage()}}</span>
                     </div>
                   }
 
@@ -654,6 +665,7 @@ export class FinanceComponent {
   state = inject(CrmStateService);
   invoicesService = inject(InvoicesService);
   translation = inject(TranslationService);
+  private api = inject(ApiService);
   activeTab = signal<'Customer' | 'Vendor' | 'Recovery'>('Customer');
 
   setFinanceTab(tab: 'Customer' | 'Vendor' | 'Recovery'): void {
@@ -688,12 +700,25 @@ export class FinanceComponent {
     }
   }
 
+  downloadPdf(invoice: Invoice) {
+    this.api.downloadInvoicePdf(invoice.id).subscribe({
+      next: (blob) => {
+        const filename = `facture-${invoice.invoiceNumber || invoice.id.substring(0, 8)}.pdf`;
+        this.api.downloadBlob(blob, filename);
+      },
+      error: () => {
+        this.errorMessage.set('Failed to download invoice PDF.');
+      }
+    });
+  }
+
   invoiceModalOpen  = signal(false);
   selectedInvoiceIds = signal<string[]>([]);
   reminderChannel   = signal<'WhatsApp' | 'SMS' | 'Email'>('WhatsApp');
   reminderLanguage  = 'ar';
   reminderMessage   = '';
   successMessage    = signal('');
+  errorMessage      = signal('');
   formValidationError = signal('');
 
   // ── Invoice Type Modality ─────────────────────────────────────────────────
@@ -1070,9 +1095,19 @@ export class FinanceComponent {
   }
 
   sendReminders() {
-    const channel = this.reminderChannel();
-    this.successMessage.set(`Succès! Rappel envoyé via ${channel} aux clients sélectionnés.`);
-    setTimeout(() => this.successMessage.set(''), 4000);
-    this.selectedInvoiceIds.set([]);
+    const ids = this.selectedInvoiceIds();
+    if (ids.length === 0) return;
+    const channel = this.reminderChannel().toLowerCase();
+    this.api.sendInvoiceReminders(ids, channel, this.reminderMessage).subscribe({
+      next: (res) => {
+        this.successMessage.set(`Succès! Rappel envoyé via ${this.reminderChannel()} (${res.sent} facture(s)).`);
+        setTimeout(() => this.successMessage.set(''), 4000);
+        this.selectedInvoiceIds.set([]);
+      },
+      error: (err) => {
+        this.errorMessage.set(err?.detail || 'Erreur lors de l’envoi des rappels.');
+        setTimeout(() => this.errorMessage.set(''), 4000);
+      }
+    });
   }
 }

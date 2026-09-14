@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, computed, inject, signal, ViewChild, ElementRef, AfterViewChecked, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CrmStateService, CrmGroup, GroupMessage, GroupMeeting, CrmUser } from '../services/crm-state.service';
+import { ApiService } from '../services/api.service';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -517,9 +518,11 @@ import { MatIconModule } from '@angular/material/icon';
     }
   `
 })
-export class GroupsComponent implements AfterViewChecked {
+export class GroupsComponent implements AfterViewChecked, OnDestroy {
   state = inject(CrmStateService);
   private route = inject(ActivatedRoute);
+  private api = inject(ApiService);
+  private eventSource: EventSource | null = null;
 
   selectedGroupId = signal<string | null>(null);
   activeTab = signal<'chat' | 'meetings'>('chat');
@@ -621,12 +624,85 @@ export class GroupsComponent implements AfterViewChecked {
     this.scrollChatToBottom();
   }
 
+  ngOnDestroy(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+  }
+
   selectGroup(groupId: string) {
     this.selectedGroupId.set(groupId);
     this.markMessagesAsRead(groupId);
     this.closeScheduleForm();
     this.activeTab.set('chat');
+    this.loadGroupMessages(groupId);
+    this.connectGroupStream(groupId);
     setTimeout(() => this.scrollChatToBottom(true), 50);
+  }
+
+  private loadGroupMessages(groupId: string): void {
+    this.api.getGroupMessages(groupId).subscribe({
+      next: (messages: any[]) => {
+        const mapped: GroupMessage[] = messages.map(raw => ({
+          id: String(raw.id),
+          groupId: String(raw.groupId),
+          senderUserId: String(raw.authorUserId || raw.senderUserId),
+          content: raw.content,
+          sentAt: raw.createdAt ? new Date(raw.createdAt) : (raw.sentAt ? new Date(raw.sentAt) : new Date()),
+          readByUserIds: (raw.readByUserIds || []).map((u: any) => String(u))
+        }));
+        this.state.groupMessages.update(list => {
+          const otherGroups = list.filter(m => m.groupId !== groupId);
+          return [...otherGroups, ...mapped];
+        });
+        setTimeout(() => this.scrollChatToBottom(true), 50);
+      },
+      error: () => console.error('Failed to load group messages')
+    });
+  }
+
+  private connectGroupStream(groupId: string): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const streamUrl = this.api.getGroupStreamUrl(groupId) + (token ? `?token=${encodeURIComponent(token)}` : '');
+
+    try {
+      this.eventSource = new EventSource(streamUrl, { withCredentials: true });
+      this.eventSource.addEventListener('message', (event: MessageEvent) => {
+        try {
+          const raw = JSON.parse(event.data);
+          if (!raw || !raw.id) return;
+          const incoming: GroupMessage = {
+            id: String(raw.id),
+            groupId: String(raw.groupId),
+            senderUserId: String(raw.authorUserId || raw.senderUserId),
+            content: raw.content,
+            sentAt: raw.createdAt ? new Date(raw.createdAt) : (raw.sentAt ? new Date(raw.sentAt) : new Date()),
+            readByUserIds: (raw.readByUserIds || []).map((u: any) => String(u))
+          };
+          this.state.groupMessages.update(list => {
+            if (list.some(m => m.id === incoming.id)) {
+              return list;
+            }
+            return [...list, incoming];
+          });
+          if (this.selectedGroupId() === groupId) {
+            setTimeout(() => this.scrollChatToBottom(true), 50);
+          }
+        } catch (e) {
+          console.error('Failed to parse SSE message', e);
+        }
+      });
+      this.eventSource.onerror = (err) => {
+        console.debug('Group stream connection error, will reconnect', err);
+      };
+    } catch (e) {
+      console.error('Failed to initialize EventSource', e);
+    }
   }
 
   markMessagesAsRead(groupId: string) {

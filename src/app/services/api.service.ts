@@ -22,6 +22,33 @@ export interface PageResponse<T> {
   total_pages: number;
 }
 
+export interface TicketCommentDto {
+  id: string;
+  organizationId?: string;
+  ticketId: string;
+  authorId?: string;
+  authorName: string;
+  authorRole?: string;
+  content: string;
+  isInternal?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ProductDto {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  unitPrice: number;
+  taxRate?: number;
+  category?: string;
+  unit?: string;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Backend Proposal.status is a Java enum (DRAFT, SENT, CONFIRMED, REJECTED, EXPIRED) matched by
 // exact name; the frontend uses capitalized display values, so requests/responses are translated
 // at this boundary rather than changing the capitalized values used throughout the UI.
@@ -170,23 +197,24 @@ function toBackendCampaign(campaign: unknown): unknown {
   return payload;
 }
 
-// Deal.DealStage is a Java enum: OPEN, PO_SENT, AWAITING_DELIVERY, AWAITING_INVOICING, INVOICED,
-// PAID, OVERDUE, CLOSED_WON, CLOSED_LOST. The frontend pipeline board only exposes 6 of those 9
-// stages; 'Confirmed' means the customer's purchase order has been sent/received (PO_SENT) —
-// AWAITING_DELIVERY and PAID/OVERDUE aren't surfaced anywhere in this UI.
 const DEAL_STAGE_TO_BACKEND: Record<string, string> = {
   New: 'OPEN',
   Confirmed: 'PO_SENT',
+  'Awaiting Delivery': 'AWAITING_DELIVERY',
   'Awaiting Invoicing': 'AWAITING_INVOICING',
   Invoiced: 'INVOICED',
+  Paid: 'PAID',
   'Closed Won': 'CLOSED_WON',
   'Closed Lost': 'CLOSED_LOST'
 };
 const DEAL_STAGE_FROM_BACKEND: Record<string, string> = {
   OPEN: 'New',
   PO_SENT: 'Confirmed',
+  AWAITING_DELIVERY: 'Confirmed',
   AWAITING_INVOICING: 'Awaiting Invoicing',
   INVOICED: 'Invoiced',
+  OVERDUE: 'Invoiced',
+  PAID: 'Closed Won',
   CLOSED_WON: 'Closed Won',
   CLOSED_LOST: 'Closed Lost'
 };
@@ -201,7 +229,8 @@ function toBackendDeal(deal: unknown): unknown {
 
 function fromBackendDeal(deal: Deal): Deal {
   const stage = deal.stage as unknown as string;
-  return { ...deal, stage: (DEAL_STAGE_FROM_BACKEND[stage] ?? stage) as Deal['stage'] };
+  const mappedStage = DEAL_STAGE_FROM_BACKEND[stage] ?? 'New';
+  return { ...deal, stage: mappedStage as Deal['stage'] };
 }
 
 function fromBackendCampaign(campaign: Campaign): Campaign {
@@ -318,6 +347,21 @@ export class ApiService extends BaseApiService {
     return this.post(`/groups/${groupId}/messages`, message);
   }
 
+  getGroupStreamUrl(groupId: string): string {
+    return this.buildUrl(`/groups/${groupId}/stream`);
+  }
+
+  downloadBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+
   // Meetings
   getGroupMeetings(groupId: string): Observable<GroupMeeting[]> {
     return this.get<PageResponse<GroupMeeting>>(`/groups/${groupId}/meetings`).pipe(
@@ -333,8 +377,8 @@ export class ApiService extends BaseApiService {
   // NOTE: the backend does not support filtering /partners by a `type` query
   // param — it only accepts Pageable params on that route. Type/stage
   // filtering is exposed via dedicated path-variable endpoints instead.
-  getPartners(): Observable<Partner[]> {
-    return this.get<PageResponse<Partner>>(`/partners`).pipe(
+  getPartners(params?: Record<string, string | number | boolean>): Observable<Partner[]> {
+    return this.get<PageResponse<Partner>>(`/partners`, params).pipe(
       map(response => response.content || [])
     );
   }
@@ -420,8 +464,8 @@ export class ApiService extends BaseApiService {
   }
 
   // Deals
-  getDeals(): Observable<Deal[]> {
-    return this.get<PageResponse<Deal>>(`/deals`).pipe(
+  getDeals(params?: Record<string, string | number | boolean>): Observable<Deal[]> {
+    return this.get<PageResponse<Deal>>(`/deals`, params).pipe(
       map(response => (response.content || []).map(fromBackendDeal))
     );
   }
@@ -480,6 +524,10 @@ export class ApiService extends BaseApiService {
 
   deleteProposal(id: string): Observable<unknown> {
     return this.delete(`/proposals/${id}`);
+  }
+
+  downloadProposalPdf(id: string): Observable<Blob> {
+    return this.getBlob(`/proposals/${id}/pdf`);
   }
 
   // Proposal Templates
@@ -562,9 +610,17 @@ export class ApiService extends BaseApiService {
     return this.post<Task>(`/tickets/${ticketId}/tasks`, toBackendTask(task)).pipe(map(fromBackendTask));
   }
 
+  getTicketComments(ticketId: string): Observable<TicketCommentDto[]> {
+    return this.get<TicketCommentDto[]>(`/tickets/${ticketId}/comments`);
+  }
+
+  addTicketComment(ticketId: string, payload: { content: string; authorName?: string; authorRole?: string; isInternal?: boolean }): Observable<TicketCommentDto> {
+    return this.post<TicketCommentDto>(`/tickets/${ticketId}/comments`, payload);
+  }
+
   // Invoices
-  getInvoices(): Observable<Invoice[]> {
-    return this.get<PageResponse<InvoiceResponse>>(`/invoices`).pipe(
+  getInvoices(params?: Record<string, string | number | boolean>): Observable<Invoice[]> {
+    return this.get<PageResponse<InvoiceResponse>>(`/invoices`, params).pipe(
       map(response => (response.content || []).map(invoiceFromApi))
     );
   }
@@ -583,6 +639,14 @@ export class ApiService extends BaseApiService {
 
   deleteInvoice(id: string): Observable<unknown> {
     return this.delete(`/invoices/${id}`);
+  }
+
+  sendInvoiceReminders(invoiceIds: string[], channel: string, message: string): Observable<{ sent: number; success: boolean }> {
+    return this.post<{ sent: number; success: boolean }>(`/invoices/reminders`, { invoiceIds, channel, message });
+  }
+
+  downloadInvoicePdf(id: string): Observable<Blob> {
+    return this.getBlob(`/invoices/${id}/pdf`);
   }
 
   // Purchase Orders
@@ -606,6 +670,10 @@ export class ApiService extends BaseApiService {
 
   deletePurchaseOrder(id: string): Observable<unknown> {
     return this.delete(`/purchase-orders/${id}`);
+  }
+
+  downloadPurchaseOrderPdf(id: string): Observable<Blob> {
+    return this.getBlob(`/purchase-orders/${id}/pdf`);
   }
 
   // Campaigns
@@ -734,5 +802,28 @@ export class ApiService extends BaseApiService {
 
   markAllNotificationsRead(): Observable<unknown> {
     return this.post(`/notifications/read-all`, {});
+  }
+
+  // Products
+  getProducts(params?: Record<string, string | number | boolean>): Observable<ProductDto[]> {
+    return this.get<PageResponse<ProductDto>>(`/products`, params).pipe(
+      map(response => response.content || [])
+    );
+  }
+
+  getProduct(id: string): Observable<ProductDto> {
+    return this.get<ProductDto>(`/products/${id}`);
+  }
+
+  createProduct(product: unknown): Observable<ProductDto> {
+    return this.post<ProductDto>(`/products`, product);
+  }
+
+  updateProduct(id: string, product: unknown): Observable<ProductDto> {
+    return this.patch<ProductDto>(`/products/${id}`, product);
+  }
+
+  deleteProduct(id: string): Observable<unknown> {
+    return this.delete(`/products/${id}`);
   }
 }

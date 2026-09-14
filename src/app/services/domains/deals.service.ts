@@ -25,14 +25,14 @@ export class DealsService {
   isLoading$ = computed(() => this.isLoading());
   error$ = computed(() => this.error());
 
-  load(): void {
-    if (this.isLoaded()) return;
+  load(params?: Record<string, string | number | boolean>, force = false): void {
+    if (this.isLoaded() && !params && !force) return;
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.api.getDeals().subscribe({
+    this.api.getDeals(params).subscribe({
       next: (deals) => {
-        if (deals && deals.length > 0) {
+        if (deals) {
           this.deals.set(deals.map(d => this.withSalesPersonName(d)));
         }
         this.isLoaded.set(true);
@@ -61,7 +61,6 @@ export class DealsService {
         const created = this.withSalesPersonName(raw);
         this.deals.update(deals => deals.map(d => d.id === localId ? created : d));
         this.toast.show(`Deal <strong>${created.title}</strong> created`);
-        setTimeout(() => this.state.evaluateRules('DealCreated', created as unknown as Record<string, unknown>, `Deal: ${created.title}`), 0);
       },
       error: () => {
         this.deals.update(deals => deals.filter(d => d.id !== localId));
@@ -98,7 +97,6 @@ export class DealsService {
           deals.map(d => d.id === id ? updated : d)
         );
         this.toast.show(`Deal updated`);
-        setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, unknown>, `Deal: ${updated.title}`), 0);
       },
       error: () => this.toast.show('Failed to update deal', { type: 'error' })
     });
@@ -219,7 +217,7 @@ export class DealsService {
     if (!deal) return;
     this.deals.update(deals => deals.map(d => d.id === dealId ? { ...d, stage } : d));
     this.api.updateDeal(dealId, { ...deal, stage } as unknown).subscribe({
-      next: (updated) => setTimeout(() => this.state.evaluateRules('DealUpdated', updated as unknown as Record<string, unknown>, `Deal: ${updated.title}`), 0),
+      next: () => {},
       error: () => this.toast.show('Failed to sync stage change with server', { type: 'error' })
     });
   }

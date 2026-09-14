@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Deal, Meeting } from '../services/crm-state.service';
+import { ApiService } from '../services/api.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { UserPickerComponent } from '../shared/user-picker.component';
@@ -797,6 +798,7 @@ export class DealDetailComponent {
   state = inject(CrmStateService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private api = inject(ApiService);
 
   canWriteDeal(): boolean { return this.state.hasAuthority('DEALS_WRITE'); }
   canCreatePO(): boolean { return this.state.hasAuthority('PURCHASE_ORDERS_CREATE'); }
@@ -805,11 +807,12 @@ export class DealDetailComponent {
   canCreateDealActivity(): boolean { return this.state.hasAuthority('DEAL_ACTIVITIES_CREATE'); }
 
   dealId = signal<string | null>(null);
+  private fetchedDeal = signal<Deal | null>(null);
 
   deal = computed(() => {
     const id = this.dealId();
     if (!id) return null;
-    return this.state.deals().find(d => d.id === id) || null;
+    return this.state.deals().find(d => d.id === id) || this.fetchedDeal();
   });
 
   deleteDeal(deal: Deal) {
@@ -828,13 +831,15 @@ export class DealDetailComponent {
   calendarDays = Array.from({ length: 30 }, (_, i) => i + 1);
   calendarHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  private todayStr = new Date().toISOString().split('T')[0];
+
   newActivityInput = {
-    calls: { date: '2026-06-27', duration: 15, callerName: 'Youssef El Alami', summary: '', outcome: 'Interested' },
-    emails: { date: '2026-06-27', from: 'youssef@acme.ma', to: 'contact@atlasdigital.ma', subject: '', body: '', direction: 'sent' as const },
-    meetings: { date: '2026-06-27', time: '10:00', title: '', type: 'teams' as const, attendees: '', location: 'Teams Meeting', summary: '' },
-    recordings: { date: '2026-06-27', title: '', meetingLink: 'https://teams.microsoft.com/l/meetup-join/123456', recordingLink: 'https://share.acme.ma/rec/recording-06-27', duration: '30 mins' },
-    notes: { date: '2026-06-27', author: 'Youssef El Alami', content: '' },
-    followups: { dueDate: '2026-06-27', title: '', assignedTo: 'Omar (Finance)' }
+    calls: { date: this.todayStr, duration: 15, callerName: '', summary: '', outcome: 'Interested' },
+    emails: { date: this.todayStr, from: '', to: '', subject: '', body: '', direction: 'sent' as const },
+    meetings: { date: this.todayStr, time: '10:00', title: '', type: 'teams' as const, attendees: '', location: 'Teams Meeting', summary: '' },
+    recordings: { date: this.todayStr, title: '', meetingLink: '', recordingLink: '', duration: '30 mins' },
+    notes: { date: this.todayStr, author: '', content: '' },
+    followups: { dueDate: this.todayStr, title: '', assignedTo: '' }
   };
 
   // Assign Task
@@ -857,8 +862,15 @@ export class DealDetailComponent {
 
   constructor() {
     this.route.paramMap.subscribe(params => {
-      this.dealId.set(params.get('dealId'));
+      const id = params.get('dealId');
+      this.dealId.set(id);
       this.activeDealTabs.set({});
+      if (id) {
+        this.api.getDeal(id).subscribe({
+          next: (d) => this.fetchedDeal.set(d),
+          error: () => {}
+        });
+      }
     });
     this.state.loadDeals();
     this.state.loadPartners();
@@ -900,17 +912,19 @@ export class DealDetailComponent {
   openAddActivityModal(dealId: string, type: 'calls' | 'emails' | 'meetings' | 'recordings' | 'notes' | 'followups') {
     if (!this.canCreateDealActivity()) return;
     this.addActivityModalOpen.set({ dealId, type });
-    const me = this.state.users().find(u => u.team === 'Sales')?.name || 'Youssef El Alami';
-    const deal = this.state.deals().find(d => d.id === dealId);
-    const clientEmail = deal?.contactEmail || 'contact@client.ma';
+    const me = this.state.currentUser()?.name || this.state.users().find(u => u.team === 'Sales')?.name || 'Current User';
+    const myEmail = this.state.currentUser()?.email || '';
+    const currentDeal = this.deal();
+    const clientEmail = currentDeal?.contactEmail || '';
+    const today = new Date().toISOString().split('T')[0];
 
     this.newActivityInput = {
-      calls: { date: '2026-06-27', duration: 15, callerName: me, summary: '', outcome: 'Interested' },
-      emails: { date: '2026-06-27', from: 'youssef@acme.ma', to: clientEmail, subject: 'Follow up: ' + (deal?.title || ''), body: '', direction: 'sent' },
-      meetings: { date: '2026-06-27', time: '10:00', title: '', type: 'teams', attendees: me, location: 'Teams Meeting', summary: '' },
-      recordings: { date: '2026-06-27', title: 'Meeting Recording', meetingLink: 'https://teams.microsoft.com/l/meetup-join/123456', recordingLink: 'https://share.acme.ma/rec/recording-06-27', duration: '30 mins' },
-      notes: { date: '2026-06-27', author: me, content: '' },
-      followups: { dueDate: '2026-06-27', title: '', assignedTo: me }
+      calls: { date: today, duration: 15, callerName: me, summary: '', outcome: 'Interested' },
+      emails: { date: today, from: myEmail, to: clientEmail, subject: 'Follow up: ' + (currentDeal?.title || ''), body: '', direction: 'sent' },
+      meetings: { date: today, time: '10:00', title: '', type: 'teams', attendees: me, location: 'Teams Meeting', summary: '' },
+      recordings: { date: today, title: 'Meeting Recording', meetingLink: '', recordingLink: '', duration: '30 mins' },
+      notes: { date: today, author: me, content: '' },
+      followups: { dueDate: today, title: '', assignedTo: me }
     };
   }
 
@@ -952,13 +966,17 @@ export class DealDetailComponent {
 
   hasEventsOnDay(deal: Deal, day: number): boolean {
     if (!deal.activityLog?.meetings) return false;
-    const dateStr = '2026-06-' + String(day).padStart(2, '0');
+    const now = new Date();
+    const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
+    const dateStr = prefix + String(day).padStart(2, '0');
     return deal.activityLog.meetings.some((m: Meeting) => m.date === dateStr);
   }
 
   getEventsOnDay(deal: Deal, day: number): Meeting[] {
     if (!deal.activityLog?.meetings) return [];
-    const dateStr = '2026-06-' + String(day).padStart(2, '0');
+    const now = new Date();
+    const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
+    const dateStr = prefix + String(day).padStart(2, '0');
     return deal.activityLog.meetings.filter((m: Meeting) => m.date === dateStr);
   }
 

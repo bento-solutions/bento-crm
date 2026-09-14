@@ -3154,8 +3154,6 @@ export class CrmStateService {
       campaigns: lead.campaigns || []
     };
     this.leadsData.update(list => [...list, newLead]);
-    // Fire automation rules after lead is persisted
-    setTimeout(() => this.evaluateRules('LeadCreated', newLead as unknown as Record<string, unknown>, `Lead: ${newLead.name} (${newLead.companyName})`), 0);
     const leadName = newLead.name;
     this.api.createPartner(this.leadToPartnerPayload(newLead)).subscribe({
       next: (dto) => {
@@ -3291,7 +3289,6 @@ export class CrmStateService {
     }));
     const updatedLead = this.leadsData().find(l => l.id === leadId);
     if (updatedLead) {
-      setTimeout(() => this.evaluateRules('LeadUpdated', updatedLead as unknown as Record<string, unknown>, `Lead: ${updatedLead.name} (${updatedLead.companyName})`), 0);
       if (this.isPersistedPartnerId(leadId)) {
         this.api.updatePartner(leadId, this.leadToPartnerPayload(updatedLead)).subscribe({
           error: () => this.toast.show('Failed to sync lead update to the server', { type: 'error' })
@@ -4158,8 +4155,6 @@ export class CrmStateService {
     const now = new Date().toISOString().split('T')[0];
     const newDeal = { ...deal, id: tempId, createdBy: this.currentUserId(), createdAt: now };
     this.deals.update(dList => [...dList, newDeal]);
-    // Fire automation rules against the local (optimistic) record
-    setTimeout(() => this.evaluateRules('DealCreated', newDeal as unknown as Record<string, unknown>, `Deal: ${newDeal.title}`), 0);
     this.toast.show(`Deal <strong>${newDeal.title}</strong> created`, {
       undo: () => {
         this.deals.update(dList => dList.filter(d => d.id !== newDeal.id));
@@ -4184,7 +4179,6 @@ export class CrmStateService {
     this.api.updateDeal(dealId, { stage }).subscribe({
       next: (dto) => {
         this.deals.update(deals => deals.map(d => d.id === dealId ? dto : d));
-        setTimeout(() => this.evaluateRules('DealUpdated', dto as unknown as Record<string, unknown>, `Deal: ${dto.title}`), 0);
         this.toast.show(`Deal stage updated to <strong>${stage}</strong>`, {
           undo: () => {
             this.deals.update(deals =>

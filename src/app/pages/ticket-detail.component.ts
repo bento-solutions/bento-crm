@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Task, Ticket, TicketPriority, TicketStatus } from '../services/crm-state.service';
 import { TasksService, TicketsService } from '../services/domains';
 import { RelatedEntityService } from '../services/related-entity.service';
+import { ApiService, TicketCommentDto } from '../services/api.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { UserPickerComponent } from '../shared/user-picker.component';
@@ -237,6 +238,60 @@ type TaskPriority = NonNullable<Task['priority']>;
                 </div>
               }
             </div>
+
+            <!-- Conversation / Comments Thread -->
+            <div class="card rounded-2xl p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <mat-icon class="text-[20px] w-5 h-5 text-zinc-700">forum</mat-icon>
+                  <h2 class="text-base font-bold text-zinc-900">Conversation & Notes</h2>
+                  <span class="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">{{ comments().length }}</span>
+                </div>
+              </div>
+
+              <!-- Comment List -->
+              @if (comments().length === 0) {
+                <div class="text-center py-6 text-xs text-zinc-400">No replies or notes yet. Start the conversation below.</div>
+              } @else {
+                <div class="space-y-3">
+                  @for (c of comments(); track c.id) {
+                    <div [class]="c.isInternal ? 'bg-amber-50/70 border-amber-200' : 'bg-zinc-50 border-zinc-200/70'" class="p-4 rounded-xl border space-y-2">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-bold text-zinc-900">{{ c.authorName }}</span>
+                          @if (c.authorRole) {
+                            <span class="text-[10px] uppercase font-semibold tracking-wider text-zinc-400">({{ c.authorRole }})</span>
+                          }
+                          @if (c.isInternal) {
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">Internal Note</span>
+                          }
+                        </div>
+                        <span class="text-[11px] text-zinc-400">{{ c.createdAt | date:'medium' }}</span>
+                      </div>
+                      <p class="text-xs text-zinc-700 whitespace-pre-wrap leading-relaxed">{{ c.content }}</p>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Add Comment / Reply Composer -->
+              @if (canWrite()) {
+                <div class="pt-3 border-t border-zinc-100 space-y-2">
+                  <textarea [(ngModel)]="newCommentText" rows="3" placeholder="Write a reply or internal note..."
+                            class="w-full input-field rounded-lg p-2.5 text-xs focus:outline-blue-600 resize-none"></textarea>
+                  <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer select-none">
+                      <input type="checkbox" [(ngModel)]="isInternalNote" class="rounded text-blue-600 focus:ring-0">
+                      <span>Internal note only (hidden from client)</span>
+                    </label>
+                    <button (click)="addComment()" [disabled]="!newCommentText.trim() || submittingComment()"
+                            class="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-950 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
+                      {{ submittingComment() ? 'Posting...' : isInternalNote ? 'Post Note' : 'Post Reply' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
 
           <!-- Side column -->
@@ -284,6 +339,7 @@ export class TicketDetailComponent {
   state = inject(CrmStateService);
   tasksService = inject(TasksService);
   ticketsService = inject(TicketsService);
+  private api = inject(ApiService);
   private related = inject(RelatedEntityService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -298,6 +354,11 @@ export class TicketDetailComponent {
   draftTitle = '';
   draftDescription: string | null = null;
   draftResolution: string | null = null;
+
+  comments = signal<TicketCommentDto[]>([]);
+  newCommentText = '';
+  isInternalNote = false;
+  submittingComment = signal(false);
 
   newTask: { title: string; assignedToUserId: string; priority: TaskPriority | ''; dueDate: string } =
     { title: '', assignedToUserId: '', priority: '', dueDate: '' };
@@ -359,6 +420,12 @@ export class TicketDetailComponent {
         next: () => this.loading.set(false),
         error: () => this.loading.set(false)
       });
+      if (id) {
+        this.api.getTicketComments(id).subscribe({
+          next: (res) => this.comments.set(res || []),
+          error: () => this.comments.set([])
+        });
+      }
     });
     this.destroyRef.onDestroy(() => {
       sub.unsubscribe();
@@ -368,6 +435,30 @@ export class TicketDetailComponent {
     effect(() => {
       const t = this.ticket();
       this.state.breadcrumbLabel.set(t ? t.title : null);
+    });
+  }
+
+  addComment() {
+    const text = this.newCommentText.trim();
+    if (!text || this.submittingComment()) return;
+    this.submittingComment.set(true);
+    const currentUser = this.state.currentUser();
+    const payload = {
+      content: text,
+      authorName: currentUser?.name || 'Support Staff',
+      authorRole: currentUser?.role || 'Staff',
+      isInternal: this.isInternalNote
+    };
+    this.api.addTicketComment(this.ticketId(), payload).subscribe({
+      next: (comment) => {
+        this.comments.update(list => [...list, comment]);
+        this.newCommentText = '';
+        this.isInternalNote = false;
+        this.submittingComment.set(false);
+      },
+      error: () => {
+        this.submittingComment.set(false);
+      }
     });
   }
 

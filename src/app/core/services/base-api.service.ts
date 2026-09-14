@@ -98,6 +98,14 @@ export class BaseApiService {
     );
   }
 
+  protected getBlob(endpoint: string): Observable<Blob> {
+    const url = this.buildUrl(endpoint);
+    return this.http.get(url, { responseType: 'blob' }).pipe(
+      timeout(HTTP_CONFIG.timeout),
+      catchError(error => this.handleError(error))
+    );
+  }
+
   protected buildUrl(endpoint: string): string {
     return `${this.baseUrl}${endpoint}`;
   }

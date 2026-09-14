@@ -61,14 +61,14 @@ export class PartnersService {
   isLoading$ = computed(() => this.isLoading());
   error$ = computed(() => this.error());
 
-  load(): void {
-    if (this.isLoaded()) return;
+  load(params?: Record<string, string | number | boolean>, force = false): void {
+    if (this.isLoaded() && !params && !force) return;
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.api.getPartners().subscribe({
+    this.api.getPartners(params).subscribe({
       next: (partners) => {
-        if (partners && partners.length > 0) {
+        if (partners) {
           this.partners.set(partners.map(fromBackendPartner));
         }
         this.isLoaded.set(true);

@@ -51,7 +51,7 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   private applyHeaders(request: HttpRequest<unknown>, token: string | null): HttpRequest<unknown> {
-    let authedRequest = request;
+    let authedRequest = request.clone({ withCredentials: true });
     if (token) {
       authedRequest = authedRequest.clone({
         setHeaders: { Authorization: `Bearer ${token}` },
@@ -71,13 +71,9 @@ export class AuthInterceptor implements HttpInterceptor {
 
   private handleUnauthorized(originalRequest: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-    if (!refreshToken) {
-      this.state.logout();
-      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'No refresh token available' }));
-    }
 
     if (!this.refresh$) {
-      this.refresh$ = this.authApi.refresh(refreshToken).pipe(
+      this.refresh$ = this.authApi.refresh(refreshToken || '').pipe(
         map((response: LoginResponse) => {
           this.storeTokens(response);
           return response.access_token;
