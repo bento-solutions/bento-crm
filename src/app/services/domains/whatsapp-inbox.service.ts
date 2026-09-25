@@ -183,6 +183,8 @@ export class WhatsAppInboxStore {
 
   readonly unread = signal<UnreadSummary>({ conversations: 0, messages: 0 });
   readonly connected = signal(false);
+  /** Bumped when the linked number's session changes, so the settings page can refetch it. */
+  readonly sessionVersion = signal(0);
 
   readonly drafts = computed(() => this.messages().filter(m => m.status === 'DRAFT'));
 
@@ -266,7 +268,10 @@ export class WhatsAppInboxStore {
   }
 
   private onHint(hint: ChangeHint): void {
-    if (hint.type === 'SESSION_UPDATED') return;
+    if (hint.type === 'SESSION_UPDATED') {
+      this.sessionVersion.update(v => v + 1);
+      return;
+    }
     this.refreshUnread();
     if (hint.type === 'CONVERSATION_REMOVED' && hint.conversationId) {
       this.conversations.update(list => list.filter(c => c.id !== hint.conversationId));

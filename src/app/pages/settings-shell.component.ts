@@ -48,6 +48,16 @@ import { CrmStateService } from '../services/crm-state.service';
           <mat-icon class="text-[18px] w-[18px] h-[18px]">forum</mat-icon>
           Groups
         </a>
+        @if (state.hasAuthority('WHATSAPP_ADMIN')) {
+          <a
+            routerLink="/settings/whatsapp"
+            routerLinkActive="border-zinc-900 text-zinc-900"
+            class="px-1 py-3 -mb-px border-b-2 border-transparent text-zinc-400 hover:text-zinc-600 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
+          >
+            <mat-icon class="text-[18px] w-[18px] h-[18px]">chat</mat-icon>
+            WhatsApp
+          </a>
+        }
       </div>
 
       <router-outlet></router-outlet>

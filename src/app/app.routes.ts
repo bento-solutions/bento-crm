@@ -36,7 +36,8 @@ export const routes: Routes = [
       // Same component as the top-level 'groups' route below, intentionally:
       // this one renders inside the settings shell's sidebar layout, the
       // other is the standalone main-nav entry point.
-      { path: 'groups', loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) }
+      { path: 'groups', loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },
+      { path: 'whatsapp', canActivate: [authorityGuard('WHATSAPP_ADMIN')], loadComponent: () => import('./pages/settings-whatsapp.component').then(m => m.SettingsWhatsAppComponent) }
     ]
   },
   { path: 'groups', canActivate: [authGuard], loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },

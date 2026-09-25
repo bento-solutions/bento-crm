@@ -45,7 +45,7 @@ export interface CampaignStats {
 
 export interface WhatsAppAccount {
   id: string;
-  provider: 'MOCK' | 'META';
+  provider: 'MOCK' | 'META' | 'BAILEYS';
   phoneNumberId: string;
   displayPhoneNumber?: string;
   status: string;
