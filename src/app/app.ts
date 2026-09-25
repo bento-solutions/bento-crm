@@ -1,8 +1,7 @@
-import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild, ViewChild } from '@angular/core';
+import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon'
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { CrmStateService, CRM_ROLES } from './services/crm-state.service';
 import { UserAvatarComponent } from './shared/user-avatar.component';
 import { SupportModalComponent } from './shared/support-modal.component';
@@ -147,7 +146,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, FormsModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, LoginComponent],
+  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, LoginComponent],
   styles: [`
     :host {
       display: block;
@@ -1053,8 +1052,8 @@ const SEARCH_ITEMS: SearchItem[] = [
               <mat-icon>search</mat-icon>
               <input
                 #searchInput
-                [ngModel]="searchQuery()"
-                (ngModelChange)="onSearchInput($event)"
+                [value]="searchQuery()"
+                (input)="onSearchInput(searchInput.value)"
                 (focus)="onSearchFocus()"
                 (keydown)="onSearchKeydown($event)"
                 type="text"
@@ -1197,15 +1196,20 @@ const SEARCH_ITEMS: SearchItem[] = [
         }
       </div>
 
-      <app-support-modal></app-support-modal>
+      <!-- Loaded after first paint (or at once when asked for) to keep them out of the initial bundle. -->
+      @defer (on idle; when supportRequested()) {
+        <app-support-modal #supportModal></app-support-modal>
+      }
 
-      <app-notification-inbox-drawer
-        [drawerType]="drawerType()"
-        [open]="drawerOpen()"
-        (closed)="closeDrawer()"
-        (switchType)="drawerType.set($event)"
-        (notificationOpened)="onNotificationOpened()"
-      ></app-notification-inbox-drawer>
+      @defer (on idle; when drawerOpen()) {
+        <app-notification-inbox-drawer
+          [drawerType]="drawerType()"
+          [open]="drawerOpen()"
+          (closed)="closeDrawer()"
+          (switchType)="drawerType.set($event)"
+          (notificationOpened)="onNotificationOpened()"
+        ></app-notification-inbox-drawer>
+      }
 
       <app-toast-container></app-toast-container>
     } @else {
@@ -1215,7 +1219,10 @@ const SEARCH_ITEMS: SearchItem[] = [
       @if (activeRoute().startsWith('/onboarding') || activeRoute().startsWith('/invite')) {
         <router-outlet></router-outlet>
       } @else {
-        <app-login></app-login>
+        <!-- Signed-in sessions never need the login screen, so it is fetched only when shown. -->
+        @defer (on immediate) {
+          <app-login></app-login>
+        }
       }
     }
   `
@@ -1238,7 +1245,17 @@ export class App implements OnInit, OnDestroy {
   private invoicesService = inject(InvoicesService);
   private ticketsService = inject(TicketsService);
 
-  @ViewChild(SupportModalComponent) supportModal!: SupportModalComponent;
+  /** Queried by name: a class-based query would pull the lazily loaded modal into the initial bundle. */
+  private readonly supportModal = viewChild<SupportModalComponent>('supportModal');
+  /** Set when the modal is asked for before its code has arrived; it opens as soon as it renders. */
+  protected readonly supportRequested = signal(false);
+  private openRequestedSupport = effect(() => {
+    const modal = this.supportModal();
+    if (modal && this.supportRequested()) {
+      this.supportRequested.set(false);
+      modal.openModal();
+    }
+  });
 
   // Navigation sections
   navSections = NAV_SECTIONS;
@@ -1557,7 +1574,12 @@ export class App implements OnInit, OnDestroy {
   }
 
   openSupportModal() {
-    this.supportModal?.openModal();
+    const modal = this.supportModal();
+    if (modal) {
+      modal.openModal();
+    } else {
+      this.supportRequested.set(true);
+    }
   }
 
   /** Tracks which primary route is currently active */
