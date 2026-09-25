@@ -108,6 +108,23 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
               }
             </div>
 
+            @if (linked()) {
+              <!-- Linked personal number: plain text, paced to protect the number. -->
+              <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                <p class="font-semibold">This sends from your own WhatsApp number{{ wa.account()?.linkedPhone ? ' (' + wa.account()?.linkedPhone + ')' : '' }}.</p>
+                <p>
+                  WhatsApp bans personal numbers that message many people who do not expect it. Bento sends at most
+                  15 new chats a day and 30 first messages an hour, during business hours, so this campaign takes about
+                  <strong>{{ estimatedDays() }} day(s)</strong>. Only include contacts who know you, and honour STOP replies.
+                </p>
+              </div>
+              <div>
+                <label for="linked_body" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Message</label>
+                <textarea id="linked_body" [(ngModel)]="bodyPreview" rows="4" maxlength="4096"
+                          placeholder="Bonjour, je reviens vers vous concernant votre devis. Êtes-vous toujours intéressé ?"
+                          class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400"></textarea>
+              </div>
+            } @else {
             <!-- Template -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div class="sm:col-span-2">
@@ -143,6 +160,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
               <textarea [(ngModel)]="bodyPreview" rows="2" placeholder="Bonjour Ahmed, je reviens vers vous concernant votre devis #4821."
                         class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400"></textarea>
             </div>
+            }
 
             <!-- Relance -->
             <div class="rounded-xl border border-zinc-200 p-4 space-y-3">
@@ -158,12 +176,22 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
                     <input id="delay_days" [(ngModel)]="followupDelayDays" type="number" min="1"
                            class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all" />
                   </div>
+                  @if (!linked()) {
                   <div>
                     <label for="relance_template" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Relance template</label>
                     <input id="relance_template" [(ngModel)]="followupTemplateName" type="text" placeholder="relance_j3_fr"
                            class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400" />
                   </div>
+                  }
                 </div>
+                @if (linked()) {
+                  <div class="pl-6.5">
+                    <label for="relance_body" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Relance message</label>
+                    <textarea id="relance_body" [(ngModel)]="followupBody" rows="2" maxlength="4096"
+                              placeholder="Petit rappel concernant mon message précédent."
+                              class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400"></textarea>
+                  </div>
+                }
 
                 <!-- Turns a three-day test cycle into a three-minute one. -->
                 @if (wa.isMock()) {
@@ -187,6 +215,8 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
             <p class="text-xs text-zinc-500">
               @if (validationError()) {
                 <span class="text-red-600 font-medium">{{ validationError() }}</span>
+              } @else if (launchBlocker()) {
+                <span class="text-amber-700 font-medium">{{ launchBlocker() }}</span>
               } @else {
                 Sending to <strong class="text-zinc-900">{{ sendableCount() }}</strong> contact(s).
               }
@@ -200,10 +230,10 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
                       class="px-4 py-2 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 Save draft
               </button>
-              <button (click)="submit(true)" [disabled]="!!validationError() || wa.isSending()"
+              <button (click)="submit(true)" [disabled]="!!validationError() || !!launchBlocker() || wa.isSending()"
                       class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                 <mat-icon class="w-4 h-4 text-[16px]! leading-none!">send</mat-icon>
-                {{ wa.isSending() ? 'Sending…' : 'Send now' }}
+                {{ wa.isSending() ? 'Sending…' : linked() ? 'Start sending' : 'Send now' }}
               </button>
             </div>
           </div>
@@ -229,6 +259,7 @@ export class WhatsAppCampaignModalComponent {
   followupEnabled = signal(true);
   followupDelayDays = signal(3);
   followupTemplateName = signal('');
+  followupBody = signal('');
   testMode = signal(false);
   followupDelayMinutes = signal(2);
 
@@ -257,14 +288,29 @@ export class WhatsAppCampaignModalComponent {
   selectedWithoutPhone = computed(() => this.selectedPartners().filter(p => !p.phone).length);
   sendableCount = computed(() => this.selectedPartners().filter(p => !!p.phone).length);
 
+  /** A personal number linked through the bot: plain text, paced, no templates. */
+  linked = computed(() => this.wa.account()?.provider === 'BAILEYS');
+
+  /** Rough duration at the default cap of 15 new chats a day. */
+  estimatedDays = computed(() => Math.max(1, Math.ceil(this.sendableCount() / 15)));
+
   validationError = computed(() => {
     if (!this.wa.hasAccount()) return 'Connect a WhatsApp number first.';
     if (!this.title().trim()) return 'Give the campaign a title.';
-    if (!this.templateName().trim()) return 'Enter the approved template name.';
+    if (this.linked()) {
+      if (!this.bodyPreview().trim()) return 'Write the message.';
+      if (this.followupEnabled() && !this.followupBody().trim()) return 'Write the relance message, or turn the relance off.';
+    } else if (!this.templateName().trim()) return 'Enter the approved template name.';
     if (this.selectedIds().size === 0) return 'Select at least one contact.';
     if (this.sendableCount() === 0) return 'None of the selected contacts have a phone number.';
     return null;
   });
+
+  /** A draft can be saved while the linked number is offline; launching needs a live session. */
+  launchBlocker = computed(() =>
+    this.linked() && this.wa.account()?.sessionState !== 'open'
+      ? 'Your WhatsApp number is not connected (Settings → WhatsApp). You can save a draft.'
+      : null);
 
   toggle(id: string): void {
     // Signals compare by reference, so mutating the existing Set would not trigger
@@ -289,18 +335,19 @@ export class WhatsAppCampaignModalComponent {
   }
 
   submit(launchNow: boolean): void {
-    if (this.validationError()) return;
+    if (this.validationError() || (launchNow && this.launchBlocker())) return;
 
     this.wa.create({
       title: this.title().trim(),
-      templateName: this.templateName().trim(),
+      templateName: this.linked() ? undefined : this.templateName().trim(),
       templateLang: this.templateLang(),
       templateParams: this.paramsRaw().split(',').map(s => s.trim()).filter(Boolean),
       bodyPreview: this.bodyPreview().trim() || undefined,
       partnerIds: Array.from(this.selectedIds()),
       followupEnabled: this.followupEnabled(),
       followupDelayDays: this.followupDelayDays(),
-      followupTemplateName: this.followupTemplateName().trim() || undefined,
+      followupTemplateName: this.linked() ? undefined : this.followupTemplateName().trim() || undefined,
+      followupBody: this.linked() ? this.followupBody().trim() || undefined : undefined,
       followupDelayMinutes: this.testMode() ? this.followupDelayMinutes() : undefined,
       launchNow,
     }, (campaignId) => {
@@ -317,6 +364,7 @@ export class WhatsAppCampaignModalComponent {
     this.paramsRaw.set('');
     this.bodyPreview.set('');
     this.followupTemplateName.set('');
+    this.followupBody.set('');
     this.selectedIds.set(new Set());
   }
 }

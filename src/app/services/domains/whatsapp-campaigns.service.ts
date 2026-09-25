@@ -51,11 +51,15 @@ export interface WhatsAppAccount {
   status: string;
   qualityRating?: string;
   hasAccessToken: boolean;
+  /** Linked personal number (BAILEYS): the bot session state, 'open' when it can send. */
+  sessionState?: string;
+  linkedPhone?: string;
 }
 
 export interface WhatsAppCampaignDraft {
   title: string;
-  templateName: string;
+  /** Meta only; a linked personal number sends bodyPreview as plain text. */
+  templateName?: string;
   templateLang?: string;
   templateParams?: string[];
   bodyPreview?: string;
@@ -63,6 +67,8 @@ export interface WhatsAppCampaignDraft {
   followupEnabled: boolean;
   followupDelayDays?: number;
   followupTemplateName?: string;
+  /** Relance text for a linked personal number. */
+  followupBody?: string;
   /** Test override: schedules the relance in minutes rather than days. */
   followupDelayMinutes?: number;
   launchNow?: boolean;
