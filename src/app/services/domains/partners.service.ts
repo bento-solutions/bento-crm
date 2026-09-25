@@ -16,11 +16,11 @@ const PARTNER_TYPE_FROM_BACKEND: Record<string, string> = {
   LEAD: 'Lead', PROSPECT: 'Prospect', CUSTOMER: 'Customer', VENDOR: 'Vendor'
 };
 const PARTNER_SOURCE_TO_BACKEND: Record<string, string> = {
-  'Website form': 'WEBSITE', 'Trade show': 'TRADE_SHOW', 'LinkedIn': 'LINKEDIN',
+  'Website form': 'WEBSITE', 'Trade show': 'TRADE_SHOW', 'WhatsApp': 'WHATSAPP', 'LinkedIn': 'LINKEDIN',
   'Marketing campaign': 'CAMPAIGN', 'Referral': 'REFERRAL'
 };
 const PARTNER_SOURCE_FROM_BACKEND: Record<string, string> = {
-  WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn',
+  WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn', WHATSAPP: 'WhatsApp',
   CAMPAIGN: 'Marketing campaign', REFERRAL: 'Referral'
 };
 

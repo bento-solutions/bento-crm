@@ -1,4 +1,4 @@
-import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, HostListener, viewChild, ViewChild } from '@angular/core';
+import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild, ViewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon'
 import { CommonModule } from '@angular/common';
@@ -15,11 +15,16 @@ import { DealsService } from './services/domains/deals.service';
 import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
 import { TicketsService } from './services/domains/tickets.service';
+import { WhatsAppInboxStore } from './services/domains/whatsapp-inbox.service';
 
 interface NavItem {
   label: string;
   icon: string;
   route: string;
+  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE). */
+  authority?: string;
+  /** Live count shown next to the label. */
+  badge?: 'whatsappUnread';
 }
 
 interface NavSection {
@@ -38,6 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Sales',
     items: [
       { label: 'Sales Pipeline', icon: 'monetization_on', route: '/sales' },
+      { label: 'Inbox', icon: 'forum', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
       { label: 'Marketing', icon: 'campaign', route: '/marketing' },
     ]
   },
@@ -115,6 +121,7 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Sales', mainIcon: 'monetization_on', mainRoute: '/sales', submenu: 'Deals', subIcon: 'monetization_on', tab: 'deals', action: 'Manage deals and sales pipeline', keywords: 'sales deals pipeline opportunities' },
   { mainMenu: 'Sales', mainIcon: 'monetization_on', mainRoute: '/sales', submenu: 'Proposals', subIcon: 'description', tab: 'proposals', action: 'Create and manage proposals', keywords: 'sales proposals quotes estimates' },
   { mainMenu: 'Sales', mainIcon: 'monetization_on', mainRoute: '/sales', submenu: 'Purchase Orders', subIcon: 'shopping_cart', tab: 'pos', action: 'Generate and track purchase orders', keywords: 'sales purchase orders po procurement' },
+  { mainMenu: 'Inbox', mainIcon: 'forum', mainRoute: '/inbox', action: 'Read and answer WhatsApp conversations', keywords: 'inbox whatsapp messages conversations chat reply' },
   { mainMenu: 'Marketing', mainIcon: 'campaign', mainRoute: '/marketing', submenu: 'Email Campaigns', subIcon: 'email', tab: 'Email', action: 'Launch and manage email campaigns', keywords: 'marketing email campaigns' },
   { mainMenu: 'Marketing', mainIcon: 'campaign', mainRoute: '/marketing', submenu: 'WhatsApp Campaigns', subIcon: 'chat', tab: 'WhatsApp', action: 'Send WhatsApp campaigns to prospects', keywords: 'marketing whatsapp campaigns' },
   { mainMenu: 'Marketing', mainIcon: 'campaign', mainRoute: '/marketing', submenu: 'SMS Campaigns', subIcon: 'sms', tab: 'SMS', action: 'Send SMS campaigns to contacts', keywords: 'marketing sms campaigns' },
@@ -318,6 +325,30 @@ const SEARCH_ITEMS: SearchItem[] = [
     .sidebar-link:hover {
       background: var(--color-surface-hover);
       color: var(--color-text-heading);
+    }
+
+    .nav-badge {
+      margin-inline-start: auto;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      background: var(--color-success);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 18px;
+      text-align: center;
+    }
+
+    .app-sidebar.collapsed .nav-badge {
+      position: absolute;
+      margin: 0;
+      transform: translate(14px, -10px);
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      font-size: 10px;
     }
 
     .sidebar-link.active {
@@ -927,16 +958,21 @@ const SEARCH_ITEMS: SearchItem[] = [
             @for (section of navSections; track section.label) {
               <div class="sidebar-section-title">{{ section.label }}</div>
               @for (item of section.items; track item.route) {
-                <a
-                  [routerLink]="item.route"
-                  class="sidebar-link"
-                  [class.active]="isNavActive(item)"
-                  [title]="item.label"
-                  (click)="mobileMenuOpen.set(false)"
-                >
-                  <mat-icon>{{ item.icon }}</mat-icon>
-                  <span class="nav-label">{{ item.label }}</span>
-                </a>
+                @if (!item.authority || state.hasAuthority(item.authority)) {
+                  <a
+                    [routerLink]="item.route"
+                    class="sidebar-link"
+                    [class.active]="isNavActive(item)"
+                    [title]="item.label"
+                    (click)="mobileMenuOpen.set(false)"
+                  >
+                    <mat-icon>{{ item.icon }}</mat-icon>
+                    <span class="nav-label">{{ item.label }}</span>
+                    @if (badgeCount(item); as count) {
+                      <span class="nav-badge" [attr.aria-label]="count + ' unread'">{{ count > 99 ? '99+' : count }}</span>
+                    }
+                  </a>
+                }
               }
             }
           </nav>
@@ -1187,6 +1223,16 @@ const SEARCH_ITEMS: SearchItem[] = [
 export class App implements OnInit, OnDestroy {
   state = inject(CrmStateService);
   private router = inject(Router);
+  private inbox = inject(WhatsAppInboxStore);
+
+  /** The inbox stream feeds the nav badge, so it runs whenever the user may read WhatsApp. */
+  private inboxLifecycle = effect(() => {
+    if (this.state.isAuthenticated() && this.state.currentUserAuthorities().has('WHATSAPP_READ')) {
+      this.inbox.start();
+    } else {
+      this.inbox.stop();
+    }
+  });
   private dealsService = inject(DealsService);
   private partnersService = inject(PartnersService);
   private invoicesService = inject(InvoicesService);
@@ -1578,6 +1624,10 @@ export class App implements OnInit, OnDestroy {
 
     return crumbs;
   });
+
+  badgeCount(item: NavItem): number {
+    return item.badge === 'whatsappUnread' ? this.inbox.unread().conversations : 0;
+  }
 
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();

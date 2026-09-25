@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -7,10 +7,15 @@ import { CrmStateService, Lead, LeadActivity, LeadAttachment } from '../services
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { ApiService } from '../services/api.service';
+import { WhatsAppInboxStore } from '../services/domains/whatsapp-inbox.service';
+import { WaThreadComponent } from '../shared/whatsapp/wa-thread.component';
+import { WaComposerComponent } from '../shared/whatsapp/wa-composer.component';
+import { TranslatePipe } from '../pipes/translate.pipe';
 
 @Component({
   selector: 'app-lead-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent,
+    WaThreadComponent, WaComposerComponent, TranslatePipe],
   template: `
     <div class="space-y-6 font-sans max-w-5xl mx-auto">
       <a routerLink="/partners" class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors">
@@ -111,6 +116,9 @@ import { ApiService } from '../services/api.service';
             <button (click)="activeTab.set('activities')" [class]="activeTab() === 'activities' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-700'" class="py-3 border-b-2 text-sm font-semibold transition-all">Activities & Notes</button>
             <button (click)="activeTab.set('attachments')" [class]="activeTab() === 'attachments' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-700'" class="py-3 border-b-2 text-sm font-semibold transition-all">Attachments</button>
             <button (click)="activeTab.set('history')" [class]="activeTab() === 'history' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-700'" class="py-3 border-b-2 text-sm font-semibold transition-all">Status History</button>
+            @if (canReadWhatsApp()) {
+              <button (click)="openWhatsAppTab(lead.id)" [class]="activeTab() === 'whatsapp' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-700'" class="py-3 border-b-2 text-sm font-semibold transition-all">{{ 'inbox.leadTab.title' | translate }}</button>
+            }
           </div>
 
           <div class="p-6">
@@ -275,6 +283,37 @@ import { ApiService } from '../services/api.service';
               </div>
             }
 
+            @if (activeTab() === 'whatsapp') {
+              <div class="rounded-xl overflow-hidden flex flex-col h-[560px]" style="border: 1px solid var(--color-border)">
+                @if (inbox.selected(); as c) {
+                  <div class="flex items-center justify-between px-4 py-2 text-xs" style="border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary)">
+                    <span dir="ltr">{{ c.phone }}</span>
+                    <a [routerLink]="['/inbox']" [queryParams]="{ c: c.id }" class="font-semibold" style="color: var(--color-accent-text)">{{ 'inbox.leadTab.openInInbox' | translate }}</a>
+                  </div>
+                  <app-wa-thread
+                    class="flex-1 min-h-0"
+                    [messages]="inbox.messages()"
+                    [loading]="inbox.loadingMessages()"
+                    [hasOlder]="!!inbox.olderCursor()"
+                    [canApprove]="canSendWhatsApp()"
+                    (loadOlder)="inbox.loadOlder()"
+                    (approve)="inbox.approve($event.id, $event.text)"
+                    (discard)="inbox.discard($event)"
+                  />
+                  <app-wa-composer [canSend]="canSendWhatsApp()" [sending]="inbox.sending()" (send)="inbox.send($event)" />
+                } @else if (waLoading()) {
+                  <p class="flex-1 flex items-center justify-center text-sm" style="color: var(--color-text-tertiary)">{{ 'inbox.loading' | translate }}</p>
+                } @else if (lead.phone) {
+                  <div class="flex-1 flex items-center justify-center text-sm p-6 text-center" style="color: var(--color-text-secondary)">
+                    {{ 'inbox.leadTab.empty' | translate }}
+                  </div>
+                  <app-wa-composer [canSend]="canSendWhatsApp()" [sending]="inbox.sending()" (send)="inbox.startWithPartner(lead.id, $event)" />
+                } @else {
+                  <p class="flex-1 flex items-center justify-center text-sm p-6 text-center" style="color: var(--color-text-secondary)">{{ 'inbox.leadTab.noPhone' | translate }}</p>
+                }
+              </div>
+            }
+
             @if (activeTab() === 'history') {
               <div class="space-y-4">
                 <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Status Transition Log</h3>
@@ -305,14 +344,18 @@ import { ApiService } from '../services/api.service';
     </div>
   `
 })
-export class LeadDetailComponent {
+export class LeadDetailComponent implements OnDestroy {
   state = inject(CrmStateService);
   route = inject(ActivatedRoute);
   router = inject(Router);
   api = inject(ApiService);
   uploading = signal(false);
 
-  activeTab = signal<'info' | 'activities' | 'attachments' | 'history'>('info');
+  activeTab = signal<'info' | 'activities' | 'attachments' | 'history' | 'whatsapp'>('info');
+  inbox = inject(WhatsAppInboxStore);
+  waLoading = signal(false);
+  canReadWhatsApp = computed(() => this.state.hasAuthority('WHATSAPP_READ'));
+  canSendWhatsApp = computed(() => this.state.hasAuthority('WHATSAPP_SEND'));
   showConvertMenu = signal(false);
 
   newActivity = {
@@ -342,6 +385,17 @@ export class LeadDetailComponent {
         this.showConvertMenu.set(false);
       });
     }
+  }
+
+  async openWhatsAppTab(leadId: string) {
+    this.activeTab.set('whatsapp');
+    this.waLoading.set(true);
+    await this.inbox.openForPartner(leadId);
+    this.waLoading.set(false);
+  }
+
+  ngOnDestroy() {
+    this.inbox.select(null);
   }
 
   toggleConvertMenu(event: Event) {

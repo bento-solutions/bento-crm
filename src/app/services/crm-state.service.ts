@@ -193,6 +193,7 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'PROPOSALS_READ', 'PROPOSALS_CREATE', 'PROPOSALS_WRITE', 'PROPOSALS_DELETE',
     'PURCHASE_ORDERS_READ', 'PURCHASE_ORDERS_CREATE', 'PURCHASE_ORDERS_WRITE', 'PURCHASE_ORDERS_DELETE',
     'INVOICES_READ', 'INVOICES_CREATE', 'INVOICES_WRITE', 'INVOICES_DELETE',
+    'PAYMENTS_READ', 'PAYMENTS_CREATE', 'PAYMENTS_WRITE', 'PAYMENTS_DELETE',
     'TICKETS_READ', 'TICKETS_CREATE', 'TICKETS_WRITE', 'TICKETS_DELETE',
     'TASKS_READ', 'TASKS_CREATE', 'TASKS_WRITE', 'TASKS_DELETE',
     'CAMPAIGNS_READ', 'CAMPAIGNS_CREATE', 'CAMPAIGNS_WRITE', 'CAMPAIGNS_DELETE',
@@ -200,7 +201,11 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'USERS_READ', 'USERS_WRITE',
     'TEAMS_READ', 'TEAMS_WRITE', 'TEAMS_CREATE', 'TEAMS_DELETE',
     'GROUPS_READ', 'GROUPS_CREATE', 'GROUPS_WRITE', 'GROUPS_DELETE',
-    'ANALYTICS_READ', 'ADMIN_ACCESS'
+    'FILES_READ', 'FILES_WRITE',
+    'ANALYTICS_READ',
+    'WHATSAPP_READ', 'WHATSAPP_READ_ALL', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT', 'WHATSAPP_ADMIN',
+    'API_TOKENS_MANAGE',
+    'ADMIN_ACCESS'
   ]),
   manager: new Set([
     'PARTNERS_READ', 'PARTNERS_CREATE', 'PARTNERS_WRITE',
@@ -209,13 +214,17 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'PROPOSALS_READ', 'PROPOSALS_CREATE', 'PROPOSALS_WRITE',
     'PURCHASE_ORDERS_READ', 'PURCHASE_ORDERS_CREATE', 'PURCHASE_ORDERS_WRITE',
     'INVOICES_READ', 'INVOICES_CREATE', 'INVOICES_WRITE',
+    'PAYMENTS_READ', 'PAYMENTS_CREATE', 'PAYMENTS_WRITE',
     'TICKETS_READ', 'TICKETS_WRITE',
     'TASKS_READ', 'TASKS_CREATE', 'TASKS_WRITE',
     'CAMPAIGNS_READ', 'CAMPAIGNS_CREATE', 'CAMPAIGNS_WRITE',
     'AUTOMATION_RULES_READ', 'AUTOMATION_RULES_CREATE', 'AUTOMATION_RULES_WRITE',
     'USERS_READ', 'TEAMS_READ', 'TEAMS_WRITE',
     'GROUPS_READ', 'GROUPS_CREATE', 'GROUPS_WRITE',
-    'ANALYTICS_READ'
+    'FILES_READ', 'FILES_WRITE',
+    'ANALYTICS_READ',
+    'WHATSAPP_READ', 'WHATSAPP_READ_ALL', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT',
+    'API_TOKENS_MANAGE'
   ]),
   salesperson: new Set([
     'PARTNERS_READ', 'PARTNERS_CREATE', 'PARTNERS_WRITE',
@@ -223,17 +232,28 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'DEAL_ACTIVITIES_READ', 'DEAL_ACTIVITIES_CREATE', 'DEAL_ACTIVITIES_WRITE',
     'PROPOSALS_READ', 'PROPOSALS_CREATE', 'PROPOSALS_WRITE',
     'TASKS_READ', 'TASKS_CREATE', 'TASKS_WRITE',
-    'GROUPS_READ', 'ANALYTICS_READ'
+    'GROUPS_READ',
+    'FILES_READ', 'FILES_WRITE',
+    'ANALYTICS_READ',
+    'WHATSAPP_READ', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT',
+    'API_TOKENS_MANAGE'
   ]),
   support: new Set([
     'PARTNERS_READ', 'PARTNERS_WRITE',
     'TICKETS_READ', 'TICKETS_CREATE', 'TICKETS_WRITE',
     'TASKS_READ', 'TASKS_CREATE', 'TASKS_WRITE',
-    'GROUPS_READ', 'ANALYTICS_READ'
+    'GROUPS_READ',
+    'FILES_READ', 'FILES_WRITE',
+    'ANALYTICS_READ',
+    'WHATSAPP_READ', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT',
+    'API_TOKENS_MANAGE'
   ]),
   viewer: new Set([
     'PARTNERS_READ', 'DEALS_READ', 'DEAL_ACTIVITIES_READ', 'PROPOSALS_READ',
-    'TICKETS_READ', 'TASKS_READ', 'GROUPS_READ', 'ANALYTICS_READ'
+    'TICKETS_READ', 'TASKS_READ', 'GROUPS_READ',
+    'FILES_READ',
+    'ANALYTICS_READ',
+    'WHATSAPP_READ'
   ])
 };
 
@@ -595,7 +615,7 @@ export interface Lead {
   phone?: string;
   comments?: string;
   city?: string;
-  source?: 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral';
+  source?: 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral' | 'WhatsApp';
   assignedTo?: string;
   /** Backend user id of the owner (mirrors partner.assigned_to_user_id). */
   assignedToUserId?: string;
@@ -612,7 +632,7 @@ export interface Partner {
   comments?: string;
   city?: string;
   score?: number;
-  source?: 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral';
+  source?: 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral' | 'WhatsApp';
   assignedTo?: string;
   createdBy?: string;
   createdAt: string;
@@ -3069,7 +3089,7 @@ export class CrmStateService {
   }
 
   private static readonly PARTNER_SOURCE_FROM_BACKEND: Record<string, Partner['source']> = {
-    WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn',
+    WEBSITE: 'Website form', TRADE_SHOW: 'Trade show', LINKEDIN: 'LinkedIn', WHATSAPP: 'WhatsApp',
     CAMPAIGN: 'Marketing campaign', REFERRAL: 'Referral'
   };
 
@@ -3658,6 +3678,10 @@ export class CrmStateService {
   openNotification(n: Notification): void {
     this.markNotificationRead(n.id);
     const entity = (n.relatedEntityType || n.type || '').toUpperCase();
+    if (entity === 'WA_CONVERSATION') {
+      this.router.navigate(['/inbox'], n.relatedId ? { queryParams: { c: n.relatedId } } : {});
+      return;
+    }
     if (entity === 'INVITATION') {
       if (n.relatedId) {
         this.router.navigate(['/invite/accept'], { queryParams: { invitationId: n.relatedId } });

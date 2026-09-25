@@ -2,6 +2,7 @@ import {Routes} from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { permissionGuard } from './core/guards/permission.guard';
+import { authorityGuard } from './core/guards/authority.guard';
 
 export const routes: Routes = [
   { path: 'onboarding', canActivate: [guestGuard], loadComponent: () => import('./pages/onboarding.component').then(m => m.OnboardingComponent) },
@@ -13,6 +14,7 @@ export const routes: Routes = [
   { path: 'tasks', canActivate: [authGuard], loadComponent: () => import('./pages/tasks.component').then(m => m.TasksComponent) },
   { path: 'sales', canActivate: [authGuard], loadComponent: () => import('./pages/sales.component').then(m => m.SalesComponent) },
   { path: 'sales/deals/:dealId', canActivate: [authGuard], loadComponent: () => import('./pages/deal-detail.component').then(m => m.DealDetailComponent) },
+  { path: 'inbox', canActivate: [authGuard, authorityGuard('WHATSAPP_READ')], loadComponent: () => import('./pages/inbox.component').then(m => m.InboxComponent) },
   { path: 'marketing', canActivate: [authGuard], loadComponent: () => import('./pages/marketing.component').then(m => m.MarketingComponent) },
   { path: 'campaigns/:id', canActivate: [authGuard], loadComponent: () => import('./pages/campaign-detail.component').then(m => m.CampaignDetailComponent) },
   { path: 'partners', canActivate: [authGuard], loadComponent: () => import('./pages/partners.component').then(m => m.PartnersComponent) },
