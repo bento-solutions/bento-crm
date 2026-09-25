@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 import { CrmStateService, AutomationRule } from './crm-state.service';
 
 describe('CrmStateService Workflow Automation Engine', () => {
   let service: CrmStateService;
 
   beforeEach(() => {
-    service = new CrmStateService();
+    // Its dependencies come from inject(), which only works inside an injector.
+    service = TestBed.inject(CrmStateService);
   });
 
   it('should evaluate and match a simple condition', async () => {
