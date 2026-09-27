@@ -136,6 +136,20 @@ export class TasksService {
     });
   }
 
+  /** Edits a task's own fields. Sends the full current task for the same reason as `updateStatus`. */
+  updateDetails(id: string, changes: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assignedToUserId' | 'dueDate'>>, onSaved?: () => void): void {
+    const current = this.tasks().find(t => t.id === id);
+    if (!current) return;
+    this.api.updateTask(id, { ...current, ...changes }).subscribe({
+      next: (dto) => {
+        this.tasks.update(tasks => tasks.map(t => t.id === id ? dto : t));
+        this.toast.show('Task updated');
+        onSaved?.();
+      },
+      error: () => this.toast.show('Failed to update task', { type: 'error' })
+    });
+  }
+
   deleteTask(id: string): void {
     const deleted = this.tasks().find(t => t.id === id);
     this.api.deleteTask(id).subscribe({

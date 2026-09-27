@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,8 +11,11 @@ import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { UserPickerComponent } from '../shared/user-picker.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
+import { ClampDetectDirective } from '../shared/clamp-detect.directive';
+import { ToastService } from '../services/toast.service';
 
 type TaskPriority = NonNullable<Task['priority']>;
+interface TaskDraft { title: string; description: string; status: Task['status']; priority: TaskPriority | ''; assignedToUserId: string; dueDate: string }
 
 /**
  * One ticket and the work raised for it: the ticket's own fields, editable in place, and its
@@ -23,7 +26,7 @@ type TaskPriority = NonNullable<Task['priority']>;
  */
 @Component({
   selector: 'app-ticket-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent, UserPickerComponent, AttachmentsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent, UserPickerComponent, AttachmentsComponent, ClampDetectDirective],
   template: `
     <div class="space-y-6 font-sans max-w-5xl mx-auto">
       <a routerLink="/tickets" class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors">
@@ -77,11 +80,16 @@ type TaskPriority = NonNullable<Task['priority']>;
                 <app-created-by-badge [createdBy]="t.createdBy" [createdAt]="t.createdAt" [size]="20" />
               </div>
             </div>
-            @if (canDelete()) {
-              <button (click)="deleteTicket(t)" class="text-zinc-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete ticket">
-                <mat-icon class="text-[20px] w-5 h-5">delete</mat-icon>
+            <div class="flex items-center gap-1">
+              <button (click)="copyTicket(t)" class="inline-flex items-center gap-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors" title="Copy the ticket, its description and its tasks">
+                <mat-icon class="text-[18px] w-4.5 h-4.5">{{ copied() ? 'check' : 'content_copy' }}</mat-icon>{{ copied() ? 'Copied' : 'Copy' }}
               </button>
-            }
+              @if (canDelete()) {
+                <button (click)="deleteTicket(t)" class="text-zinc-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete ticket">
+                  <mat-icon class="text-[20px] w-5 h-5">delete</mat-icon>
+                </button>
+              }
+            </div>
           </div>
 
           <!-- Inline-editable fields -->
@@ -148,51 +156,66 @@ type TaskPriority = NonNullable<Task['priority']>;
               }
 
               <!-- Task rows -->
-              <ul class="divide-y divide-zinc-100">
+              <ul class="@container divide-y divide-zinc-100">
                 @for (task of tasks(); track task.id) {
                   <li class="flex items-start gap-3 py-3 group" [class.opacity-60]="task.status === 'Completed'">
                     <input type="checkbox" [checked]="task.status === 'Completed'" (change)="toggleDone(task)" [disabled]="!canWriteTasks()"
                            class="cursor-pointer h-4 w-4 mt-0.5 accent-zinc-900 shrink-0" [attr.aria-label]="'Mark ' + task.title + (task.status === 'Completed' ? ' not done' : ' done')" />
-                    <div class="min-w-0 flex-1">
-                      <div class="text-sm font-medium text-zinc-900 truncate" [class.line-through]="task.status === 'Completed'" [title]="task.title">{{ task.title }}</div>
-                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-meta text-zinc-500">
-                        @if (task.priority) {
-                          <span [class]="taskPriorityColor(task.priority)" class="font-bold px-1.5 py-0.5 rounded-full border">{{ task.priority }}</span>
-                        }
-                        <span class="inline-flex items-center gap-1.5 min-w-0" [title]="userName(task.assignedToUserId)">
-                          @if (task.assignedToUserId) {
-                            <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
-                            <span class="truncate max-w-[10rem]">{{ userName(task.assignedToUserId) }}</span>
-                          } @else {
-                            <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-400">person</mat-icon><span class="text-zinc-400">Unassigned</span>
-                          }
-                        </span>
-                        @if (task.dueDate) {
-                          <span class="inline-flex items-center gap-1" [class]="isTaskOverdue(task) ? 'text-red-600 font-semibold' : ''">
-                            <mat-icon class="text-[14px] w-3.5 h-3.5">event</mat-icon>{{ task.dueDate | date:'d MMM' }}
-                          </span>
-                        }
+                    <!-- Sized by the list's own width, not the viewport: the sidebar and the page's side column
+                         can leave this card narrow on a wide screen, and the controls take ~230px. -->
+                    <div class="min-w-0 flex-1 flex flex-col @xl:flex-row @xl:items-start gap-2 @xl:gap-3">
+                      <div class="min-w-0 flex-1">
+                        <button type="button" (click)="openTask(task)" class="block w-full text-left text-sm font-medium text-zinc-900 wrap-break-word hover:underline decoration-zinc-300 underline-offset-2" [class.line-through]="task.status === 'Completed'">{{ task.title }}</button>
                         @if (task.description) {
-                          <span class="truncate max-w-[16rem] text-zinc-400" [title]="task.description">{{ task.description }}</span>
+                          <button type="button" (click)="openTask(task)" class="block w-full text-left mt-1 text-xs text-zinc-500 hover:text-zinc-700" [attr.aria-label]="'Read the full description of ' + task.title">
+                            <span appClampDetect #clamp="clampDetect" class="line-clamp-2 whitespace-pre-line wrap-break-word">{{ task.description }}</span>
+                            @if (clamp.clamped()) {
+                              <span class="inline-flex items-center gap-0.5 mt-0.5 text-meta font-semibold text-zinc-700">Read more<mat-icon class="text-[14px] w-3.5 h-3.5">chevron_right</mat-icon></span>
+                            }
+                          </button>
                         }
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-meta text-zinc-500">
+                          @if (task.priority) {
+                            <span [class]="taskPriorityColor(task.priority)" class="font-bold px-1.5 py-0.5 rounded-full border">{{ task.priority }}</span>
+                          }
+                          <span class="inline-flex items-center gap-1.5 min-w-0" [title]="userName(task.assignedToUserId)">
+                            @if (task.assignedToUserId) {
+                              <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
+                              <span class="truncate max-w-[10rem]">{{ userName(task.assignedToUserId) }}</span>
+                            } @else {
+                              <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-400">person</mat-icon><span class="text-zinc-400">Unassigned</span>
+                            }
+                          </span>
+                          @if (task.dueDate) {
+                            <span class="inline-flex items-center gap-1" [class]="isTaskOverdue(task) ? 'text-red-600 font-semibold' : ''">
+                              <mat-icon class="text-[14px] w-3.5 h-3.5">event</mat-icon>{{ task.dueDate | date:'d MMM' }}
+                            </span>
+                          }
+                        </div>
                       </div>
-                    </div>
-                    <select [ngModel]="task.status" (ngModelChange)="setStatus(task, $event)" [disabled]="!canWriteTasks()" class="input-field rounded-lg px-2 py-1 text-xs shrink-0 w-32!" [attr.aria-label]="'Status of ' + task.title">
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-                      @if (canWriteTasks()) {
-                        <button (click)="tasksService.relink(task.id, {})" title="Unlink from ticket" class="text-zinc-400 hover:text-zinc-700 p-1 rounded">
-                          <mat-icon class="text-[16px] w-4 h-4">link_off</mat-icon>
-                        </button>
-                      }
-                      @if (canDeleteTasks()) {
-                        <button (click)="deleteTask(task)" title="Delete task" class="text-zinc-400 hover:text-red-600 p-1 rounded">
-                          <mat-icon class="text-[16px] w-4 h-4">delete</mat-icon>
-                        </button>
-                      }
+                      <div class="flex items-center gap-1 shrink-0">
+                        <select [ngModel]="task.status" (ngModelChange)="setStatus(task, $event)" [disabled]="!canWriteTasks()" class="input-field rounded-lg px-2 py-1 text-xs w-32!" [attr.aria-label]="'Status of ' + task.title">
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                        <!-- Hover-revealed on desktop; always visible on touch-sized screens, which have no hover. -->
+                        <div class="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                          <button (click)="openTask(task)" title="Open task" class="text-zinc-400 hover:text-zinc-700 p-1 rounded">
+                            <mat-icon class="text-[16px] w-4 h-4">open_in_full</mat-icon>
+                          </button>
+                          @if (canWriteTasks()) {
+                            <button (click)="tasksService.relink(task.id, {})" title="Unlink from ticket" class="text-zinc-400 hover:text-zinc-700 p-1 rounded">
+                              <mat-icon class="text-[16px] w-4 h-4">link_off</mat-icon>
+                            </button>
+                          }
+                          @if (canDeleteTasks()) {
+                            <button (click)="deleteTask(task)" title="Delete task" class="text-zinc-400 hover:text-red-600 p-1 rounded">
+                              <mat-icon class="text-[16px] w-4 h-4">delete</mat-icon>
+                            </button>
+                          }
+                        </div>
+                      </div>
                     </div>
                   </li>
                 } @empty {
@@ -333,6 +356,106 @@ type TaskPriority = NonNullable<Task['priority']>;
         </div>
       }
     </div>
+
+    <!-- Task modal: the full task, readable and (with TASKS_WRITE) editable -->
+    @if (openedTask(); as task) {
+      <!-- z-[60]: above the app's quick-actions FAB (z-50), below toasts. -->
+      <div class="fixed inset-0 z-[60] bg-zinc-900/40 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="td_task_modal_title"
+             class="bg-white shadow-xl w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+          <div class="flex items-start justify-between gap-3 px-6 pt-5 pb-3 border-b border-zinc-100">
+            <div class="min-w-0 flex items-center gap-2 text-xs text-zinc-500">
+              <mat-icon class="text-[18px] w-4.5 h-4.5">task_alt</mat-icon>
+              <span id="td_task_modal_title" class="font-semibold uppercase tracking-wide">Task</span>
+              <span class="font-mono text-zinc-400">#{{ task.id.slice(0, 8) }}</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button (click)="copyTask(task)" title="Copy task" class="text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg hover:bg-zinc-100">
+                <mat-icon class="text-[18px] w-4.5 h-4.5">content_copy</mat-icon>
+              </button>
+              <button (click)="closeTask()" title="Close" class="text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg hover:bg-zinc-100">
+                <mat-icon class="text-[20px] w-5 h-5">close</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="px-6 py-5 space-y-4 overflow-y-auto">
+            @if (canWriteTasks()) {
+              <div>
+                <label for="td_task_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Title</label>
+                <textarea id="td_task_title" [(ngModel)]="taskDraft.title" rows="2"
+                          class="w-full input-field rounded-lg p-2 text-base font-semibold text-zinc-950 focus:outline-blue-600 resize-y"></textarea>
+              </div>
+              <div>
+                <label for="td_task_description" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description</label>
+                <textarea id="td_task_description" [(ngModel)]="taskDraft.description" rows="8" placeholder="Add details, acceptance criteria, links…"
+                          class="w-full input-field rounded-lg p-2 text-sm leading-relaxed focus:outline-blue-600 resize-y"></textarea>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="td_task_status" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Status</label>
+                  <select id="td_task_status" [(ngModel)]="taskDraft.status" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="td_task_priority" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Priority</label>
+                  <select id="td_task_priority" [(ngModel)]="taskDraft.priority" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                    <option value="">None</option>
+                    <option value="Urgent">Urgent</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div>
+                  <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assignee</span>
+                  <app-user-picker [(value)]="taskDraft.assignedToUserId" />
+                </div>
+                <div>
+                  <label for="td_task_due" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Due date</label>
+                  <input id="td_task_due" type="date" [(ngModel)]="taskDraft.dueDate" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600" />
+                </div>
+              </div>
+            } @else {
+              <h3 class="text-lg font-bold text-zinc-950 leading-snug wrap-break-word">{{ task.title }}</h3>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500">
+                <span class="font-semibold text-zinc-700">{{ task.status }}</span>
+                @if (task.priority) {
+                  <span [class]="taskPriorityColor(task.priority)" class="font-bold px-1.5 py-0.5 rounded-full border">{{ task.priority }}</span>
+                }
+                <span class="inline-flex items-center gap-1.5">
+                  @if (task.assignedToUserId) { <app-user-avatar [userId]="task.assignedToUserId" [size]="18" /> }
+                  {{ userName(task.assignedToUserId) }}
+                </span>
+                @if (task.dueDate) {
+                  <span class="inline-flex items-center gap-1" [class]="isTaskOverdue(task) ? 'text-red-600 font-semibold' : ''">
+                    <mat-icon class="text-[14px] w-3.5 h-3.5">event</mat-icon>{{ task.dueDate | date:'mediumDate' }}
+                  </span>
+                }
+              </div>
+              <div>
+                <h4 class="text-xs font-semibold text-zinc-500 uppercase mb-1">Description</h4>
+                <p class="text-sm text-zinc-700 whitespace-pre-wrap wrap-break-word leading-relaxed">{{ task.description || 'No description.' }}</p>
+              </div>
+            }
+          </div>
+
+          <div class="flex justify-end gap-2 px-6 py-4 border-t border-zinc-100">
+            @if (canWriteTasks()) {
+              <button (click)="closeTask()" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
+              <button (click)="saveTask(task)" [disabled]="!taskDraft.title.trim() || savingTask()"
+                      class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg">
+                {{ savingTask() ? 'Saving…' : 'Save' }}
+              </button>
+            } @else {
+              <button (click)="closeTask()" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Close</button>
+            }
+          </div>
+        </div>
+      </div>
+    }
   `
 })
 export class TicketDetailComponent {
@@ -344,6 +467,7 @@ export class TicketDetailComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private toast = inject(ToastService);
 
   readonly statusOptions: TicketStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
@@ -359,6 +483,16 @@ export class TicketDetailComponent {
   newCommentText = '';
   isInternalNote = false;
   submittingComment = signal(false);
+
+  /** The task shown in the modal. Read live from the store so a save elsewhere is reflected. */
+  private openedTaskId = signal<string | null>(null);
+  openedTask = computed(() => {
+    const id = this.openedTaskId();
+    return id ? this.tasksService.getTaskById(id) : undefined;
+  });
+  taskDraft: TaskDraft = this.emptyTaskDraft();
+  savingTask = signal(false);
+  copied = signal(false);
 
   newTask: { title: string; assignedToUserId: string; priority: TaskPriority | ''; dueDate: string } =
     { title: '', assignedToUserId: '', priority: '', dueDate: '' };
@@ -544,6 +678,123 @@ export class TicketDetailComponent {
     }
   }
 
+  // ---- Task modal ----
+
+  openTask(task: Task) {
+    this.taskDraft = this.draftFrom(task);
+    this.openedTaskId.set(task.id);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeTask() {
+    const task = this.openedTask();
+    if (!task) return;
+    if (this.taskDraftDirty(task) && !confirm('Discard your changes to this task?')) return;
+    this.openedTaskId.set(null);
+  }
+
+  saveTask(task: Task) {
+    const title = this.taskDraft.title.trim();
+    if (!title || !this.canWriteTasks() || this.savingTask()) return;
+    if (!this.taskDraftDirty(task)) { this.openedTaskId.set(null); return; }
+    const d = this.taskDraft;
+    this.savingTask.set(true);
+    this.tasksService.updateDetails(task.id, {
+      title,
+      description: d.description.trim() || undefined,
+      status: d.status,
+      priority: d.priority || undefined,
+      assignedToUserId: d.assignedToUserId || undefined,
+      dueDate: d.dueDate || undefined
+    }, () => this.openedTaskId.set(null));
+    // Re-enable Save whether the call succeeded or not; the toast reports failures.
+    setTimeout(() => this.savingTask.set(false), 300);
+  }
+
+  private taskDraftDirty(task: Task): boolean {
+    const a = this.draftFrom(task);
+    const b = this.taskDraft;
+    return a.title !== b.title.trim() || a.description !== b.description.trim() || a.status !== b.status
+      || a.priority !== b.priority || a.assignedToUserId !== b.assignedToUserId || a.dueDate !== b.dueDate;
+  }
+
+  private draftFrom(task: Task): TaskDraft {
+    return {
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      priority: task.priority || '',
+      assignedToUserId: task.assignedToUserId || '',
+      dueDate: task.dueDate || ''
+    };
+  }
+
+  private emptyTaskDraft(): TaskDraft {
+    return { title: '', description: '', status: 'Pending', priority: '', assignedToUserId: '', dueDate: '' };
+  }
+
+  // ---- Copy ----
+
+  /** Copies the ticket as Markdown (plain text) and HTML, so it pastes well in Slack, docs and email alike. */
+  copyTicket(t: Ticket) {
+    const tasks = this.tasks();
+    const done = tasks.filter(x => x.status === 'Completed').length;
+
+    const md: string[] = [`# ${t.title}`, ''];
+    const html: string[] = [`<h1>${esc(t.title)}</h1>`];
+    md.push('## Description', '', t.description?.trim() || '_No description._', '');
+    html.push('<h2>Description</h2>', paragraphs(t.description) || '<p><em>No description.</em></p>');
+
+    md.push(`## Tasks (${done}/${tasks.length} done)`, '');
+    html.push(`<h2>Tasks (${done}/${tasks.length} done)</h2>`);
+    if (tasks.length === 0) {
+      md.push('_No tasks._');
+      html.push('<p><em>No tasks.</em></p>');
+    } else {
+      html.push('<ol>');
+      tasks.forEach((task, i) => {
+        const box = task.status === 'Completed' ? '[x]' : '[ ]';
+        md.push(`${i + 1}. ${box} **${task.title}**`);
+        const desc = task.description?.trim();
+        if (desc) desc.split('\n').forEach(line => md.push(`   ${line}`.trimEnd()));
+        md.push('');
+        html.push(`<li><p>${task.status === 'Completed' ? '☑' : '☐'} <strong>${esc(task.title)}</strong></p>${paragraphs(desc)}</li>`);
+      });
+      html.push('</ol>');
+    }
+
+    this.writeClipboard(md.join('\n').trimEnd() + '\n', html.join(''), () => {
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+      this.toast.show('Ticket copied to clipboard', { type: 'success' });
+    });
+  }
+
+  copyTask(task: Task) {
+    const desc = task.description?.trim();
+    const md = `**${task.title}**` + (desc ? `\n\n${desc}` : '') + '\n';
+    const html = `<p><strong>${esc(task.title)}</strong></p>${paragraphs(desc)}`;
+    this.writeClipboard(md, html, () => this.toast.show('Task copied to clipboard', { type: 'success' }));
+  }
+
+  private writeClipboard(text: string, html: string, onDone: () => void) {
+    // Rich copy where supported; plain text is always included for editors that ignore HTML.
+    // Falls back to a copy event where the async Clipboard API is missing or its permission
+    // is denied (embedded webviews, locked-down browsers, non-HTTPS origins).
+    const fallback = () => copyViaEvent(text, html)
+      ? onDone()
+      : this.toast.show('Failed to copy to clipboard', { type: 'error' });
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      const item = new ClipboardItem({
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+        'text/html': new Blob([html], { type: 'text/html' })
+      });
+      navigator.clipboard.write([item]).then(onDone, fallback);
+    } else {
+      fallback();
+    }
+  }
+
   // ---- Display helpers ----
 
   userName(userId?: string): string {
@@ -613,4 +864,34 @@ export class TicketDetailComponent {
       default: return 'text-zinc-400 border-zinc-200';
     }
   }
+}
+
+function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Synchronous clipboard write through the legacy copy command; needs no clipboard permission. */
+function copyViaEvent(text: string, html: string): boolean {
+  let written = false;
+  const onCopy = (e: ClipboardEvent) => {
+    if (!e.clipboardData) return;
+    e.clipboardData.setData('text/plain', text);
+    e.clipboardData.setData('text/html', html);
+    e.preventDefault();
+    written = true;
+  };
+  document.addEventListener('copy', onCopy);
+  try {
+    document.execCommand('copy');
+  } finally {
+    document.removeEventListener('copy', onCopy);
+  }
+  return written;
+}
+
+/** Blank-line-separated paragraphs, single newlines kept as line breaks. */
+function paragraphs(text?: string): string {
+  const trimmed = text?.trim();
+  if (!trimmed) return '';
+  return trimmed.split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
 }
