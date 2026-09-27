@@ -38,7 +38,8 @@ export const routes: Routes = [
       // other is the standalone main-nav entry point.
       { path: 'groups', loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },
       { path: 'whatsapp', canActivate: [authorityGuard('WHATSAPP_ADMIN')], loadComponent: () => import('./pages/settings-whatsapp.component').then(m => m.SettingsWhatsAppComponent) },
-      { path: 'api-tokens', canActivate: [authorityGuard('API_TOKENS_MANAGE')], loadComponent: () => import('./pages/settings-api-tokens.component').then(m => m.SettingsApiTokensComponent) }
+      { path: 'api-tokens', canActivate: [authorityGuard('API_TOKENS_MANAGE')], loadComponent: () => import('./pages/settings-api-tokens.component').then(m => m.SettingsApiTokensComponent) },
+      { path: 'brands', canActivate: [authorityGuard('PARTNERS_WRITE')], loadComponent: () => import('./pages/settings-brands.component').then(m => m.SettingsBrandsComponent) }
     ]
   },
   { path: 'groups', canActivate: [authGuard], loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },

@@ -144,6 +144,21 @@ import { TranslatePipe } from '../pipes/translate.pipe';
                     </div>
                   </div>
 
+                  <!-- Attribution -->
+                  <div class="bg-white border border-zinc-200 rounded-xl p-5 space-y-3">
+                    <h3 class="text-xs font-bold text-zinc-950 uppercase tracking-wider">Attribution</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div class="text-meta uppercase font-semibold text-zinc-400">Brand</div>
+                        <div class="font-semibold text-zinc-800 mt-0.5 flex items-center gap-1.5">
+                          @if (lead.brandColor) { <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="lead.brandColor"></span> }
+                          {{ lead.brandName || '—' }}
+                        </div>
+                      </div>
+                      <div><div class="text-meta uppercase font-semibold text-zinc-400">Business Type</div><div class="font-semibold text-zinc-800 mt-0.5">{{ lead.businessTypeName || '—' }}</div></div>
+                    </div>
+                  </div>
+
                   <!-- Company Information -->
                   <div class="bg-white border border-zinc-200 rounded-xl p-5 space-y-3">
                     <h3 class="text-xs font-bold text-zinc-950 uppercase tracking-wider">Company Information</h3>

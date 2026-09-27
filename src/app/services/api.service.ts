@@ -7,7 +7,7 @@ import type {
   Organization, CrmUser, CrmTeam, CrmGroup, GroupMessage, GroupMeeting,
   Partner, LeadContact, LeadActivity, LeadStatusHistory, CustomerCard,
   Deal, Proposal, ProposalTemplate, Task, Ticket, Invoice, PurchaseOrder,
-  Campaign, AutomationRule, Notification
+  Campaign, AutomationRule, Notification, Brand, BusinessType
 } from './crm-state.service';
 import type { WhatsAppAccount, CampaignRecipient, CampaignStats } from './domains/whatsapp-campaigns.service';
 import type { PartnerLedger } from '../shared/partner-ledger.model';
@@ -406,6 +406,55 @@ export class ApiService extends BaseApiService {
 
   getPartner(id: string): Observable<Partner> {
     return this.get(`/partners/${id}`);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private static brandFromDto(dto: any): Brand {
+    return {
+      id: dto.id,
+      name: dto.name,
+      code: dto.code,
+      description: dto.description,
+      colorHex: dto.color_hex,
+      isDefault: dto.is_default,
+      isActive: dto.is_active
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  private static businessTypeFromDto(dto: any): BusinessType {
+    return { id: dto.id, name: dto.name, isActive: dto.is_active };
+  }
+
+  // Brands (product lines a partner/lead is attributed to) and Business Types
+  // (structured line-of-business referential): both fetched with a large flat
+  // page to populate a filter/select control, same as getPartnersByType.
+  getBrands(): Observable<Brand[]> {
+    return this.get<PageResponse<unknown>>(`/brands`, { size: 1000 }).pipe(
+      map(response => (response.content || []).map(ApiService.brandFromDto))
+    );
+  }
+
+  createBrand(brand: unknown): Observable<Brand> {
+    return this.post(`/brands`, brand);
+  }
+
+  updateBrand(id: string, brand: unknown): Observable<Brand> {
+    return this.patch(`/brands/${id}`, brand);
+  }
+
+  deleteBrand(id: string): Observable<void> {
+    return this.delete(`/brands/${id}`);
+  }
+
+  getBusinessTypes(): Observable<BusinessType[]> {
+    return this.get<PageResponse<unknown>>(`/business-types`, { size: 1000 }).pipe(
+      map(response => (response.content || []).map(ApiService.businessTypeFromDto))
+    );
+  }
+
+  createBusinessType(businessType: unknown): Observable<BusinessType> {
+    return this.post(`/business-types`, businessType);
   }
 
   createPartner(partner: unknown): Observable<Partner> {

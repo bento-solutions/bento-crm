@@ -620,6 +620,32 @@ export interface Lead {
   /** Backend user id of the owner (mirrors partner.assigned_to_user_id). */
   assignedToUserId?: string;
   createdAt?: string;
+
+  /** Product line this lead was prospected for (mirrors partner.brand_id); distinct from productInterests. */
+  brandId?: string;
+  brandName?: string;
+  brandColor?: string;
+  /** Structured line-of-business referential (mirrors partner.business_type_id). */
+  businessTypeId?: string;
+  businessTypeName?: string;
+}
+
+/** A product line partners are attributed to (BentoCars, BentoTravel, CRMbento...). */
+export interface Brand {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  colorHex?: string;
+  isDefault?: boolean;
+  isActive?: boolean;
+}
+
+/** Structured referential for a partner's line of business. */
+export interface BusinessType {
+  id: string;
+  name: string;
+  isActive?: boolean;
 }
 
 export interface Partner {
@@ -1035,6 +1061,8 @@ export class CrmStateService {
   dealsLoaded = signal<boolean>(false);
   partnersLoaded = signal<boolean>(false);
   leadsLoaded = signal<boolean>(false);
+  brandsLoaded = signal<boolean>(false);
+  businessTypesLoaded = signal<boolean>(false);
   proposalsLoaded = signal<boolean>(false);
   invoicesLoaded = signal<boolean>(false);
   purchaseOrdersLoaded = signal<boolean>(false);
@@ -1378,6 +1406,8 @@ export class CrmStateService {
 
     this.loadNotifications();
     this.loadLeadsFromApi();
+    this.loadBrandsFromApi();
+    this.loadBusinessTypesFromApi();
   }
 
   // Lazy-load: Deals
@@ -1427,9 +1457,20 @@ export class CrmStateService {
   // Lazy-load: Leads. leadsData starts empty on every boot and every lead
   // page reads it, so without this the leads registered in a previous
   // session (persisted as partners of type LEAD) vanished on refresh.
-  loadLeadsFromApi(): void {
-    if (this.leadsLoaded()) return;
-    this.api.getPartnersByType('LEAD').subscribe({
+  /**
+   * `filters` (brandId/businessTypeId/interestedProduct) are forwarded as GET /partners query
+   * params, so the Partners list's brand/business-type/interested-product filters run server-side
+   * rather than only trimming an already-loaded array. Passing filters always re-fetches, even
+   * once `leadsLoaded` is true.
+   */
+  loadLeadsFromApi(filters?: Record<string, string>): void {
+    if (this.leadsLoaded() && !filters) return;
+    const hasFilters = !!filters && Object.values(filters).some(v => !!v);
+    const params: Record<string, string | number> = hasFilters
+      ? { type: 'LEAD', size: 1000, ...filters }
+      : {};
+    const request = hasFilters ? this.api.getPartners(params) : this.api.getPartnersByType('LEAD');
+    request.subscribe({
       next: (dtos) => {
         this.leadsData.set((dtos || []).map(d => this.leadFromPartnerDto(d)));
         this.leadsLoaded.set(true);
@@ -1437,6 +1478,36 @@ export class CrmStateService {
       error: (err) => {
         console.warn('Failed to load leads from API, using local data:', err);
         this.leadsLoaded.set(true);
+      }
+    });
+  }
+
+  /** Lazy-load: Brands (product-line referential used to attribute leads and filter the Partners list). */
+  loadBrandsFromApi(force = false): void {
+    if (this.brandsLoaded() && !force) return;
+    this.api.getBrands().subscribe({
+      next: (brands) => {
+        this.brands.set(brands || []);
+        this.brandsLoaded.set(true);
+      },
+      error: (err) => {
+        console.warn('Failed to load brands from API:', err);
+        this.brandsLoaded.set(true);
+      }
+    });
+  }
+
+  /** Lazy-load: Business types (structured line-of-business referential used to filter the Partners list). */
+  loadBusinessTypesFromApi(): void {
+    if (this.businessTypesLoaded()) return;
+    this.api.getBusinessTypes().subscribe({
+      next: (businessTypes) => {
+        this.businessTypes.set(businessTypes || []);
+        this.businessTypesLoaded.set(true);
+      },
+      error: (err) => {
+        console.warn('Failed to load business types from API:', err);
+        this.businessTypesLoaded.set(true);
       }
     });
   }
@@ -2581,6 +2652,11 @@ export class CrmStateService {
 
   leadsData = signal<Lead[]>([]);
 
+  /** Product lines partners are attributed to (BentoCars, BentoTravel, CRMbento...). */
+  brands = signal<Brand[]>([]);
+  /** Structured line-of-business referential (agence de location, agence de voyage...). */
+  businessTypes = signal<BusinessType[]>([]);
+
   // ────────────────────────────────────────────────────────
   // Automation Rule Engine
   // ────────────────────────────────────────────────────────
@@ -3145,6 +3221,11 @@ export class CrmStateService {
       company: dto.company,
       productInterests: dto.product_interests,
       campaigns: dto.campaigns,
+      brandId: dto.brand_id,
+      brandName: dto.brand_name,
+      brandColor: dto.brand_color,
+      businessTypeId: dto.business_type_id,
+      businessTypeName: dto.business_type_name,
       assignedToUserId: dto.assigned_to_user_id,
       assignedSalesperson: dto.assigned_to_user_id
         ? this.users().find(u => u.id === dto.assigned_to_user_id)?.displayName
@@ -3185,7 +3266,9 @@ export class CrmStateService {
       company: lead.company,
       product_interests: lead.productInterests,
       campaigns: lead.campaigns,
-      notes: lead.notes
+      notes: lead.notes,
+      brand_id: lead.brandId || undefined,
+      business_type_id: lead.businessTypeId || undefined
     };
   }
 

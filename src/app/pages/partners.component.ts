@@ -159,6 +159,18 @@ import { PaginatorComponent } from '../shared/paginator.component';
                     <option value="Medium">Medium</option>
                     <option value="Low">Low</option>
                   </select>
+                  <select [ngModel]="brandFilter()" (ngModelChange)="brandFilter.set($event); currentPage.set(1)" class="input-field rounded-xl px-3 py-2 text-sm outline-none bg-transparent">
+                    <option value="">All Brands</option>
+                    @for (brand of state.brands(); track brand.id) { <option [value]="brand.id">{{ brand.name }}</option> }
+                  </select>
+                  <select [ngModel]="businessTypeFilter()" (ngModelChange)="businessTypeFilter.set($event); currentPage.set(1)" class="input-field rounded-xl px-3 py-2 text-sm outline-none bg-transparent">
+                    <option value="">All Business Types</option>
+                    @for (bt of state.businessTypes(); track bt.id) { <option [value]="bt.id">{{ bt.name }}</option> }
+                  </select>
+                  <select [ngModel]="interestedProductFilter()" (ngModelChange)="interestedProductFilter.set($event); currentPage.set(1)" class="input-field rounded-xl px-3 py-2 text-sm outline-none bg-transparent">
+                    <option value="">All Interested Products</option>
+                    @for (brand of state.brands(); track brand.id) { <option [value]="brand.name">{{ brand.name }}</option> }
+                  </select>
                 </div>
                 <div class="text-xs text-zinc-400 font-semibold uppercase">
                   Showing {{ pageStart() }}-{{ pageEnd() }} of {{ filteredLeads().length }} leads
@@ -196,7 +208,12 @@ import { PaginatorComponent } from '../shared/paginator.component';
                               {{ getInitials(lead.name) }}
                             </div>
                             <div class="min-w-0">
-                              <button (click)="selectLead(lead)" class="table-name-link text-xs font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors truncate max-w-[120px] block text-left" [title]="'View ' + lead.name">{{ lead.name }}</button>
+                              <button (click)="selectLead(lead)" class="table-name-link text-xs font-semibold text-zinc-900 group-hover:text-zinc-900 transition-colors truncate max-w-[120px] flex items-center gap-1.5 text-left" [title]="'View ' + lead.name">
+                                @if (lead.brandColor) {
+                                  <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="lead.brandColor" [title]="lead.brandName"></span>
+                                }
+                                <span class="truncate">{{ lead.name }}</span>
+                              </button>
                               <div class="text-meta text-zinc-400">{{ lead.id }}</div>
                             </div>
                           </div>
@@ -470,6 +487,19 @@ import { PaginatorComponent } from '../shared/paginator.component';
                             </div>
                           </div>
                           <div class="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
+                            <h3 class="text-xs font-bold text-zinc-950 uppercase tracking-wider">Attribution</h3>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <div class="text-meta uppercase font-semibold text-zinc-400">Brand</div>
+                                <div class="font-semibold text-zinc-800 mt-0.5 flex items-center gap-1.5">
+                                  @if (lead.brandColor) { <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="lead.brandColor"></span> }
+                                  {{ lead.brandName || '—' }}
+                                </div>
+                              </div>
+                              <div><div class="text-meta uppercase font-semibold text-zinc-400">Business Type</div><div class="font-semibold text-zinc-800 mt-0.5">{{ lead.businessTypeName || '—' }}</div></div>
+                            </div>
+                          </div>
+                          <div class="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
                             <h3 class="text-xs font-bold text-zinc-950 uppercase tracking-wider">Company Information</h3>
                             <div class="grid grid-cols-2 gap-4 text-sm">
                               <div><div class="text-meta uppercase font-semibold text-zinc-400">Industry</div><div class="font-semibold text-zinc-800 mt-0.5">{{ lead.company?.industry || '—' }}</div></div>
@@ -683,13 +713,31 @@ import { PaginatorComponent } from '../shared/paginator.component';
                           <option value="Other">Other</option>
                         </select>
                       </div>
-                      <div><label for="product_interest" class="block font-semibold text-zinc-500 mb-1">Product Interest</label><input [(ngModel)]="newLead.interestedProduct" type="text" placeholder="e.g. Cloud Hosting" class="w-full input-field rounded-lg p-2 outline-none"></div>
                       <div><label for="assigned_salesperson" class="block font-semibold text-zinc-500 mb-1">Assigned Salesperson</label>
                         <select id="assigned_salesperson" [(ngModel)]="newLead.assignedSalesperson" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
                           <option value="">-- Unassigned --</option>
                           @for (user of state.users(); track user.name) {
                             <option [value]="user.name">{{ user.name }} ({{ user.role }})</option>
                           }
+                        </select></div>
+                    </div>
+                  </div>
+                  <div class="space-y-2.5">
+                    <h4 class="font-bold text-zinc-950 uppercase tracking-wider text-meta">4. Brand & Business Type</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div><label for="brand" class="block font-semibold text-zinc-500 mb-1">Brand</label>
+                        <select id="brand" [(ngModel)]="newLead.brandId" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                          @for (brand of state.brands(); track brand.id) { <option [value]="brand.id">{{ brand.name }}</option> }
+                        </select></div>
+                      <div><label for="business_type" class="block font-semibold text-zinc-500 mb-1">Business Type</label>
+                        <select id="business_type" [(ngModel)]="newLead.businessTypeId" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                          <option value="">-- Not set --</option>
+                          @for (bt of state.businessTypes(); track bt.id) { <option [value]="bt.id">{{ bt.name }}</option> }
+                        </select></div>
+                      <div class="col-span-2"><label for="product_interest" class="block font-semibold text-zinc-500 mb-1">Interested Product</label>
+                        <select id="product_interest" [(ngModel)]="newLead.interestedProduct" class="w-full input-field rounded-lg p-2 outline-none bg-transparent">
+                          <option value="">-- Not set --</option>
+                          @for (brand of state.brands(); track brand.id) { <option [value]="brand.name">{{ brand.name }}</option> }
                         </select></div>
                     </div>
                   </div>
@@ -1079,6 +1127,9 @@ export class PartnersComponent {
   searchQuery = signal('');
   statusFilter = signal('');
   priorityFilter = signal('');
+  brandFilter = signal('');
+  businessTypeFilter = signal('');
+  interestedProductFilter = signal('');
   selectedLead = signal<Lead | null>(null);
   activeDetailTab = signal<'info' | 'activities' | 'attachments' | 'history'>('info');
   activeConvertMenuId = signal<string | null>(null);
@@ -1122,6 +1173,8 @@ export class PartnersComponent {
     temperature: 'Warm' as Lead['temperature'],
     origin: 'Landing Page' as Lead['origin'],
     interestedProduct: '',
+    brandId: '',
+    businessTypeId: '',
     assignedSalesperson: '',
     notes: ''
   };
@@ -1191,6 +1244,15 @@ export class PartnersComponent {
     }
     if (this.priorityFilter()) {
       list = list.filter(l => l.priority === this.priorityFilter());
+    }
+    if (this.brandFilter()) {
+      list = list.filter(l => l.brandId === this.brandFilter());
+    }
+    if (this.businessTypeFilter()) {
+      list = list.filter(l => l.businessTypeId === this.businessTypeFilter());
+    }
+    if (this.interestedProductFilter()) {
+      list = list.filter(l => (l.productInterests || []).some(pi => pi.product === this.interestedProductFilter()));
     }
     if (this.searchQuery().trim()) {
       const q = this.searchQuery().toLowerCase();
@@ -1639,6 +1701,8 @@ export class PartnersComponent {
       temperature: 'Warm',
       origin: 'Landing Page',
       interestedProduct: '',
+      brandId: this.state.brands().find(b => b.isDefault)?.id || this.state.brands()[0]?.id || '',
+      businessTypeId: '',
       assignedSalesperson: this.state.users()[0]?.name || '',
       notes: ''
     };
@@ -1672,6 +1736,8 @@ export class PartnersComponent {
       probability: this.newLead.status === 'Qualified' ? 70 : 30,
       expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: this.newLead.notes,
+      brandId: this.newLead.brandId || undefined,
+      businessTypeId: this.newLead.businessTypeId || undefined,
       company: {
         industry: this.newLead.industry,
         size: this.newLead.companySize,
@@ -1694,12 +1760,9 @@ export class PartnersComponent {
           campaign: 'General Lead Capture'
         }
       ],
-      productInterests: [
-        {
-          product: this.newLead.interestedProduct,
-          solution: 'Cloud Solution Integration'
-        }
-      ]
+      productInterests: this.newLead.interestedProduct
+        ? [{ product: this.newLead.interestedProduct, solution: 'Cloud Solution Integration' }]
+        : []
     });
     this.addLeadModalOpen.set(false);
   }
