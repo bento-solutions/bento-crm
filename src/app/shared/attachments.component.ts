@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../services/api.service';
@@ -8,6 +8,7 @@ export interface StoredFileDto {
   fileName: string;
   sizeBytes?: number;
   createdAt?: string;
+  contentType?: string;
 }
 
 /**
@@ -40,24 +41,48 @@ export interface StoredFileDto {
           @for (file of files(); track file.id) {
             <div class="flex items-center justify-between gap-2 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
               <div class="flex items-center gap-2 min-w-0">
-                <mat-icon class="text-[16px] w-4 h-4 text-zinc-400 shrink-0">description</mat-icon>
-                <a [href]="downloadUrl(file.id)" target="_blank" class="text-xs font-semibold text-zinc-800 hover:underline truncate">{{ file.fileName }}</a>
+                @if (isImage(file) && previewUrls()[file.id]; as previewUrl) {
+                  <img [src]="previewUrl" [alt]="file.fileName" (click)="openPreview(file)" class="w-8 h-8 rounded object-cover shrink-0 cursor-pointer" />
+                } @else {
+                  <mat-icon class="text-[16px] w-4 h-4 text-zinc-400 shrink-0">description</mat-icon>
+                }
+                <span
+                  class="text-xs font-semibold text-zinc-800 truncate"
+                  [class.cursor-pointer]="isImage(file) && previewUrls()[file.id]"
+                  [class.hover:underline]="isImage(file) && previewUrls()[file.id]"
+                  (click)="isImage(file) && openPreview(file)"
+                >{{ file.fileName }}</span>
                 <span class="text-meta text-zinc-400 shrink-0">{{ formatFileSize(file.sizeBytes) }}</span>
               </div>
-              @if (canWrite()) {
-                <button (click)="deleteFile(file.id)" title="Delete" class="text-zinc-400 hover:text-red-600 p-1 rounded transition-colors shrink-0">
-                  <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+              <div class="flex items-center gap-0.5 shrink-0">
+                <button (click)="downloadFile(file)" title="Download" class="text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors">
+                  <mat-icon class="text-[16px] w-4 h-4">file_download</mat-icon>
                 </button>
-              }
+                @if (canWrite()) {
+                  <button (click)="deleteFile(file.id)" title="Delete" class="text-zinc-400 hover:text-red-600 p-1 rounded transition-colors">
+                    <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+                  </button>
+                }
+              </div>
             </div>
           }
         </div>
       }
     </div>
+
+    @if (previewFile(); as preview) {
+      <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" (click)="closePreview()">
+        <img [src]="preview.url" [alt]="preview.fileName" class="max-w-full max-h-full rounded-lg shadow-2xl" (click)="$event.stopPropagation()" />
+        <button (click)="closePreview()" title="Close" class="absolute top-4 right-4 text-white/80 hover:text-white p-2">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
   `
 })
 export class AttachmentsComponent {
   private api = inject(ApiService);
+  private destroyRef = inject(DestroyRef);
 
   ownerEntityType = input.required<string>();
   ownerEntityId = input.required<string>();
@@ -67,20 +92,61 @@ export class AttachmentsComponent {
   loading = signal(false);
   uploading = signal(false);
 
+  // Object URLs for image attachments, fetched via the authenticated Blob download
+  // rather than a plain <img src> — the /files/{id} endpoint requires a Bearer token,
+  // which a browser-issued <img> request can't carry. Keyed by file id, revoked on
+  // owner change / delete / destroy so they don't leak.
+  previewUrls = signal<Record<string, string>>({});
+  previewFile = signal<{ url: string; fileName: string } | null>(null);
+
   constructor() {
     effect(() => {
       const type = this.ownerEntityType();
       const id = this.ownerEntityId();
       if (!id) return;
       this.loading.set(true);
+      this.clearPreviews();
       this.api.getFilesForOwner(type, id).subscribe({
         next: (files) => {
           this.files.set(files || []);
           this.loading.set(false);
+          (files || []).filter(f => this.isImage(f)).forEach(f => this.loadPreview(f));
         },
         error: () => this.loading.set(false)
       });
     });
+
+    this.destroyRef.onDestroy(() => this.clearPreviews());
+  }
+
+  isImage(file: StoredFileDto): boolean {
+    return !!file.contentType?.startsWith('image/');
+  }
+
+  openPreview(file: StoredFileDto): void {
+    const url = this.previewUrls()[file.id];
+    if (!url) return;
+    this.previewFile.set({ url, fileName: file.fileName });
+  }
+
+  closePreview(): void {
+    this.previewFile.set(null);
+  }
+
+  private loadPreview(file: StoredFileDto): void {
+    if (this.previewUrls()[file.id]) return;
+    this.api.downloadStoredFile(file.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        this.previewUrls.update(urls => ({ ...urls, [file.id]: url }));
+      },
+      error: () => { /* leave the generic file icon as a fallback */ }
+    });
+  }
+
+  private clearPreviews(): void {
+    Object.values(this.previewUrls()).forEach(url => URL.revokeObjectURL(url));
+    this.previewUrls.set({});
   }
 
   onFileSelected(event: Event): void {
@@ -92,6 +158,7 @@ export class AttachmentsComponent {
       next: (dto) => {
         this.uploading.set(false);
         this.files.update(files => [...files, dto]);
+        if (this.isImage(dto)) this.loadPreview(dto);
         input.value = '';
       },
       error: () => {
@@ -105,13 +172,25 @@ export class AttachmentsComponent {
     if (!this.canWrite()) return;
     const prev = this.files();
     this.files.update(files => files.filter(f => f.id !== fileId));
+    const url = this.previewUrls()[fileId];
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.previewUrls.update(urls => {
+        const rest = { ...urls };
+        delete rest[fileId];
+        return rest;
+      });
+    }
     this.api.deleteFile(fileId).subscribe({
       error: () => this.files.set(prev)
     });
   }
 
-  downloadUrl(fileId: string): string {
-    return this.api.getFileDownloadUrl(fileId);
+  downloadFile(file: StoredFileDto): void {
+    this.api.downloadStoredFile(file.id).subscribe({
+      next: (blob) => this.api.downloadBlob(blob, file.fileName),
+      error: () => { /* handle error */ }
+    });
   }
 
   formatFileSize(bytes?: number): string {

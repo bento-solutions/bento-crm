@@ -836,8 +836,8 @@ export class ApiService extends BaseApiService {
     return this.get<StoredFileDto[]>(`/files`, { ownerEntityType, ownerEntityId });
   }
 
-  getFileDownloadUrl(id: string): string {
-    return this.buildUrl(`/files/${id}`);
+  downloadStoredFile(id: string): Observable<Blob> {
+    return this.getBlob(`/files/${id}`);
   }
 
   deleteFile(id: string): Observable<unknown> {

@@ -615,7 +615,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                                     <div>
                                       <div class="font-semibold text-zinc-800">
                                         @if (file.fileId) {
-                                          <a [href]="getDownloadUrl(file.fileId)" target="_blank" class="hover:underline">{{ file.fileName }}</a>
+                                          <a href="" (click)="downloadAttachment($event, file)" class="hover:underline">{{ file.fileName }}</a>
                                         } @else { {{ file.fileName }} }
                                       </div>
                                       <div class="text-meta text-zinc-400">Uploaded: {{ file.uploadedAt }} &bull; {{ file.fileSize || 'N/A' }}</div>
@@ -1669,8 +1669,13 @@ export class PartnersComponent {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  getDownloadUrl(fileId: string): string {
-    return this.api.getFileDownloadUrl(fileId);
+  downloadAttachment(event: Event, file: LeadAttachment): void {
+    event.preventDefault();
+    if (!file.fileId) return;
+    this.api.downloadStoredFile(file.fileId).subscribe({
+      next: (blob) => this.api.downloadBlob(blob, file.fileName),
+      error: () => { /* handle error */ }
+    });
   }
 
   deleteAttachment(leadId: string, file: LeadAttachment) {
