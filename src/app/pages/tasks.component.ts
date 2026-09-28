@@ -88,6 +88,14 @@ import { EntityLink } from '../shared/related-entity.model';
           {{ 'tasks.kanban' | translate }}
         </button>
         <div class="ml-auto flex items-center gap-2 py-2">
+          <mat-icon class="text-[16px] w-4 h-4 text-zinc-500">person</mat-icon>
+          <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field rounded-lg px-2 py-1.5 text-xs focus:outline-blue-600 cursor-pointer" aria-label="Filter tasks by assignee">
+            <option value="">All assignees</option>
+            <option value="NONE">{{ 'leads.unassigned' | translate }}</option>
+            @for (user of state.users(); track user.id) {
+              <option [value]="user.id">{{user.displayName}}</option>
+            }
+          </select>
           <mat-icon class="text-[16px] w-4 h-4 text-zinc-500">link</mat-icon>
           <select [ngModel]="linkFilter()" (ngModelChange)="linkFilter.set($event); tasksPage.set(1)" class="input-field rounded-lg px-2 py-1.5 text-xs focus:outline-blue-600 cursor-pointer" aria-label="Filter tasks by linked record">
             <option value="">All tasks</option>
@@ -488,13 +496,29 @@ export class TasksComponent {
   /** Narrow the board to tasks linked to one kind of record ('NONE' = unlinked, '' = all). */
   linkFilter = signal<'' | 'TICKET' | 'DEAL' | 'PARTNER' | 'NONE'>('');
 
-  /** All tasks, filtered by priority and/or linked record if a filter is active */
+  /** Narrow the board to tasks assigned to one user ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
+  private static readonly ASSIGNEE_FILTER_KEY = 'bento_task_assignee_filter';
+  assigneeFilter = signal<string>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem(TasksComponent.ASSIGNEE_FILTER_KEY) || '' : ''
+  );
+
+  setAssigneeFilter(value: string) {
+    this.assigneeFilter.set(value);
+    this.tasksPage.set(1);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TasksComponent.ASSIGNEE_FILTER_KEY, value);
+    }
+  }
+
+  /** All tasks, filtered by priority, linked record and/or assignee if a filter is active */
   filteredTasks = computed(() => {
     const priority = this.activePriorityFilter();
     const link = this.linkFilter();
+    const assignee = this.assigneeFilter();
     return this.tasksService.allTasks().filter(t =>
       (!priority || t.priority === priority) &&
-      (!link || (link === 'NONE' ? !t.relatedEntityType : t.relatedEntityType === link))
+      (!link || (link === 'NONE' ? !t.relatedEntityType : t.relatedEntityType === link)) &&
+      (!assignee || (assignee === 'NONE' ? !t.assignedToUserId : t.assignedToUserId === assignee))
     );
   });
 

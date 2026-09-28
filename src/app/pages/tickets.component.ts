@@ -50,6 +50,13 @@ import { AttachmentsComponent } from '../shared/attachments.component';
             <option [value]="t">{{ t }}</option>
           }
         </select>
+        <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field rounded-lg p-2 text-sm focus:outline-blue-600 cursor-pointer w-44" aria-label="Filter tickets by assignee">
+          <option value="">All Assignees</option>
+          <option value="NONE">Unassigned</option>
+          @for (user of state.users(); track user.id) {
+            <option [value]="user.id">{{user.displayName}}</option>
+          }
+        </select>
         @if (hasActiveFilters()) {
           <button (click)="clearFilters()" class="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-600 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors">
             <mat-icon class="text-[14px] w-3.5 h-3.5">close</mat-icon>
@@ -344,18 +351,34 @@ export class TicketsComponent {
   statusFilter = signal<TicketStatus | null>(null);
   typeFilter = signal<string | null>(null);
 
+  /** Narrow the list to tickets assigned to one user ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
+  private static readonly ASSIGNEE_FILTER_KEY = 'bento_ticket_assignee_filter';
+  assigneeFilter = signal<string>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem(TicketsComponent.ASSIGNEE_FILTER_KEY) || '' : ''
+  );
+
+  setAssigneeFilter(value: string) {
+    this.assigneeFilter.set(value);
+    this.ticketsPage.set(1);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TicketsComponent.ASSIGNEE_FILTER_KEY, value);
+    }
+  }
+
   filteredTickets = computed(() => {
     const priority = this.priorityFilter();
     const status = this.statusFilter();
     const type = this.typeFilter();
+    const assignee = this.assigneeFilter();
     return this.ticketsService.allTickets().filter(t =>
       (!priority || t.priority === priority) &&
       (!status || t.status === status) &&
-      (!type || t.type === type)
+      (!type || t.type === type) &&
+      (!assignee || (assignee === 'NONE' ? !t.assignedToUserId : t.assignedToUserId === assignee))
     );
   });
 
-  hasActiveFilters = computed(() => !!this.priorityFilter() || !!this.statusFilter() || !!this.typeFilter());
+  hasActiveFilters = computed(() => !!this.priorityFilter() || !!this.statusFilter() || !!this.typeFilter() || !!this.assigneeFilter());
 
   ticketStatusOptions = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   selectedTicketIds = signal<Set<string>>(new Set());
@@ -453,6 +476,7 @@ export class TicketsComponent {
     this.priorityFilter.set(null);
     this.statusFilter.set(null);
     this.typeFilter.set(null);
+    this.setAssigneeFilter('');
   }
 
   /**
