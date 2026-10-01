@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../services/api.service';
@@ -105,7 +105,10 @@ export class AttachmentsComponent {
       const id = this.ownerEntityId();
       if (!id) return;
       this.loading.set(true);
-      this.clearPreviews();
+      // Reading `previewUrls()` here (even via the private helper) would make the effect
+      // depend on it — and since clearPreviews() also writes a fresh `{}` to it, the effect
+      // would retrigger itself on every run, hammering this endpoint in an infinite loop.
+      untracked(() => this.clearPreviews());
       this.api.getFilesForOwner(type, id).subscribe({
         next: (files) => {
           this.files.set(files || []);
