@@ -880,7 +880,7 @@ export class DashboardComponent {
         rows: pending
           .filter(t => t.priority === key)
           .sort(byDeadline)
-          .map(t => this.queueRow(t.id, t.title, `#${t.id}`, t.deadline))
+          .map(t => this.queueRow(t.id, t.title, `#${t.id.slice(0, 8)}`, t.deadline))
       }))
       .filter(s => s.rows.length > 0);
 

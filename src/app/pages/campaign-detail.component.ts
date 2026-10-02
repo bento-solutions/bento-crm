@@ -295,7 +295,7 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="text-sm font-medium text-ink truncate">{{ p.name }}</div>
-                    <div class="text-xs text-ink-3 truncate">{{ contactHint(c, p) }}<span class="text-ink-4"> · </span>{{ p.type }}</div>
+                    <div class="text-xs text-ink-3 truncate">{{ contactHint(c, p) }}<span class="text-ink-3"> · </span>{{ p.type }}</div>
                   </div>
                   @if (isEnrolled(p.id)) {
                     <span class="badge badge-neutral shrink-0">Added</span>

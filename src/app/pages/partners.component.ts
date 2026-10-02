@@ -354,13 +354,13 @@ import { ToastService } from '../services/toast.service';
                         </div>
                         <div>
                           <h2 class="section-title" id="slide-over-title">{{ lead.name }}</h2>
-                          <p class="text-xs text-ink-3 font-semibold">{{ lead.id }} &bull; {{ lead.companyName }}</p>
+                          <p class="text-xs text-ink-3"><span class="font-mono">#{{ lead.id.slice(0, 8) }}</span> &bull; {{ lead.companyName }}</p>
                         </div>
                       </div>
                       <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5 badge">
-                          <span class="eyebrow">Status:</span>
-                          <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" class="input-field cursor-pointer font-semibold">
+                        <div class="flex items-center gap-2">
+                <span class="field-label">Status</span>
+                <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" class="input-field input-sm w-auto cursor-pointer">
                             <option value="New">New</option>
                             <option value="Contacted">Contacted</option>
                             <option value="Attempted Contact">Attempted Contact</option>

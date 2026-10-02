@@ -32,8 +32,8 @@ import { TranslatePipe } from '../pipes/translate.pipe';
                 {{ getInitials(lead.name) }}
               </div>
               <div>
-                <h2 class="section-title">{{ lead.name }}</h2>
-                <p class="text-sm text-ink-3 font-semibold mt-0.5">{{ lead.id }} &bull; {{ lead.companyName }}</p>
+                <h1 class="t-title">{{ lead.name }}</h1>
+                <p class="text-sm text-ink-3 mt-0.5"><span class="font-mono">#{{ lead.id.slice(0, 8) }}</span> &bull; {{ lead.companyName }}</p>
                 <div class="flex items-center gap-2 mt-2">
                   <span [class]="getStatusClass(lead.status)" class="badge">{{ lead.status }}</span>
                   <span [class]="getPriorityBadge(lead.priority)" class="badge">{{ lead.priority }}</span>
@@ -42,9 +42,9 @@ import { TranslatePipe } from '../pipes/translate.pipe';
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1.5 badge">
-                <span class="eyebrow">Status:</span>
-                <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" class="input-field cursor-pointer font-semibold">
+              <div class="flex items-center gap-2">
+                <span class="field-label">Status</span>
+                <select [ngModel]="lead.status" (ngModelChange)="onStatusChange(lead.id, $event)" class="input-field input-sm w-auto cursor-pointer">
                   <option value="New">New</option>
                   <option value="Contacted">Contacted</option>
                   <option value="Attempted Contact">Attempted Contact</option>

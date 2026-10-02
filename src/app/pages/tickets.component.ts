@@ -675,9 +675,9 @@ export class TicketsComponent {
   getPriorityColor(priority: TicketPriority) {
     switch(priority) {
       case 'URGENT': return 'text-danger-ink';
-      case 'HIGH': return 'text-warning';
-      case 'MEDIUM': return 'text-success';
-      case 'LOW': return 'text-accent';
+      case 'HIGH': return 'text-warning-ink';
+      case 'MEDIUM': return 'text-success-ink';
+      case 'LOW': return 'text-accent-ink';
     }
   }
 

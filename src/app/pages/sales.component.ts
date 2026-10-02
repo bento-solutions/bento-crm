@@ -698,14 +698,14 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Create Deal Modal -->
     @if (dealModalOpen()) {
       <div class="modal-backdrop">
-        <div class="modal modal-md">
+        <div class="modal modal-3xl">
           <div class="flex justify-between items-center border-b border-line-soft pb-3 shrink-0">
             <h3 class="modal-title">Create Deal</h3>
             <span class="badge badge-neutral">Extended Fields Active</span>
           </div>
           
           <!-- HEADER SECTION: All form fields in scrollable 2-column grid -->
-          <div class="overflow-y-auto pr-2 shrink-0 max-h-[35vh]">
+          <div class="overflow-y-auto pr-2 shrink-0 max-h-[50vh]">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Left Column: Core Deal info, Customer details, Commercials -->
               <div class="space-y-6">

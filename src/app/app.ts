@@ -73,9 +73,6 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
-// Flat list for breadcrumb matching
-const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap(s => s.items);
-
 interface SearchItem {
   mainMenu: string;
   mainIcon: string;

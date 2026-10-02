@@ -87,7 +87,7 @@ import { WhatsAppCampaignsService } from '../services/domains/whatsapp-campaigns
                       <div class="text-sm font-medium text-ink truncate">{{ p.name }}</div>
                       <div class="text-xs text-ink-3 truncate">
                         {{ p.phone || 'No phone number' }}
-                        @if (p.city) { <span class="text-ink-4">·</span> {{ p.city }} }
+                        @if (p.city) { <span class="text-ink-3">·</span> {{ p.city }} }
                       </div>
                     </div>
                     <!-- Flagged before sending rather than after: a contact with no

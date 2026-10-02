@@ -858,6 +858,10 @@ mat-icon.mat-icon { color: revert-layer; }
 
   /* ── Stat cards (KPI) ─────────────────────── */
   .stat-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .stat-card__value { font-size: 20px; }
+  }
   .stat-card {
     display: flex; flex-direction: column; gap: 10px; min-width: 0;
     padding: var(--tile-padding);
@@ -942,6 +946,7 @@ mat-icon.mat-icon { color: revert-layer; }
   .modal-lg { max-width: 640px; }
   .modal-xl { max-width: 800px; }
   .modal-2xl { max-width: 1040px; }
+  .modal-3xl { max-width: 1200px; }
   .modal-flush { padding: 0; gap: 0; overflow: hidden; }
   .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .modal-title { font-size: 16px; line-height: 1.4; font-weight: 600; color: var(--color-text-heading); }

@@ -116,7 +116,7 @@ interface CalendarDay {
       border: 1px solid var(--color-border-light); background: var(--color-surface);
     }
     .cal__cell--pad { border-color: transparent; background: transparent; }
-    .cal__cell.is-past { background: var(--color-bg); }
+    .cal__cell.is-past { background: var(--color-subtle); }
     .cal__cell.has-people { border-color: var(--color-border-strong); }
     .cal__cell.is-today {
       background: var(--tile-soft, var(--color-accent-light));

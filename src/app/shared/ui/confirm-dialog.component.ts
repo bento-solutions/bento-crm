@@ -8,10 +8,11 @@ import { ConfirmService } from './confirm.service';
   host: { '(document:keydown.escape)': 'cancel()' },
   template: `
     @if (confirm.request(); as req) {
+      <!-- Escape (host listener) is the keyboard path; the backdrop click is a pointer convenience. -->
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
-      <div class="modal-backdrop" (click)="cancel()">
+      <div class="modal-backdrop" (click)="onBackdrop($event)">
         <div class="modal modal-sm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
-             [attr.aria-describedby]="req.message ? 'confirm-message' : null" (click)="$event.stopPropagation()">
+             [attr.aria-describedby]="req.message ? 'confirm-message' : null">
           <div class="modal-header">
             <h3 class="modal-title" id="confirm-title">{{ req.title }}</h3>
           </div>
@@ -43,6 +44,10 @@ export class ConfirmDialogComponent {
 
   protected accept(): void {
     this.confirm.answer(true);
+  }
+
+  protected onBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.cancel();
   }
 
   protected cancel(): void {

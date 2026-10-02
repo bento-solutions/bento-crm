@@ -51,7 +51,7 @@ export class PageHeaderComponent {
   title = input.required<string>();
   subtitle = input<string>('');
   /** Router link for the "back" affordance on detail pages. */
-  backLink = input<string | any[] | null>(null);
+  backLink = input<string | readonly unknown[] | null>(null);
   backLabel = input<string>('Back');
   /** `section` renders an h2 for sub-pages that already sit under a page header (Settings tabs). */
   size = input<'page' | 'section'>('page');

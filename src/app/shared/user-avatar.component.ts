@@ -54,7 +54,7 @@ export class UserAvatarComponent {
       case 36: return 13;
       case 44: return 16;
       case 56: return 20;
-      default: return Math.round(this.size * 0.38);
+      default: return Math.max(10, Math.round(this.size * 0.4));
     }
   }
 }
