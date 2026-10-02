@@ -7,7 +7,7 @@ import type {
   Organization, CrmUser, CrmTeam, CrmGroup, GroupMessage, GroupMeeting,
   Partner, LeadContact, LeadActivity, LeadStatusHistory, CustomerCard,
   Deal, Proposal, ProposalTemplate, Task, Ticket, Invoice, PurchaseOrder,
-  Campaign, AutomationRule, Notification, Brand, BusinessType
+  Campaign, AutomationRule, Notification, Brand, BusinessType, LeadKpiStats
 } from './crm-state.service';
 import type { WhatsAppAccount, CampaignRecipient, CampaignStats } from './domains/whatsapp-campaigns.service';
 import type { PartnerLedger } from '../shared/partner-ledger.model';
@@ -396,6 +396,10 @@ export class ApiService extends BaseApiService {
     return this.get<PageResponse<Partner>>(`/partners/type/${type}`, { size: 1000 }).pipe(
       map(response => response.content || [])
     );
+  }
+
+  getLeadKpi(): Observable<LeadKpiStats> {
+    return this.get<LeadKpiStats>(`/partners/stats/leads`);
   }
 
   getPartnersByStage(stage: string): Observable<Partner[]> {

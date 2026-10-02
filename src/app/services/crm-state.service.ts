@@ -625,6 +625,15 @@ export interface Lead {
 }
 
 /** A product line partners are attributed to (BentoCars, BentoTravel, CRMbento...). */
+/** Server-computed numbers behind the dashboard's "New Leads" tile (GET /partners/stats/leads). */
+export interface LeadKpiStats {
+  total: number;
+  new_this_month: number;
+  previous_month: number;
+  /** Leads created per calendar month, oldest first, current month last. */
+  monthly_series: number[];
+}
+
 export interface Brand {
   id: string;
   name: string;
@@ -1473,6 +1482,20 @@ export class CrmStateService {
         console.warn('Failed to load leads from API, using local data:', err);
         this.leadsLoaded.set(true);
       }
+    });
+  }
+
+  /** Latest lead KPI from the server; null until the first response (or if the call fails). */
+  leadKpi = signal<LeadKpiStats | null>(null);
+
+  /**
+   * Refreshes the lead KPI. Deliberately not guarded by a "loaded" flag: new leads arrive from
+   * the bot and landing pages while the CRM is open, so each dashboard visit re-reads it.
+   */
+  loadLeadKpi(): void {
+    this.api.getLeadKpi().subscribe({
+      next: (kpi) => this.leadKpi.set(kpi),
+      error: (err) => console.warn('Failed to load lead KPI from API:', err)
     });
   }
 

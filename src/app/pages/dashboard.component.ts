@@ -49,6 +49,8 @@ interface KpiData {
   spark: Spark;
   /** Where the tile drills down to. */
   route: string;
+  /** Partners-page tab to land on, when the route is shared by several partner types. */
+  tab?: string;
 }
 
 interface TodayItem {
@@ -111,6 +113,7 @@ const CATALOG: TileDef[] = [
   { id: 'kpi:activeCampaigns', kind: 'kpi', title: 'Campaigns', icon: 'campaign', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
   { id: 'kpi:marketingSpend', kind: 'kpi', title: 'Reach', icon: 'send', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
   { id: 'kpi:newTasksWeek', kind: 'kpi', title: 'New Tasks', icon: 'assignment_add', tone: ENTITY_TONE.tasks, w: 2, h: 2 },
+  { id: 'kpi:newLeads', kind: 'kpi', title: 'New Leads', icon: 'person_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
   { id: 'kpi:newProspects', kind: 'kpi', title: 'New Prospects', icon: 'group_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
   { id: 'kpi:lostProspects', kind: 'kpi', title: 'Lost Deals', icon: 'trending_down', tone: ENTITY_TONE.late, w: 2, h: 2 },
   { id: 'kpi:todaysDeal', kind: 'kpi', title: 'Best Today', icon: 'star', tone: ENTITY_TONE.deals, w: 2, h: 2 }
@@ -358,7 +361,7 @@ const CATALOG: TileDef[] = [
                 <!-- ── KPI ── -->
                 @case ('kpi') {
                   @let k = kpi(tile.id);
-                  <button type="button" class="kpi kpi--link" data-no-drag (click)="openKpi(k.route)" [attr.aria-label]="tile.title + ': open ' + k.route.slice(1)">
+                  <button type="button" class="kpi kpi--link" data-no-drag (click)="openKpi(k.route, k.tab)" [attr.aria-label]="tile.title + ': open ' + k.route.slice(1)">
                     <span class="dash-value dash-value--kpi" [appCountUp]="k.raw" [appCountUpFormat]="k.format">0</span>
                   </button>
                   <div class="kpi__foot">
@@ -592,6 +595,7 @@ export class DashboardComponent {
     this.state.loadTickets();
     this.state.loadInvoices();
     this.state.loadCampaigns();
+    this.state.loadLeadKpi();
   }
 
   // ────────────────────────────────────────────────────────
@@ -940,6 +944,11 @@ export class DashboardComponent {
       .sort((a, b) => b.amount - a.amount);
     const dailyDeals = this.dailySeries(deals.map(d => ({ date: d.orderDate, value: 1 })), 14);
 
+    // Leads come from the server's own aggregate: state.partners() is one page of the list, so
+    // counting leads out of it would undercount. Zeros until the first response lands.
+    const leadKpi = this.state.leadKpi();
+    const leadSeries = leadKpi?.monthly_series ?? new Array(12).fill(0);
+
     const openTickets = tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
     const activeCampaigns = campaigns.filter(c => c.status === 'Active').length;
 
@@ -951,7 +960,7 @@ export class DashboardComponent {
       hint: string,
       series: number[],
       route: string,
-      opts: { inverted?: boolean; period?: Delta['period'] } = {}
+      opts: { inverted?: boolean; period?: Delta['period']; tab?: string } = {}
     ): KpiData => ({
       label,
       icon,
@@ -960,7 +969,8 @@ export class DashboardComponent {
       hint,
       delta: this.delta(series, opts.inverted, opts.period),
       spark: this.spark(series, 90, 26),
-      route
+      route,
+      tab: opts.tab
     });
 
     return {
@@ -971,6 +981,7 @@ export class DashboardComponent {
       activeCampaigns: make('Active Campaigns', 'campaign', activeCampaigns, this.intFormat, 'running now', campaignSeries, '/marketing'),
       marketingSpend: make('Campaign Reach', 'send', this.last(reachSeries), v => this.compact(v), 'messages sent this month', reachSeries, '/marketing'),
       newTasksWeek: make('New Tasks', 'assignment_add', this.last(taskSeries), this.intFormat, 'created this week', taskSeries, '/tasks', { period: 'week' }),
+      newLeads: make('New Leads', 'person_add', leadKpi?.new_this_month ?? 0, this.intFormat, `${leadKpi?.total ?? 0} leads in total`, leadSeries, '/partners', { tab: 'Lead' }),
       newProspects: make('New Prospects', 'group_add', this.last(prospectSeries), this.intFormat, 'added this month', prospectSeries, '/partners'),
       lostProspects: make('Lost Deals', 'trending_down', this.last(lostSeries), v => this.moneyCompact(v), 'value lost this month', lostSeries, '/sales', { inverted: true }),
       todaysDeal: make(
@@ -1028,7 +1039,8 @@ export class DashboardComponent {
     return `${d.direction === 'up' ? 'Up' : 'Down'} ${d.label} vs previous ${d.period}`;
   }
 
-  openKpi(route: string) {
+  openKpi(route: string, tab?: string) {
+    if (tab) this.state.navigateTab.set(tab);
     this.router.navigate([route]);
   }
 
