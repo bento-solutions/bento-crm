@@ -62,11 +62,11 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
       <div class="flex items-center gap-1 shrink-0">
         @if (c.partnerId && c.partnerType === 'LEAD') {
           <a [routerLink]="['/partners/lead', c.partnerId]" class="wa-icon-btn text-xs font-semibold px-2 py-1.5 rounded-lg hidden sm:inline-flex items-center gap-1">
-            <mat-icon class="!text-lg !w-4 !h-4">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
+            <mat-icon class="icon-sm">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
           </a>
         } @else if (!c.partnerId && canCreateLead()) {
           <button type="button" class="wa-icon-btn text-xs font-semibold px-2 py-1.5 rounded-lg inline-flex items-center gap-1" (click)="createLead.emit()">
-            <mat-icon class="!text-lg !w-4 !h-4">person_add</mat-icon><span class="hidden sm:inline">{{ 'inbox.header.createLead' | translate }}</span>
+            <mat-icon class="icon-sm">person_add</mat-icon><span class="hidden sm:inline">{{ 'inbox.header.createLead' | translate }}</span>
           </button>
         }
         <div class="relative">
@@ -78,7 +78,7 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
             <div class="wa-menu absolute end-0 top-10 z-30 w-64 rounded-xl py-1 text-sm">
               @if (c.partnerId && c.partnerType === 'LEAD') {
                 <a [routerLink]="['/partners/lead', c.partnerId]" class="flex items-center gap-2 px-3 py-2 sm:hidden" (click)="menuOpen.set(false)">
-                  <mat-icon class="!text-lg wa-muted">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
+                  <mat-icon class="wa-muted icon-md">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
                 </a>
               }
               @if (canLink()) {
@@ -102,18 +102,18 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
                   </div>
                 } @else {
                   <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start" (click)="linking.set(true)">
-                    <mat-icon class="!text-lg wa-muted">link</mat-icon>{{ 'inbox.header.linkPartner' | translate }}
+                    <mat-icon class="wa-muted icon-md">link</mat-icon>{{ 'inbox.header.linkPartner' | translate }}
                   </button>
                   @if (c.partnerId) {
                     <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start" (click)="linkPartner.emit(null); close()">
-                      <mat-icon class="!text-lg wa-muted">link_off</mat-icon>{{ 'inbox.header.unlink' | translate }}
+                      <mat-icon class="wa-muted icon-md">link_off</mat-icon>{{ 'inbox.header.unlink' | translate }}
                     </button>
                   }
                 }
               }
               @if (canIgnore()) {
                 <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start wa-danger" (click)="confirmIgnore()">
-                  <mat-icon class="!text-lg">block</mat-icon>{{ 'inbox.header.ignore' | translate }}
+                  <mat-icon class="icon-md">block</mat-icon>{{ 'inbox.header.ignore' | translate }}
                 </button>
               }
             </div>

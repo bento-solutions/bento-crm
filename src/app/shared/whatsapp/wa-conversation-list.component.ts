@@ -11,7 +11,6 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
   imports: [FormsModule, MatIconModule, TranslatePipe],
   styles: [`
     :host { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-    .wa-filters button[aria-pressed="true"] { background: var(--color-text-primary); color: var(--color-surface); }
     .wa-row { border-bottom: 1px solid var(--color-border-light); }
     .wa-row:hover { background: var(--color-surface-hover); }
     .wa-row[aria-current="true"] { background: var(--color-accent-light); }
@@ -21,23 +20,24 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
     .wa-search { background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); }
   `],
   template: `
-    <div class="p-3 space-y-2 border-b" style="border-color: var(--color-border)">
-      <div class="relative">
-        <mat-icon class="absolute start-2 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] wa-muted">search</mat-icon>
+    <div class="p-3 space-y-2 border-b border-line">
+      <label class="search-field search-field--block">
+        <mat-icon>search</mat-icon>
         <input
           type="search"
-          class="input-field w-full"
+          class="input-field"
           [placeholder]="'inbox.search' | translate"
           [ngModel]="query()"
           (ngModelChange)="onQuery($event)"
           [attr.aria-label]="'inbox.search' | translate"
         />
-      </div>
-      <div class="wa-filters flex gap-1 overflow-x-auto" role="group" [attr.aria-label]="'inbox.filter.label' | translate">
+      </label>
+      <div class="segmented w-full overflow-x-auto" role="group" [attr.aria-label]="'inbox.filter.label' | translate">
         @for (f of filters; track f) {
           <button
             type="button"
-            class="px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap wa-muted"
+            class="segmented__item flex-1 justify-center"
+            [class.is-active]="filter() === f"
             [attr.aria-pressed]="filter() === f"
             (click)="filterChange.emit(f)"
           >{{ ('inbox.filter.' + f) | translate }}</button>
@@ -69,7 +69,7 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
             <span class="flex items-center justify-between gap-2 mt-0.5">
               <span class="text-xs truncate wa-muted flex items-center gap-1">
                 @if (c.lastMessageDirection === 'OUT') {
-                  <mat-icon class="!text-base !w-[14px] !h-[14px] shrink-0">done_all</mat-icon>
+                  <mat-icon class="shrink-0 icon-xs">done_all</mat-icon>
                 }
                 <span class="truncate" dir="auto">{{ c.lastMessagePreview }}</span>
               </span>
@@ -89,7 +89,7 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
       } @empty {
         @if (!loading()) {
           <div class="p-8 text-center text-sm wa-muted">
-            <mat-icon class="!text-3xl !w-8 !h-8 mb-2 opacity-50">forum</mat-icon>
+            <mat-icon class="mb-2 opacity-50 icon-xl">forum</mat-icon>
             <p>{{ (filter() === 'all' && !query() ? 'inbox.empty' : 'inbox.emptyFiltered') | translate }}</p>
           </div>
         }

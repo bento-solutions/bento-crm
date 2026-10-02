@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
   template: `
     @if (blockedReason(); as reason) {
       <p class="wa-note text-xs px-4 py-2 flex items-center gap-2">
-        <mat-icon class="!text-lg !w-4 !h-4 shrink-0">info</mat-icon>{{ reason | translate }}
+        <mat-icon class="shrink-0 icon-sm">info</mat-icon>{{ reason | translate }}
       </p>
     }
     @if (canSend()) {

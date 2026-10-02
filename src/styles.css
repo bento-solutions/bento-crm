@@ -712,6 +712,7 @@ mat-icon.mat-icon { color: revert-layer; }
   .search-field { position: relative; display: block; min-width: 200px; max-width: 360px; flex: 1 1 240px; }
   .search-field > .mat-icon { position: absolute; inset-inline-start: 10px; top: 50%; transform: translateY(-50%); color: var(--color-text-tertiary); pointer-events: none; }
   .search-field > .input-field { padding-inline-start: 34px; }
+  .search-field--block { max-width: none; flex: none; width: 100%; }
 
   /* ── Badges & chips ───────────────────────── */
   .badge, .badge-neutral, .badge-accent, .badge-success, .badge-warning, .badge-danger, .badge-info, .badge-violet, .badge-primary {

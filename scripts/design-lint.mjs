@@ -23,6 +23,7 @@ const rules = [
   { id: 'palette', rx: new RegExp(`(?<![\\w-])(?:[\\w\\[\\]:&>*-]+:)*(?:bg|text|border|ring|divide|outline|from|to|via|fill|stroke|decoration|placeholder|accent|caret|shadow)-(?:${PALETTE})-\\d{2,3}(?![\\w-])`, 'g'), msg: 'raw palette utility — use a semantic token (bg-surface, text-ink-2, border-line, badge-success …)' },
   { id: 'arbitrary-size', rx: /(?<![\w-])text-\[\d+(?:\.\d+)?px\]/g, msg: 'arbitrary font size — use text-meta/xs/sm/base/lg/xl/2xl or icon-* for icons' },
   { id: 'arbitrary-colour', rx: /(?<![\w-])(?:bg|text|border|ring|fill|stroke)-\[(?:#|rgb|hsl)[^\]]*\]/g, msg: 'arbitrary colour — use a semantic token' },
+  { id: 'important-size', rx: /(?<![\w-])!(?:text|w|h|size)-[\w\[\]./]+/g, msg: 'important-modifier sizing — use icon-xs/sm/md/lg/xl on icons, or a type token' },
   { id: 'weight', rx: /(?<![\w-])font-(?:bold|extrabold|black)(?![\w-])/g, msg: 'use font-semibold (headings/emphasis) or font-medium' },
   { id: 'gradient', rx: /(?<![\w-])bg-gradient-to-/g, msg: 'no gradients — flat surfaces only' },
   { id: 'native-dialog', rx: /(?<![\w.])(?:confirm|alert|prompt)\(/g, msg: 'native browser dialog — use ConfirmService / ToastService', skipComments: true },
