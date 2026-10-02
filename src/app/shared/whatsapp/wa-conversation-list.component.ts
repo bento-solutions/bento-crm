@@ -16,17 +16,17 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
     .wa-row:hover { background: var(--color-surface-hover); }
     .wa-row[aria-current="true"] { background: var(--color-accent-light); }
     .wa-avatar { background: var(--color-surface-active); color: var(--color-text-primary); }
-    .wa-unread { background: var(--color-success); color: #fff; }
+    .wa-unread { background: var(--color-primary); color: var(--color-on-primary); }
     .wa-muted { color: var(--color-text-secondary); }
     .wa-search { background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); }
   `],
   template: `
     <div class="p-3 space-y-2 border-b" style="border-color: var(--color-border)">
       <div class="relative">
-        <mat-icon class="absolute start-2 top-1/2 -translate-y-1/2 !text-[18px] !w-[18px] !h-[18px] wa-muted">search</mat-icon>
+        <mat-icon class="absolute start-2 top-1/2 -translate-y-1/2 !text-lg !w-[18px] !h-[18px] wa-muted">search</mat-icon>
         <input
           type="search"
-          class="wa-search w-full rounded-lg ps-8 pe-2 py-1.5 text-sm"
+          class="input-field w-full"
           [placeholder]="'inbox.search' | translate"
           [ngModel]="query()"
           (ngModelChange)="onQuery($event)"
@@ -54,12 +54,12 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
           [attr.aria-current]="c.id === selectedId()"
           (click)="selectConversation.emit(c.id)"
         >
-          <span class="wa-avatar h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+          <span class="wa-avatar h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0">
             {{ avatar(c) }}
           </span>
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline justify-between gap-2">
-              <span class="text-sm truncate" [class.font-bold]="c.unreadCount > 0" [class.font-semibold]="c.unreadCount === 0">
+              <span class="text-sm truncate" [class.font-semibold]="c.unreadCount > 0" [class.font-semibold]="c.unreadCount === 0">
                 {{ title(c) }}
               </span>
               <span class="text-meta shrink-0" [style.color]="c.unreadCount > 0 ? 'var(--color-success)' : 'var(--color-text-tertiary)'">
@@ -69,12 +69,12 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
             <span class="flex items-center justify-between gap-2 mt-0.5">
               <span class="text-xs truncate wa-muted flex items-center gap-1">
                 @if (c.lastMessageDirection === 'OUT') {
-                  <mat-icon class="!text-[14px] !w-[14px] !h-[14px] shrink-0">done_all</mat-icon>
+                  <mat-icon class="!text-base !w-[14px] !h-[14px] shrink-0">done_all</mat-icon>
                 }
                 <span class="truncate" dir="auto">{{ c.lastMessagePreview }}</span>
               </span>
               @if (c.unreadCount > 0) {
-                <span class="wa-unread text-meta font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center shrink-0">
+                <span class="wa-unread text-meta font-semibold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center shrink-0">
                   {{ c.unreadCount }}
                 </span>
               }
@@ -89,7 +89,7 @@ import { conversationTitle, formatPhone, initials, listTime } from './wa-format'
       } @empty {
         @if (!loading()) {
           <div class="p-8 text-center text-sm wa-muted">
-            <mat-icon class="!text-[32px] !w-8 !h-8 mb-2 opacity-50">forum</mat-icon>
+            <mat-icon class="!text-3xl !w-8 !h-8 mb-2 opacity-50">forum</mat-icon>
             <p>{{ (filter() === 'all' && !query() ? 'inbox.empty' : 'inbox.emptyFiltered') | translate }}</p>
           </div>
         }

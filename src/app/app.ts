@@ -7,6 +7,9 @@ import { UserAvatarComponent } from './shared/user-avatar.component';
 import { SupportModalComponent } from './shared/support-modal.component';
 import { NotificationInboxDrawerComponent } from './shared/notification-inbox-drawer.component';
 import { ToastContainerComponent } from './shared/toast.component';
+import { ConfirmDialogComponent } from './shared/ui/confirm-dialog.component';
+import { ENTITY_TONE } from './shared/ui/tones';
+import type { Tone } from './shared/ui/stat-card.component';
 import { LoginComponent } from './pages/login.component';
 import { filter } from 'rxjs/operators';
 import { Subscription, interval } from 'rxjs';
@@ -98,6 +101,15 @@ interface SearchResult {
   actionId?: string;
 }
 
+interface CreateItem {
+  label: string;
+  icon: string;
+  route: string;
+  tone: Tone;
+  tab?: string;
+  actionId?: string;
+}
+
 interface QuickAction {
   actionId: string;
   label: string;
@@ -146,7 +158,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, LoginComponent],
+  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent],
   styles: [`
     :host {
       display: block;
@@ -224,14 +236,14 @@ const SEARCH_ITEMS: SearchItem[] = [
       width: 28px;
       height: 28px;
       object-fit: contain;
-      border-radius: 6px;
+      border-radius: var(--r-control);
     }
 
     .sidebar-collapse-btn {
       margin-left: auto;
       width: 28px;
       height: 28px;
-      border-radius: 6px;
+      border-radius: var(--r-control);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -311,7 +323,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       align-items: center;
       gap: 10px;
       padding: 7px 12px;
-      border-radius: 6px;
+      border-radius: var(--r-control);
       font-size: 13px;
       font-weight: 500;
       color: var(--color-text-secondary);
@@ -332,8 +344,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       height: 18px;
       padding: 0 5px;
       border-radius: 9px;
-      background: var(--color-success);
-      color: #fff;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
       font-size: 11px;
       font-weight: 700;
       line-height: 18px;
@@ -352,12 +364,12 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-link.active {
       background: var(--color-accent-light);
-      color: var(--color-accent);
+      color: var(--color-accent-text);
       font-weight: 600;
     }
 
     .sidebar-link.active mat-icon {
-      color: var(--color-accent);
+      color: var(--color-accent-text);
     }
 
     .sidebar-link mat-icon {
@@ -388,7 +400,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       align-items: center;
       gap: 10px;
       padding: 7px 12px;
-      border-radius: 6px;
+      border-radius: var(--r-control);
       font-size: 13px;
       font-weight: 500;
       color: var(--color-text-secondary);
@@ -408,12 +420,12 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-bottom-link.active {
       background: var(--color-accent-light);
-      color: var(--color-accent);
+      color: var(--color-accent-text);
       font-weight: 600;
     }
 
     .sidebar-bottom-link.active mat-icon {
-      color: var(--color-accent);
+      color: var(--color-accent-text);
     }
 
     .sidebar-user {
@@ -421,10 +433,10 @@ const SEARCH_ITEMS: SearchItem[] = [
       align-items: center;
       gap: 10px;
       padding: 10px 12px;
-      border-top: 1px solid var(--color-surface-hover);
+      border-top: 1px solid var(--color-border-light);
       margin-top: 4px;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: var(--r-control);
       transition: background 150ms ease;
       text-decoration: none;
     }
@@ -444,7 +456,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-profile-wrapper {
       position: relative;
-      border-top: 1px solid var(--color-surface-hover);
+      border-top: 1px solid var(--color-border-light);
       margin-top: 4px;
     }
 
@@ -467,8 +479,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       right: 0;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 10px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      border-radius: var(--r-card);
+      box-shadow: var(--shadow-lg);
       padding: 4px;
       z-index: 60;
       overflow: hidden;
@@ -486,7 +498,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       align-items: center;
       gap: 10px;
       padding: 8px 12px;
-      border-radius: 6px;
+      border-radius: var(--r-control);
       font-size: 13px;
       font-weight: 500;
       color: var(--color-text-secondary);
@@ -553,7 +565,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 12px 24px;
+      min-height: var(--topbar-height);
+      padding: 8px var(--content-padding);
       background: var(--color-surface);
       border-bottom: 1px solid var(--color-border);
       flex-shrink: 0;
@@ -568,10 +581,11 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-search input {
       width: 100%;
-      padding: 7px 12px 7px 36px;
+      height: var(--control-height);
+      padding: 0 12px 0 36px;
       background: var(--color-bg);
       border: 1px solid var(--color-border);
-      border-radius: 8px;
+      border-radius: var(--r-control);
       font-size: 13px;
       color: var(--color-text-heading);
       outline: none;
@@ -584,8 +598,8 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-search input:focus {
       background: var(--color-surface);
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      border-color: var(--color-accent-text);
+      box-shadow: 0 0 0 3px var(--color-focus-ring);
     }
 
     .topbar-search mat-icon {
@@ -626,9 +640,9 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .topbar-icon-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+      width: var(--control-height);
+      height: var(--control-height);
+      border-radius: var(--r-control);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -654,19 +668,21 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .notification-dot {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 16px;
-      height: 16px;
-      background: var(--color-accent);
+      top: 1px;
+      inset-inline-end: 1px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      background: var(--color-primary);
       border: 2px solid var(--color-surface);
       border-radius: 9999px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 9px;
-      font-weight: 700;
-      color: white;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 600;
+      color: var(--color-on-primary);
     }
 
     .topbar-avatar {
@@ -682,8 +698,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       top: calc(100% + 6px);
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 12px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      border-radius: var(--r-card);
+      box-shadow: var(--shadow-lg);
       max-height: 320px;
       overflow-y: auto;
       z-index: 50;
@@ -733,7 +749,7 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .search-result-breadcrumb {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -754,41 +770,45 @@ const SEARCH_ITEMS: SearchItem[] = [
       line-height: 1.3;
     }
 
-    /* ── Breadcrumbs ── */
-    .content-breadcrumbs {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 12px 24px 0;
-      font-size: 13px;
-    }
-
-    .breadcrumb-link {
-      color: var(--color-text-secondary);
-      font-weight: 500;
-      text-decoration: none;
-      transition: color 150ms ease;
-    }
-
-    .breadcrumb-link:hover {
-      color: var(--color-text-heading);
-    }
-
-    .breadcrumb-current {
-      color: var(--color-text-heading);
-      font-weight: 600;
-    }
-
-    .breadcrumb-sep {
-      color: var(--color-border-strong);
-    }
 
     /* ── Main content ── */
     .content-main {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 56px 24px 24px;
+      padding: var(--content-padding);
     }
+
+    /* Pages are centred with a generous cap so ultra-wide screens keep readable line lengths. */
+    .content-main > :not(router-outlet) {
+      display: block;
+      max-width: 1680px;
+      margin-inline: auto;
+    }
+
+    @media (max-width: 640px) {
+      .content-main { padding: 16px; }
+      .content-topbar { padding-inline: 16px; }
+    }
+
+    /* ── Create menu (global "+") ── */
+    .create-menu { position: relative; }
+    .create-menu__panel {
+      position: absolute;
+      inset-inline-end: 0;
+      top: calc(100% + 6px);
+      width: 232px;
+      z-index: var(--z-dropdown);
+    }
+    .create-menu__item-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--r-control);
+      flex-shrink: 0;
+    }
+    .backdrop-clear { position: fixed; inset: 0; z-index: calc(var(--z-dropdown) - 1); }
 
     /* ── Mobile sidebar toggle ── */
     .mobile-sidebar-toggle {
@@ -816,114 +836,16 @@ const SEARCH_ITEMS: SearchItem[] = [
       .mobile-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.3);
+        background: var(--scrim);
         z-index: 45;
       }
     }
 
-    /* ── Quick Actions FAB ── */
-    .quick-actions-fab {
-      position: fixed;
-      bottom: 32px;
-      right: 24px;
-      z-index: 50;
-    }
 
-    .fab-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-accent);
-      color: var(--color-accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .fab-btn:hover {
-      background: var(--color-accent);
-      color: var(--color-surface);
-    }
-
-    .fab-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      line-height: 20px;
-    }
-
-    .fab-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 49;
-    }
-
-    .fab-dropdown {
-      position: absolute;
-      bottom: calc(100% + 12px);
-      right: 0;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 12px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
-      padding: 6px;
-      min-width: 200px;
-      z-index: 50;
-    }
-
-    .fab-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: var(--color-text-primary);
-      font-size: 13px;
-      font-weight: 600;
-      transition: background 150ms ease;
-    }
-
-    .fab-item:hover {
-      background: var(--color-surface-hover);
-    }
-
-    .fab-item-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--color-accent-light);
-      flex-shrink: 0;
-    }
-
-    .fab-item-icon mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      line-height: 18px;
-      color: var(--color-accent);
-    }
-
-    .fab-btn mat-icon,
-    .fab-dropdown mat-icon {
-      color: inherit;
-    }
-
-    @media (max-width: 768px) {
-      .quick-actions-fab {
-        right: 16px;
-      }
-    }
   `],
   template: `
     @if (state.isAuthenticated()) {
-      <div class="app-layout font-sans search-container">
+      <div class="app-layout search-container">
 
         <!-- Mobile overlay -->
         @if (mobileMenuOpen()) {
@@ -1018,7 +940,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                     (click)="closeProfileMenu()"
                   >
                     <mat-icon>person</mat-icon>
-                    <span>Settings</span>
+                    <span>My Profile</span>
                   </a>
                   <button
                     class="profile-menu-item"
@@ -1061,7 +983,7 @@ const SEARCH_ITEMS: SearchItem[] = [
               />
               @if (searchQuery()) {
                 <button class="clear-btn" (click)="clearSearch()" title="Clear search">
-                  <mat-icon class="text-[14px] w-3.5 h-3.5">close</mat-icon>
+                  <mat-icon class="icon-xs">close</mat-icon>
                 </button>
               }
 
@@ -1093,60 +1015,68 @@ const SEARCH_ITEMS: SearchItem[] = [
               }
               @if (showSearchResults() && searchQuery().length >= 1 && filteredSearchItems().length === 0) {
                 <div class="search-dropdown" style="padding: 20px; text-align: center;">
-                  <p class="text-body text-zinc-500">No results found for "{{ searchQuery() }}"</p>
+                  <p class="text-body text-ink-3">No results found for "{{ searchQuery() }}"</p>
                 </div>
               }
             </div>
 
             <!-- Right Actions -->
             <div class="topbar-actions">
-              @if (activeRoute() === '/') {
+              <!-- Global create -->
+              <div class="create-menu">
                 <button
-                  class="topbar-icon-btn"
-                  (click)="state.isCustomizing.set(!state.isCustomizing())"
-                  [title]="state.isCustomizing() ? 'Done customising' : 'Customise dashboard'"
+                  class="btn-primary"
+                  (click)="quickActionsOpen.set(!quickActionsOpen())"
+                  [attr.aria-expanded]="quickActionsOpen()"
+                  aria-haspopup="menu"
                 >
-                  <mat-icon>{{ state.isCustomizing() ? 'check' : 'edit_square' }}</mat-icon>
+                  <mat-icon>add</mat-icon>
+                  Create
                 </button>
-              }
+                @if (quickActionsOpen()) {
+                  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
+                  <div class="backdrop-clear" (click)="quickActionsOpen.set(false)"></div>
+                  <div class="menu create-menu__panel" role="menu">
+                    @for (item of createItems; track item.label) {
+                      <button class="menu-item" role="menuitem" (click)="runCreate(item)">
+                        <span class="create-menu__item-icon tone-icon tone" [attr.data-tone]="item.tone"><mat-icon class="icon-sm">{{ item.icon }}</mat-icon></span>
+                        {{ item.label }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+
               <button
                 class="topbar-icon-btn"
                 (click)="openInbox()"
-                title="Mail"
+                title="Messages"
+                aria-label="Messages"
               >
-                <mat-icon>mail</mat-icon>
+                <mat-icon>mail_outline</mat-icon>
               </button>
               <button
                 class="topbar-icon-btn"
                 (click)="openNotifications()"
                 title="Notifications"
+                [attr.aria-label]="'Notifications' + (unreadCount() > 0 ? ', ' + unreadCount() + ' unread' : '')"
               >
                 <mat-icon>notifications_none</mat-icon>
                 @if (unreadCount() > 0) {
-                  <span class="notification-dot">{{ unreadCount() }}</span>
+                  <span class="notification-dot">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
                 }
               </button>
               <a
                 routerLink="/profile"
                 class="topbar-avatar"
                 title="View Profile"
+                aria-label="View profile"
               >
                 <app-user-avatar [userId]="state.currentUserId()" [size]="32" class="shrink-0 rounded-full block"></app-user-avatar>
               </a>
             </div>
           </header>
 
-          <!-- Breadcrumbs -->
-          <div class="content-breadcrumbs">
-            @for (crumb of breadcrumbs(); track crumb.label; let last = $last) {
-              @if (!last && crumb.route) {
-                <a [routerLink]="crumb.route" class="breadcrumb-link">{{ crumb.label }}</a>
-                <mat-icon class="breadcrumb-sep text-[14px] w-3.5 h-3.5">chevron_right</mat-icon>
-              } @else {
-                <span class="breadcrumb-current">{{ crumb.label }}</span>
-              }
-            }
-          </div>
 
           <!-- Main Content -->
           <main class="content-main">
@@ -1156,45 +1086,6 @@ const SEARCH_ITEMS: SearchItem[] = [
 
       </div>
 
-      <!-- Quick Actions FAB -->
-      @if (quickActionsOpen()) {
-        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
-        <div class="fab-backdrop" (click)="quickActionsOpen.set(false)"></div>
-      }
-      <div class="quick-actions-fab">
-        <button class="fab-btn" (click)="quickActionsOpen.set(!quickActionsOpen())">
-          <mat-icon>{{ quickActionsOpen() ? 'close' : 'add' }}</mat-icon>
-        </button>
-
-        @if (quickActionsOpen()) {
-          <div class="fab-dropdown">
-            <a routerLink="/sales" class="fab-item hover:underline" (click)="closeQuickActions()">
-              <div class="fab-item-icon fab-item-icon--blue">
-                <mat-icon>add_business</mat-icon>
-              </div>
-              <span>New Proposal</span>
-            </a>
-            <a routerLink="/partners" class="fab-item hover:underline" (click)="closeQuickActions()">
-              <div class="fab-item-icon fab-item-icon--emerald">
-                <mat-icon>person_add</mat-icon>
-              </div>
-              <span>Add Partner</span>
-            </a>
-            <a routerLink="/marketing" class="fab-item hover:underline" (click)="closeQuickActions()">
-              <div class="fab-item-icon fab-item-icon--amber">
-                <mat-icon>campaign</mat-icon>
-              </div>
-              <span>New Campaign</span>
-            </a>
-            <a routerLink="/tickets" class="fab-item hover:underline" (click)="closeQuickActions()">
-              <div class="fab-item-icon fab-item-icon--rose">
-                <mat-icon>support_agent</mat-icon>
-              </div>
-              <span>Create Ticket</span>
-            </a>
-          </div>
-        }
-      </div>
 
       <!-- Loaded after first paint (or at once when asked for) to keep them out of the initial bundle. -->
       @defer (on idle; when supportRequested()) {
@@ -1212,6 +1103,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       }
 
       <app-toast-container></app-toast-container>
+      <app-confirm-dialog />
     } @else {
       <!-- The only two routes a signed-out visitor is meant to reach: creating an
            organization, and joining one from an emailed invitation. Everything else
@@ -1331,8 +1223,20 @@ export class App implements OnInit, OnDestroy {
   drawerType = signal<'notifications' | 'inbox'>('notifications');
   quickActionsOpen = signal(false);
 
-  closeQuickActions() {
+  /** Global "Create" menu. Items with an `actionId` open the target page's creation dialog. */
+  readonly createItems: CreateItem[] = [
+    { label: 'New Deal', icon: 'monetization_on', route: '/sales', tab: 'deals', actionId: 'new-deal', tone: ENTITY_TONE.deals },
+    { label: 'New Partner', icon: 'person_add', route: '/partners', tab: 'Customer', actionId: 'new-partner', tone: ENTITY_TONE.partners },
+    { label: 'New Ticket', icon: 'support_agent', route: '/tickets', actionId: 'new-ticket', tone: ENTITY_TONE.tickets },
+    { label: 'New Task', icon: 'task_alt', route: '/tasks', tone: ENTITY_TONE.tasks },
+    { label: 'New Campaign', icon: 'campaign', route: '/marketing', tone: ENTITY_TONE.campaigns },
+  ];
+
+  runCreate(item: CreateItem) {
     this.quickActionsOpen.set(false);
+    if (item.tab) this.state.navigateTab.set(item.tab);
+    if (item.actionId) this.state.pendingQuickAction.set({ id: item.actionId });
+    this.router.navigate([item.route]);
   }
 
   openNotifications() {
@@ -1613,39 +1517,6 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
-  breadcrumbs = computed(() => {
-    const route = this.activeRoute();
-    const crumbs: { label: string; route?: string }[] = [];
-
-    if (route === '/') {
-      crumbs.push({ label: 'Dashboard' });
-      return crumbs;
-    }
-
-    // Find the matching parent nav item
-    const navItem = ALL_NAV_ITEMS.find(item => route.startsWith(item.route) && item.route !== '/');
-    if (navItem) {
-      crumbs.push({ label: navItem.label, route: navItem.route });
-
-      // Check for sub-label from service (set by section pages with sub-tabs)
-      const subLabel = this.state.breadcrumbLabel();
-      if (subLabel) {
-        crumbs.push({ label: subLabel });
-      } else {
-        // Derive sub-label from URL path segments beyond the nav route
-        const subPath = route.replace(navItem.route, '').replace(/^\//, '');
-        if (subPath) {
-          const segments = subPath.split('/');
-          segments.forEach(seg => {
-            const label = seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' ');
-            crumbs.push({ label });
-          });
-        }
-      }
-    }
-
-    return crumbs;
-  });
 
   badgeCount(item: NavItem): number {
     return item.badge === 'whatsappUnread' ? this.inbox.unread().conversations : 0;

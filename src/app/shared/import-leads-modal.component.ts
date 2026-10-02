@@ -56,14 +56,14 @@ interface ParsedRow {
   imports: [CommonModule, FormsModule, MatIconModule],
   template: `
     <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
-    <div class="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="button" (click)="close.emit()" (keydown.escape)="close.emit()">
+    <div class="modal-backdrop" role="button" (click)="close.emit()" (keydown.escape)="close.emit()">
       <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" role="button" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()">
+      <div class="modal modal-2xl modal-flush" role="button" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()">
 
-        <div class="p-6 border-b border-zinc-100 flex items-center justify-between">
+        <div class="p-6 border-b border-line-soft flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-bold text-zinc-950">Import Leads</h3>
-            <p class="text-sm text-zinc-500 mt-0.5">
+            <h3 class="modal-title">Import Leads</h3>
+            <p class="text-sm text-ink-3 mt-0.5">
               @switch (step()) {
                 @case ('upload') { Choose a CSV or Excel file to load. }
                 @case ('map') { Match each column to a lead field. }
@@ -71,7 +71,7 @@ interface ParsedRow {
               }
             </p>
           </div>
-          <button (click)="close.emit()" (keydown.escape)="close.emit()" class="text-zinc-400 hover:text-zinc-600 transition-colors">
+          <button (click)="close.emit()" (keydown.escape)="close.emit()" class="btn-icon btn-sm">
             <mat-icon>close</mat-icon>
           </button>
         </div>
@@ -80,33 +80,33 @@ interface ParsedRow {
 
           <!-- Step 1: file -->
           @if (step() === 'upload') {
-            <label class="block border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-2xl p-12 text-center cursor-pointer transition-colors"
+            <label class="block border-2 border-dashed border-line hover:border-line-strong rounded-2xl p-12 text-center cursor-pointer transition-colors"
               (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
-              <mat-icon class="text-[40px]! w-10 h-10 text-zinc-300">upload_file</mat-icon>
-              <div class="mt-3 text-sm font-semibold text-zinc-700">Drop a file here, or click to browse</div>
-              <div class="mt-1 text-xs text-zinc-400">.csv, .xls or .xlsx — the first row must be the column headers</div>
+              <mat-icon class="text-ink-4 icon-xl">upload_file</mat-icon>
+              <div class="mt-3 text-sm font-semibold text-ink-2">Drop a file here, or click to browse</div>
+              <div class="mt-1 text-xs text-ink-3">.csv, .xls or .xlsx — the first row must be the column headers</div>
               @if (parsing()) {
-                <div class="mt-3 text-xs font-semibold text-zinc-500">Reading file…</div>
+                <div class="mt-3 text-xs font-semibold text-ink-3">Reading file…</div>
               }
               <input type="file" accept=".csv,.xls,.xlsx" class="hidden" (change)="onFileSelected($event)">
             </label>
             @if (parseError()) {
-              <div class="mt-4 text-sm text-red-600">{{ parseError() }}</div>
+              <div class="mt-4 text-sm text-danger-ink">{{ parseError() }}</div>
             }
           }
 
           <!-- Step 2: column mapping -->
           @if (step() === 'map') {
-            <div class="text-xs text-zinc-500 mb-4">
-              <strong class="text-zinc-700">{{ fileName() }}</strong> — {{ rawRows().length }} data row(s), {{ headers().length }} column(s).
+            <div class="text-xs text-ink-3 mb-4">
+              <strong class="text-ink-2">{{ fileName() }}</strong> — {{ rawRows().length }} data row(s), {{ headers().length }} column(s).
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               @for (header of headers(); track header) {
-                <div class="flex items-center gap-3 bg-zinc-50 rounded-xl p-3">
-                  <span class="text-sm font-mono text-zinc-700 truncate w-1/2" [title]="header">{{ header }}</span>
-                  <mat-icon class="text-[16px]! w-4 h-4 text-zinc-300 shrink-0">arrow_forward</mat-icon>
+                <div class="flex items-center gap-3 bg-subtle rounded-xl p-3">
+                  <span class="text-sm font-mono text-ink-2 truncate w-1/2" [title]="header">{{ header }}</span>
+                  <mat-icon class="text-ink-4 shrink-0 icon-sm">arrow_forward</mat-icon>
                   <select [ngModel]="mapping()[header] || ''" (ngModelChange)="setMapping(header, $event)"
-                    class="grow border border-zinc-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-700/20">
+                    class="input-field">
                     <option value="">— Ignore —</option>
                     @for (field of fields; track field.key) {
                       <option [value]="field.key">{{ field.label }}{{ field.required ? ' *' : '' }}</option>
@@ -116,7 +116,7 @@ interface ParsedRow {
               }
             </div>
             @if (!hasNameMapping()) {
-              <div class="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div class="alert alert-warning mt-4">
                 Map a column to <strong>Name</strong> — a lead cannot be created without one.
               </div>
             }
@@ -125,66 +125,66 @@ interface ParsedRow {
           <!-- Step 3: preview -->
           @if (step() === 'preview') {
             <div class="flex flex-wrap gap-3 mb-4">
-              <span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700">
+              <span class="badge badge-lg badge-success">
                 {{ validRows().length }} ready to import
               </span>
               @if (invalidRows().length > 0) {
-                <span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-50 text-red-700">
+                <span class="badge badge-lg badge-danger">
                   {{ invalidRows().length }} will be skipped
                 </span>
               }
             </div>
 
-            <div class="overflow-x-auto border border-zinc-100 rounded-xl">
-              <table class="min-w-full text-sm">
-                <thead class="bg-zinc-50">
-                  <tr class="text-xs uppercase tracking-wider text-zinc-500">
-                    <th scope="col" class="px-3 py-2 text-left font-medium">Row</th>
+            <div class="overflow-x-auto border border-line-soft rounded-xl">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Row</th>
                     @for (field of mappedFields(); track field.key) {
-                      <th scope="col" class="px-3 py-2 text-left font-medium">{{ field.label }}</th>
+                      <th scope="col">{{ field.label }}</th>
                     }
-                    <th scope="col" class="px-3 py-2 text-left font-medium">Issues</th>
+                    <th scope="col">Issues</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100">
+                <tbody>
                   @for (row of previewRows(); track row.rowNumber) {
-                    <tr [class.bg-red-50/50]="row.errors.length > 0">
-                      <td class="px-3 py-2 text-zinc-400 font-mono text-xs">{{ row.rowNumber }}</td>
+                    <tr [class.bg-danger-soft/50]="row.errors.length > 0">
+                      <td class="text-ink-3 font-mono">{{ row.rowNumber }}</td>
                       @for (field of mappedFields(); track field.key) {
-                        <td class="px-3 py-2 text-zinc-700 truncate max-w-[160px]">{{ row.lead[field.key] }}</td>
+                        <td class="text-ink-2 truncate max-w-[160px]">{{ row.lead[field.key] }}</td>
                       }
-                      <td class="px-3 py-2 text-xs text-red-600">{{ row.errors.join('; ') }}</td>
+                      <td class="text-danger-ink">{{ row.errors.join('; ') }}</td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
             @if (parsedRows().length > previewRows().length) {
-              <div class="mt-2 text-xs text-zinc-400">
+              <div class="mt-2 text-xs text-ink-3">
                 Showing the first {{ previewRows().length }} of {{ parsedRows().length }} rows.
               </div>
             }
           }
         </div>
 
-        <div class="p-6 border-t border-zinc-100 flex justify-between gap-3">
+        <div class="p-6 border-t border-line-soft flex justify-between gap-3">
           <button (click)="back()" (keydown.escape)="back()" [disabled]="step() === 'upload'"
-            class="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            class="px-4 py-2 rounded-xl text-sm font-semibold text-ink-2 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             Back
           </button>
           <div class="flex gap-3">
-            <button (click)="close.emit()" (keydown.escape)="close.emit()" class="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition-colors">
+            <button (click)="close.emit()" (keydown.escape)="close.emit()" class="px-4 py-2 rounded-xl text-sm font-semibold text-ink-2 hover:bg-muted transition-colors">
               Cancel
             </button>
             @if (step() === 'map') {
               <button (click)="step.set('preview')" (keydown.escape)="step.set('preview')" [disabled]="!hasNameMapping()"
-                class="bg-zinc-900 hover:bg-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors">
+                class="btn-primary">
                 Preview
               </button>
             }
             @if (step() === 'preview') {
               <button (click)="runImport()" (keydown.escape)="runImport()" [disabled]="validRows().length === 0"
-                class="bg-zinc-900 hover:bg-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors">
+                class="btn-primary">
                 Import {{ validRows().length }} lead(s)
               </button>
             }

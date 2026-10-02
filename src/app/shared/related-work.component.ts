@@ -21,31 +21,31 @@ import { EntityLink, RelatedEntityType, isLinked } from './related-entity.model'
     <div class="space-y-5">
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide flex items-center gap-1.5">
-            <mat-icon class="text-[16px] w-4 h-4 text-zinc-400">checklist</mat-icon>
+          <h4 class="eyebrow flex items-center gap-1.5">
+            <mat-icon class="text-ink-4 icon-sm">checklist</mat-icon>
             Tasks
-            <span class="text-zinc-400 font-semibold">({{ tasks().length }})</span>
+            <span class="text-ink-3 font-semibold">({{ tasks().length }})</span>
           </h4>
-          <a routerLink="/tasks" class="text-xs font-semibold text-blue-700 hover:text-blue-800">All tasks</a>
+          <a routerLink="/tasks" class="text-xs font-semibold text-accent-ink hover:text-accent-ink">All tasks</a>
         </div>
 
         @if (tasks().length === 0) {
-          <p class="text-xs text-zinc-400 italic">No tasks linked to this record.</p>
+          <p class="text-xs text-ink-3 italic">No tasks linked to this record.</p>
         } @else {
           <div class="space-y-1.5">
             @for (task of tasks(); track task.id) {
-              <div class="flex items-center justify-between gap-3 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
+              <div class="flex items-center justify-between gap-3 bg-subtle border border-line-soft rounded-lg px-3 py-2">
                 <div class="min-w-0">
-                  <p class="text-xs font-semibold text-zinc-800 truncate">{{ task.title }}</p>
+                  <p class="text-xs font-semibold text-ink truncate">{{ task.title }}</p>
                   @if (task.dueDate) {
-                    <p class="text-meta text-zinc-400">Due {{ task.dueDate }}</p>
+                    <p class="text-meta text-ink-3">Due {{ task.dueDate }}</p>
                   }
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   @if (task.priority) {
-                    <span class="text-meta font-bold uppercase" [class]="taskPriorityClass(task.priority)">{{ task.priority }}</span>
+                    <span class="eyebrow" [class]="taskPriorityClass(task.priority)">{{ task.priority }}</span>
                   }
-                  <span class="text-meta font-semibold px-2 py-0.5 rounded-full" [class]="taskStatusClass(task.status)">{{ task.status }}</span>
+                  <span class="badge" [class]="taskStatusClass(task.status)">{{ task.status }}</span>
                 </div>
               </div>
             }
@@ -55,27 +55,27 @@ import { EntityLink, RelatedEntityType, isLinked } from './related-entity.model'
 
       <section>
         <div class="flex items-center justify-between mb-2">
-          <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide flex items-center gap-1.5">
-            <mat-icon class="text-[16px] w-4 h-4 text-zinc-400">confirmation_number</mat-icon>
+          <h4 class="eyebrow flex items-center gap-1.5">
+            <mat-icon class="text-ink-4 icon-sm">confirmation_number</mat-icon>
             Tickets
-            <span class="text-zinc-400 font-semibold">({{ tickets().length }})</span>
+            <span class="text-ink-3 font-semibold">({{ tickets().length }})</span>
           </h4>
-          <a routerLink="/tickets" class="text-xs font-semibold text-blue-700 hover:text-blue-800">All tickets</a>
+          <a routerLink="/tickets" class="text-xs font-semibold text-accent-ink hover:text-accent-ink">All tickets</a>
         </div>
 
         @if (tickets().length === 0) {
-          <p class="text-xs text-zinc-400 italic">No tickets linked to this record.</p>
+          <p class="text-xs text-ink-3 italic">No tickets linked to this record.</p>
         } @else {
           <div class="space-y-1.5">
             @for (ticket of tickets(); track ticket.id) {
-              <div class="flex items-center justify-between gap-3 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
+              <div class="flex items-center justify-between gap-3 bg-subtle border border-line-soft rounded-lg px-3 py-2">
                 <div class="min-w-0">
-                  <p class="text-xs font-semibold text-zinc-800 truncate">{{ ticket.title }}</p>
+                  <p class="text-xs font-semibold text-ink truncate">{{ ticket.title }}</p>
                   @if (ticket.type) {
-                    <p class="text-meta text-zinc-400">{{ ticket.type }}</p>
+                    <p class="text-meta text-ink-3">{{ ticket.type }}</p>
                   }
                 </div>
-                <span class="text-meta font-semibold px-2 py-0.5 rounded-full shrink-0" [class]="ticketStatusClass(ticket.status)">
+                <span class="badge shrink-0" [class]="ticketStatusClass(ticket.status)">
                   {{ ticketStatusLabel(ticket.status) }}
                 </span>
               </div>
@@ -115,17 +115,17 @@ export class RelatedWorkComponent implements OnInit {
 
   taskStatusClass(status: string): string {
     switch (status) {
-      case 'Completed': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      case 'In Progress': return 'bg-sky-50 text-sky-700 border border-sky-200';
-      default: return 'bg-zinc-100 text-zinc-700 border border-zinc-200';
+      case 'Completed': return 'badge-success';
+      case 'In Progress': return 'badge-info';
+      default: return 'badge-neutral';
     }
   }
 
   taskPriorityClass(priority: string): string {
     switch (priority) {
-      case 'Urgent': return 'text-red-600';
-      case 'Medium': return 'text-amber-600';
-      default: return 'text-emerald-600';
+      case 'Urgent': return 'text-danger-ink';
+      case 'Medium': return 'text-warning-ink';
+      default: return 'text-success-ink';
     }
   }
 
@@ -141,10 +141,10 @@ export class RelatedWorkComponent implements OnInit {
 
   ticketStatusClass(status: string): string {
     switch (status) {
-      case 'OPEN': return 'bg-red-50 text-red-600 border border-red-200';
-      case 'IN_PROGRESS': return 'bg-amber-50 text-amber-700 border border-amber-200';
-      case 'RESOLVED': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      default: return 'bg-zinc-100 text-zinc-500 border border-zinc-200';
+      case 'OPEN': return 'badge-danger';
+      case 'IN_PROGRESS': return 'badge-warning';
+      case 'RESOLVED': return 'badge-success';
+      default: return 'badge-neutral';
     }
   }
 }

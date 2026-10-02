@@ -8,6 +8,7 @@ import { CampaignsService } from '../services/domains';
 import { PartnersService, Partner } from '../services/domains/partners.service';
 import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains/whatsapp-campaigns.service';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
 
 /**
  * One preset combination of partner type + backend stage(s), for the "group" filter. `type`
@@ -51,36 +52,36 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
   selector: 'app-campaign-detail',
   imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent],
   template: `
-    <div class="space-y-6 font-sans max-w-5xl mx-auto">
-      <a routerLink="/marketing" class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors">
-        <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">arrow_back</mat-icon>
+    <div class="page max-w-5xl mx-auto">
+      <a routerLink="/marketing" class="page-back">
+        <mat-icon class="icon-sm">arrow_back</mat-icon>
         Back to Marketing
       </a>
 
       @if (campaign(); as c) {
         <!-- Header -->
-        <div class="card rounded-2xl p-6 space-y-4">
+        <div class="card p-5 space-y-4">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0 flex-1 space-y-2">
               <div class="flex flex-wrap items-center gap-2">
-                <span [class]="channelColor(c.type)" class="inline-flex items-center gap-1 px-2.5 py-1 text-body font-semibold rounded-full border">
-                  <mat-icon class="text-[16px] w-4 h-4">{{ channelIcon(c.type) }}</mat-icon>{{ c.type }}
+                <span [class]="channelColor(c.type)" class="badge">
+                  <mat-icon class="icon-sm">{{ channelIcon(c.type) }}</mat-icon>{{ c.type }}
                 </span>
-                <span class="text-meta text-zinc-400 font-mono">#{{ c.id.slice(0, 8) }}</span>
+                <span class="text-meta text-ink-3 font-mono">#{{ c.id.slice(0, 8) }}</span>
               </div>
               @if (editingTitle()) {
                 <input [(ngModel)]="draftTitle" (keydown.enter)="saveTitle()" (keydown.escape)="editingTitle.set(false)"
-                       class="w-full input-field rounded-lg p-2 text-xl font-bold text-zinc-950 focus:outline-blue-600" />
+                       class="input-field w-full text-xl" />
                 <div class="flex gap-2">
-                  <button (click)="saveTitle()" class="px-3 py-1.5 bg-zinc-900 text-white text-xs font-semibold rounded-lg">Save</button>
-                  <button (click)="editingTitle.set(false)" class="px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-semibold rounded-lg">Cancel</button>
+                  <button (click)="saveTitle()" class="btn-primary btn-sm">Save</button>
+                  <button (click)="editingTitle.set(false)" class="btn-secondary btn-sm">Cancel</button>
                 </div>
               } @else {
-                <h1 class="text-2xl font-bold text-zinc-950 leading-tight flex items-start gap-2 group">
+                <h1 class="t-title leading-tight flex items-start gap-2">
                   <span>{{ c.title }}</span>
                   @if (canWrite()) {
-                    <button (click)="startEditTitle(c)" title="Rename campaign" class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-700 transition-opacity mt-1">
-                      <mat-icon class="text-[18px] w-4.5 h-4.5">edit</mat-icon>
+                    <button (click)="startEditTitle(c)" title="Rename campaign" class="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-ink-2 transition-opacity mt-1">
+                      <mat-icon class="icon-md">edit</mat-icon>
                     </button>
                   }
                 </h1>
@@ -88,16 +89,16 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
               <app-created-by-badge [createdBy]="c.createdBy" [createdAt]="c.createdAt" [size]="20" />
             </div>
             @if (canDelete()) {
-              <button (click)="deleteCampaign(c)" class="text-zinc-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete campaign">
-                <mat-icon class="text-[20px] w-5 h-5">delete</mat-icon>
+              <button (click)="deleteCampaign(c)" class="btn-icon btn-sm btn-danger-hover" title="Delete campaign">
+                <mat-icon class="icon-sm">delete</mat-icon>
               </button>
             }
           </div>
 
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-zinc-100">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-line-soft">
             <div>
-              <label for="cd_status" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Status</label>
-              <select id="cd_status" [ngModel]="c.status" (ngModelChange)="patch({ status: $event })" [disabled]="!canWrite()" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label for="cd_status" class="field-label mb-1.5">Status</label>
+              <select id="cd_status" [ngModel]="c.status" (ngModelChange)="patch({ status: $event })" [disabled]="!canWrite()" class="input-field w-full">
                 <option value="Draft">Draft</option>
                 <option value="Scheduled">Scheduled</option>
                 <option value="Sending">Sending</option>
@@ -106,48 +107,48 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
               </select>
             </div>
             <div class="col-span-2 md:col-span-2">
-              <label for="cd_audience" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Target audience label</label>
+              <label for="cd_audience" class="field-label mb-1.5">Target audience label</label>
               <input id="cd_audience" [ngModel]="c.targetAudience || ''" (ngModelChange)="draftAudience = $event" (blur)="saveAudience(c)" [disabled]="!canWrite()"
-                     placeholder="e.g. All active customers" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600" />
+                     placeholder="e.g. All active customers" class="input-field w-full" />
             </div>
             <div>
-              <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Messages sent</span>
-              <div class="p-2 text-sm text-zinc-700 font-semibold">{{ c.sentCount || 0 }}</div>
+              <span class="eyebrow block mb-1">Messages sent</span>
+              <div class="p-2 text-sm text-ink-2 font-semibold">{{ c.sentCount || 0 }}</div>
             </div>
           </div>
 
           @if (isWhatsApp(c) && c.templateName) {
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-100 text-sm">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-line-soft text-sm">
               <div>
-                <div class="text-xs font-semibold text-zinc-500 uppercase mb-1">Template</div>
-                <div class="font-mono text-zinc-800">{{ c.templateName }} <span class="text-zinc-400">({{ c.templateLang || 'fr' }})</span></div>
+                <div class="eyebrow mb-1">Template</div>
+                <div class="font-mono text-ink">{{ c.templateName }} <span class="text-ink-3">({{ c.templateLang || 'fr' }})</span></div>
               </div>
               @if (c.followupEnabled) {
                 <div>
-                  <div class="text-xs font-semibold text-zinc-500 uppercase mb-1">Relance</div>
-                  <div class="text-zinc-800">After {{ c.followupDelayDays || 3 }} day(s)</div>
+                  <div class="eyebrow mb-1">Relance</div>
+                  <div class="text-ink">After {{ c.followupDelayDays || 3 }} day(s)</div>
                 </div>
               }
               @if (c.bodyPreview) {
                 <div class="col-span-2">
-                  <div class="text-xs font-semibold text-zinc-500 uppercase mb-1">Preview</div>
-                  <div class="text-zinc-600 truncate">{{ c.bodyPreview }}</div>
+                  <div class="eyebrow mb-1">Preview</div>
+                  <div class="text-ink-2 truncate">{{ c.bodyPreview }}</div>
                 </div>
               }
             </div>
           }
 
           @if (!isWhatsApp(c)) {
-            <div class="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200">
-              <mat-icon class="text-amber-600 text-[18px] w-4.5 h-4.5 shrink-0">info</mat-icon>
-              <p class="text-xs text-amber-800">{{ c.type }} sending isn't wired up yet — build the audience below so it's ready to go once it is.</p>
+            <div class="flex items-start gap-2.5 p-3 rounded-xl bg-warning-soft border border-warning-line">
+              <mat-icon class="text-warning-ink shrink-0 icon-md">info</mat-icon>
+              <p class="text-xs text-warning-ink">{{ c.type }} sending isn't wired up yet — build the audience below so it's ready to go once it is.</p>
             </div>
           } @else if (c.status === 'Draft' && canWrite()) {
-            <div class="flex items-center justify-between gap-3 pt-4 border-t border-zinc-100">
-              <span class="text-xs text-zinc-500">{{ pendingCount() }} recipient(s) ready to send</span>
+            <div class="flex items-center justify-between gap-3 pt-4 border-t border-line-soft">
+              <span class="text-xs text-ink-3">{{ pendingCount() }} recipient(s) ready to send</span>
               <button (click)="launch(c)" [disabled]="pendingCount() === 0 || launching()"
-                      class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg flex items-center gap-1.5 transition-colors">
-                <mat-icon class="text-[18px] w-4.5 h-4.5">send</mat-icon>{{ launching() ? 'Launching…' : 'Launch campaign' }}
+                      class="btn-primary">
+                <mat-icon class="icon-md">send</mat-icon>{{ launching() ? 'Launching…' : 'Launch campaign' }}
               </button>
             </div>
           }
@@ -155,65 +156,65 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
 
         <!-- Message template -->
         @if (canWrite()) {
-          <div class="card rounded-2xl p-6 space-y-4">
+          <div class="card p-5 space-y-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-bold text-zinc-900 flex items-center gap-2">
-                <mat-icon class="text-[20px] w-5 h-5 text-zinc-700">description</mat-icon>Message template
+              <h2 class="card-title flex items-center gap-2">
+                <mat-icon class="text-ink-2 icon-md">description</mat-icon>Message template
               </h2>
               @if (!newTemplateOpen()) {
-                <button (click)="openNewTemplate()" class="text-xs font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1 transition-colors">
-                  <mat-icon class="text-[16px] w-4 h-4">add</mat-icon>New template
+                <button (click)="openNewTemplate()" class="text-xs font-semibold text-ink-2 hover:text-ink flex items-center gap-1 transition-colors">
+                  <mat-icon class="icon-sm">add</mat-icon>New template
                 </button>
               }
             </div>
 
             @if (isWhatsApp(c)) {
-              <p class="text-xs text-zinc-500 -mt-2">Reference copy for your team — the actual WhatsApp send uses the approved Meta template above (<span class="font-mono">{{ c.templateName || 'none set' }}</span>).</p>
+              <p class="text-xs text-ink-3 -mt-2">Reference copy for your team — the actual WhatsApp send uses the approved Meta template above (<span class="font-mono">{{ c.templateName || 'none set' }}</span>).</p>
             }
 
             <div>
-              <label for="cd_template" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Template</label>
-              <select id="cd_template" [ngModel]="c.templateId || ''" (ngModelChange)="onTemplateChange(c, $event)" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label for="cd_template" class="field-label mb-1.5">Template</label>
+              <select id="cd_template" [ngModel]="c.templateId || ''" (ngModelChange)="onTemplateChange(c, $event)" class="input-field w-full">
                 <option value="">-- No template --</option>
                 @for (t of templatesForChannel(c); track t.id) { <option [value]="t.id">{{ t.name }}</option> }
               </select>
             </div>
 
             @if (selectedTemplate(c); as t) {
-              <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-2">
+              <div class="rounded-xl border border-line bg-subtle p-4 space-y-2">
                 @if (c.type === 'Email' && t.subject) {
-                  <div class="text-sm"><span class="font-semibold text-zinc-500">Subject:</span> <span class="text-zinc-900">{{ t.subject }}</span></div>
+                  <div class="text-sm"><span class="font-semibold text-ink-3">Subject:</span> <span class="text-ink">{{ t.subject }}</span></div>
                 }
-                <div class="text-sm text-zinc-700 whitespace-pre-wrap">{{ t.body }}</div>
+                <div class="text-sm text-ink-2 whitespace-pre-wrap">{{ t.body }}</div>
               </div>
             } @else if (templatesForChannel(c).length === 0 && !newTemplateOpen()) {
-              <p class="text-xs text-zinc-400">No {{ c.type }} templates yet — create one above.</p>
+              <p class="text-xs text-ink-3">No {{ c.type }} templates yet — create one above.</p>
             }
 
             @if (newTemplateOpen()) {
-              <div class="rounded-xl border border-zinc-200 p-4 space-y-3">
+              <div class="rounded-xl border border-line p-4 space-y-3">
                 <div>
-                  <label for="cd_new_tpl_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Template name</label>
-                  <input id="cd_new_tpl_name" [(ngModel)]="newTemplateName" type="text" placeholder="e.g. Relance rentrée" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600" />
+                  <label for="cd_new_tpl_name" class="field-label mb-1.5">Template name</label>
+                  <input id="cd_new_tpl_name" [(ngModel)]="newTemplateName" type="text" placeholder="e.g. Relance rentrée" class="input-field w-full" />
                 </div>
                 @if (c.type === 'Email') {
                   <div>
-                    <label for="cd_new_tpl_subject" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Subject</label>
-                    <input id="cd_new_tpl_subject" [(ngModel)]="newTemplateSubject" type="text" placeholder="e.g. Votre offre Bento CRM Pro" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600" />
+                    <label for="cd_new_tpl_subject" class="field-label mb-1.5">Subject</label>
+                    <input id="cd_new_tpl_subject" [(ngModel)]="newTemplateSubject" type="text" placeholder="e.g. Votre offre Bento CRM Pro" class="input-field w-full" />
                   </div>
                 }
                 <div>
-                  <label for="cd_new_tpl_body" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+                  <label for="cd_new_tpl_body" class="field-label mb-1.5">
                     Message
-                    <span class="normal-case font-normal text-zinc-400">— {{ '{{name}}' }} and {{ '{{company}}' }} are filled in per contact</span>
+                    <span class="normal-case font-normal text-ink-3">— {{ '{{name}}' }} and {{ '{{company}}' }} are filled in per contact</span>
                   </label>
                   <textarea id="cd_new_tpl_body" [(ngModel)]="newTemplateBody" rows="4" placeholder="Bonjour {{ '{{name}}' }}, …"
-                            class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                            class="input-field w-full"></textarea>
                 </div>
                 <div class="flex justify-end gap-2">
-                  <button (click)="newTemplateOpen.set(false)" class="px-3 py-1.5 border border-zinc-200 text-zinc-600 text-xs font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
+                  <button (click)="newTemplateOpen.set(false)" class="btn-secondary btn-sm">Cancel</button>
                   <button (click)="saveNewTemplate(c)" [disabled]="!newTemplateName.trim() || !newTemplateBody.trim()"
-                          class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg">
+                          class="btn-primary btn-sm">
                     Save & use
                   </button>
                 </div>
@@ -224,150 +225,150 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
 
         <!-- Stats -->
         @if (isWhatsApp(c) && wa.stats(); as s) {
-          <div class="grid grid-cols-3 sm:grid-cols-7 gap-px bg-zinc-100 border border-zinc-100 rounded-2xl overflow-hidden">
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-zinc-900">{{ s.total }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Total</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-zinc-500">{{ s.pending }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Pending</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-sky-700">{{ s.sent + s.delivered + s.read }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Sent</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-emerald-700">{{ s.replied }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Replied</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-red-700">{{ s.failed }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Failed</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-amber-700">{{ s.skipped }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Skipped</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-zinc-900">{{ s.replyRate }}%</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Reply rate</div></div>
+          <div class="grid grid-cols-3 sm:grid-cols-7 gap-px bg-muted border border-line-soft rounded-2xl overflow-hidden">
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.total }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ s.pending }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Pending</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-info-ink">{{ s.sent + s.delivered + s.read }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Sent</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-success-ink">{{ s.replied }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Replied</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-danger-ink">{{ s.failed }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Failed</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ s.skipped }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Skipped</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.replyRate }}%</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Reply rate</div></div>
           </div>
           @if (s.followupsPending > 0) {
-            <div class="flex items-center justify-between px-4 py-2 bg-white border border-zinc-100 rounded-xl">
-              <span class="text-xs text-zinc-500">{{ s.followupsPending }} relance(s) due</span>
-              <button (click)="cancelFollowups(c)" class="text-xs px-3 py-1.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg font-medium transition-colors">
+            <div class="card flex items-center justify-between px-4 py-2">
+              <span class="text-xs text-ink-3">{{ s.followupsPending }} relance(s) due</span>
+              <button (click)="cancelFollowups(c)" class="btn-secondary btn-sm">
                 Cancel all pending relances
               </button>
             </div>
           }
         } @else {
-          <div class="grid grid-cols-3 gap-px bg-zinc-100 border border-zinc-100 rounded-2xl overflow-hidden">
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-zinc-900">{{ wa.recipients().length }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Total</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-zinc-500">{{ pendingCount() }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Ready</div></div>
-            <div class="bg-white p-3 text-center"><div class="text-lg font-semibold text-amber-700">{{ skippedCount() }}</div><div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Skipped</div></div>
+          <div class="grid grid-cols-3 gap-px bg-muted border border-line-soft rounded-2xl overflow-hidden">
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ wa.recipients().length }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ pendingCount() }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Ready</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ skippedCount() }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Skipped</div></div>
           </div>
         }
 
         <!-- Audience builder -->
         @if (canWrite()) {
-          <div class="card rounded-2xl p-6 space-y-4">
-            <h2 class="text-base font-bold text-zinc-900 flex items-center gap-2">
-              <mat-icon class="text-[20px] w-5 h-5 text-zinc-700">group_add</mat-icon>Add recipients
+          <div class="card p-5 space-y-4">
+            <h2 class="card-title flex items-center gap-2">
+              <mat-icon class="text-ink-2 icon-md">group_add</mat-icon>Add recipients
             </h2>
 
             <div class="flex flex-wrap items-center gap-2">
               <div class="relative flex-1 min-w-[200px]">
-                <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[18px] w-4.5 h-4.5 pointer-events-none">search</mat-icon>
+                <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none icon-md">search</mat-icon>
                 <input [ngModel]="search()" (ngModelChange)="search.set($event)" type="text" placeholder="Search contacts by name, email or phone..."
-                       class="w-full pl-9! pr-3 py-2 input-field rounded-lg text-sm focus:outline-blue-600" />
+                       class="input-field w-full pl-9! pr-3" />
               </div>
-              <select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)" class="input-field rounded-lg px-2 py-2 text-sm focus:outline-blue-600 cursor-pointer">
+              <select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)" class="input-field cursor-pointer">
                 <option [ngValue]="null">All types</option>
                 @for (t of partnerTypes; track t.value) { <option [ngValue]="t.value">{{ t.label }}</option> }
               </select>
-              <select [ngModel]="groupFilter()" (ngModelChange)="groupFilter.set($event)" class="input-field rounded-lg px-2 py-2 text-sm focus:outline-blue-600 cursor-pointer max-w-[180px]">
+              <select [ngModel]="groupFilter()" (ngModelChange)="groupFilter.set($event)" class="input-field cursor-pointer max-w-[180px]">
                 <option [ngValue]="null">All groups</option>
                 @for (g of audienceGroups; track g.key) { <option [ngValue]="g.key">{{ g.label }}</option> }
               </select>
               @if (typeFilter() || groupFilter() || search()) {
-                <button (click)="clearFilters()" class="text-xs text-zinc-500 hover:text-zinc-900 px-2 py-2 transition-colors">Clear</button>
+                <button (click)="clearFilters()" class="text-xs text-ink-3 hover:text-ink px-2 py-2 transition-colors">Clear</button>
               }
             </div>
 
             <div class="flex items-center justify-between px-1">
-              <label class="flex items-center gap-2 text-xs font-medium text-zinc-600 cursor-pointer select-none">
+              <label class="flex items-center gap-2 text-xs font-medium text-ink-2 cursor-pointer select-none">
                 <input type="checkbox" [checked]="allFilteredSelected()" [disabled]="filteredPartners().length === 0"
-                       (change)="toggleSelectAllFiltered()" class="w-4 h-4 rounded border-zinc-300 accent-zinc-900 cursor-pointer" />
+                       (change)="toggleSelectAllFiltered()" class="cursor-pointer" />
                 Select all {{ filteredPartners().length }} filtered
               </label>
-              <span class="text-xs text-zinc-500">{{ selectedIds().size }} selected</span>
+              <span class="text-xs text-ink-3">{{ selectedIds().size }} selected</span>
             </div>
 
-            <div class="border border-zinc-200 rounded-xl max-h-72 overflow-y-auto divide-y divide-zinc-100">
+            <div class="border border-line rounded-xl max-h-72 overflow-y-auto divide-y divide-line-soft">
               @for (p of filteredPartners(); track p.id) {
                 <button (click)="toggleSelect(p.id)" type="button"
-                        class="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-zinc-50 transition-colors"
-                        [class.bg-zinc-50]="selectedIds().has(p.id)">
-                  <div class="w-4 h-4 rounded border flex items-center justify-center shrink-0"
-                       [class]="selectedIds().has(p.id) ? 'bg-zinc-900 border-zinc-900' : 'border-zinc-300'">
-                    @if (selectedIds().has(p.id)) { <mat-icon class="text-white text-[12px]! w-3 h-3 leading-none!">check</mat-icon> }
+                        class="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-subtle transition-colors"
+                        [class.bg-subtle]="selectedIds().has(p.id)">
+                  <div class="check-box" [class.is-checked]="selectedIds().has(p.id)">
+                    @if (selectedIds().has(p.id)) { <mat-icon class="icon-xs">check</mat-icon> }
                   </div>
                   <div class="min-w-0 flex-1">
-                    <div class="text-sm font-medium text-zinc-900 truncate">{{ p.name }}</div>
-                    <div class="text-xs text-zinc-500 truncate">{{ contactHint(c, p) }}<span class="text-zinc-300"> · </span>{{ p.type }}</div>
+                    <div class="text-sm font-medium text-ink truncate">{{ p.name }}</div>
+                    <div class="text-xs text-ink-3 truncate">{{ contactHint(c, p) }}<span class="text-ink-4"> · </span>{{ p.type }}</div>
                   </div>
                   @if (isEnrolled(p.id)) {
-                    <span class="text-[10px] font-semibold uppercase text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded shrink-0">Added</span>
+                    <span class="badge badge-neutral shrink-0">Added</span>
                   }
                 </button>
               } @empty {
-                <div class="px-3 py-6 text-center text-sm text-zinc-500">No contacts match these filters.</div>
+                <div class="px-3 py-6 text-center text-sm text-ink-3">No contacts match these filters.</div>
               }
             </div>
             <button (click)="addSelected(c)" [disabled]="selectedIds().size === 0"
-                    class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg">
+                    class="btn-primary">
               Add {{ selectedIds().size || '' }} selected
             </button>
           </div>
         }
 
         <!-- Recipients -->
-        <div class="card rounded-2xl overflow-hidden">
-          <div class="p-4 border-b border-zinc-100 flex items-center justify-between">
-            <h2 class="text-base font-bold text-zinc-900">Recipients <span class="text-zinc-400 font-normal">({{ wa.recipients().length }})</span></h2>
+        <div class="card overflow-hidden">
+          <div class="p-4 border-b border-line-soft flex items-center justify-between">
+            <h2 class="card-title">Recipients <span class="text-ink-3 font-normal">({{ wa.recipients().length }})</span></h2>
             @if (isWhatsApp(c) && (c.status === 'Sending' || c.status === 'Active')) {
-              <span class="text-xs text-zinc-500">Auto-refreshing every 5s</span>
+              <span class="text-xs text-ink-3">Auto-refreshing every 5s</span>
             }
           </div>
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-zinc-100">
-              <thead class="bg-zinc-50">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <th class="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Contact</th>
-                  <th class="px-4 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Status</th>
-                  @if (canWrite()) { <th class="px-4 py-2.5"></th> }
+                  <th>Contact</th>
+                  <th>Status</th>
+                  @if (canWrite()) { <th></th> }
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-zinc-100">
+              <tbody>
                 @for (r of wa.recipients(); track r.id) {
-                  <tr class="hover:bg-zinc-50 transition-colors">
-                    <td class="px-4 py-2.5">
-                      <div class="text-sm font-medium text-zinc-900">{{ r.partnerName }}</div>
-                      <div class="text-xs text-zinc-500 font-mono">{{ r.email || r.phone || '—' }}</div>
+                  <tr>
+                    <td>
+                      <div class="text-sm font-medium text-ink">{{ r.partnerName }}</div>
+                      <div class="text-xs text-ink-3 font-mono">{{ r.email || r.phone || '—' }}</div>
                     </td>
-                    <td class="px-4 py-2.5">
-                      <span [class]="statusClass(r.status)" class="px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap">{{ statusLabel(r.status) }}</span>
-                      @if (r.errorTitle) { <div class="text-[11px] text-red-600 mt-1 max-w-xs">{{ r.errorTitle }}</div> }
+                    <td>
+                      <span [class]="statusClass(r.status)" class="badge">{{ statusLabel(r.status) }}</span>
+                      @if (r.errorTitle) { <div class="text-meta text-danger-ink mt-1 max-w-xs">{{ r.errorTitle }}</div> }
                     </td>
                     @if (canWrite()) {
-                      <td class="px-4 py-2.5 text-right">
-                        <button (click)="removeRecipient(c, r)" title="Remove" class="text-zinc-400 hover:text-red-600 p-1 rounded">
-                          <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+                      <td class="text-right">
+                        <button (click)="removeRecipient(c, r)" title="Remove" class="btn-icon btn-sm btn-danger-hover">
+                          <mat-icon class="icon-sm">close</mat-icon>
                         </button>
                       </td>
                     }
                   </tr>
                 } @empty {
-                  <tr><td [attr.colspan]="canWrite() ? 3 : 2" class="px-4 py-10 text-center text-sm text-zinc-500">No recipients yet — add some above.</td></tr>
+                  <tr><td [attr.colspan]="canWrite() ? 3 : 2" class="text-center text-ink-3">No recipients yet — add some above.</td></tr>
                 }
               </tbody>
             </table>
           </div>
         </div>
       } @else if (loading()) {
-        <div class="card rounded-2xl p-12 text-center text-sm text-zinc-400">Loading campaign…</div>
+        <div class="card p-12 text-center text-sm text-ink-3">Loading campaign…</div>
       } @else {
-        <div class="card rounded-2xl p-12 text-center space-y-3">
-          <mat-icon class="text-[40px]! w-10 h-10 text-zinc-300 block mx-auto">campaign</mat-icon>
-          <p class="text-sm text-zinc-500">This campaign doesn't exist or you don't have access to it.</p>
-          <a routerLink="/marketing" class="inline-block bg-zinc-100 text-zinc-950 border border-zinc-200/50 px-4 py-2 rounded-xl text-xs font-bold">Return to Marketing</a>
+        <div class="card p-12 text-center space-y-3">
+          <mat-icon class="text-ink-4 block mx-auto icon-xl">campaign</mat-icon>
+          <p class="text-sm text-ink-3">This campaign doesn't exist or you don't have access to it.</p>
+          <a routerLink="/marketing" class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold">Return to Marketing</a>
         </div>
       }
     </div>
   `
 })
 export class CampaignDetailComponent {
+  private confirmDialog = inject(ConfirmService);
   state = inject(CrmStateService);
   campaignsService = inject(CampaignsService);
   partnersService = inject(PartnersService);
@@ -513,9 +514,9 @@ export class CampaignDetailComponent {
     this.draftAudience = null;
   }
 
-  deleteCampaign(c: Campaign): void {
+  async deleteCampaign(c: Campaign): Promise<void> {
     if (!this.canDelete()) return;
-    if (confirm(`Delete campaign "${c.title}"? This cannot be undone.`)) {
+    if (await this.confirmDialog.ask({ title: 'Delete campaign?', message: `"${c.title}" and its delivery history will be permanently deleted.`, confirmLabel: 'Delete campaign', danger: true })) {
       this.campaignsService.deleteCampaign(c.id);
       this.router.navigate(['/marketing']);
     }
@@ -638,9 +639,9 @@ export class CampaignDetailComponent {
 
   channelColor(type: string): string {
     switch (type) {
-      case 'WhatsApp': return 'text-emerald-700 border-emerald-200 bg-emerald-50';
-      case 'SMS': return 'text-purple-700 border-purple-200 bg-purple-50';
-      default: return 'text-sky-700 border-sky-200 bg-sky-50';
+      case 'WhatsApp': return 'badge-success';
+      case 'SMS': return 'badge-violet';
+      default: return 'badge-info';
     }
   }
 
@@ -650,14 +651,14 @@ export class CampaignDetailComponent {
 
   statusClass(status: string): string {
     switch (status) {
-      case 'REPLIED': return 'bg-emerald-50 text-emerald-700';
-      case 'READ': return 'bg-sky-50 text-sky-700';
-      case 'DELIVERED': return 'bg-sky-50 text-sky-600';
-      case 'SENT': return 'bg-zinc-100 text-zinc-700';
-      case 'FAILED': return 'bg-red-50 text-red-700';
-      case 'OPTED_OUT': return 'bg-orange-50 text-orange-700';
-      case 'SKIPPED': return 'bg-amber-50 text-amber-700';
-      default: return 'bg-zinc-100 text-zinc-600';
+      case 'REPLIED': return 'badge-success';
+      case 'READ': return 'badge-info';
+      case 'DELIVERED': return 'badge-info';
+      case 'SENT': return 'bg-muted text-ink-2';
+      case 'FAILED': return 'badge-danger';
+      case 'OPTED_OUT': return 'badge-warning';
+      case 'SKIPPED': return 'badge-warning';
+      default: return 'bg-muted text-ink-2';
     }
   }
 }

@@ -57,71 +57,71 @@ const SEARCH_ITEMS: SearchItem[] = [
       transition: all 150ms ease;
     }
     .drop-zone.dragging {
-      background: #EFF6FF;
-      border-color: #3B82F6;
+      background: var(--color-accent-light);
+      border-color: var(--color-primary);
     }
   `],
   template: `
     @if (open()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-xl border border-zinc-100 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+      <div class="modal-backdrop">
+        <div class="modal modal-lg">
 
           @if (!submitted()) {
             <!-- Header -->
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-2">
-                <mat-icon class="text-zinc-900 text-[22px] w-5.5 h-5.5">help</mat-icon>
-                <h3 class="text-lg font-bold text-zinc-950">Help & Support</h3>
+                <mat-icon class="text-ink icon-lg">help</mat-icon>
+                <h3 class="modal-title">Help & Support</h3>
               </div>
-              <button (click)="closeModal()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-                <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
+              <button (click)="closeModal()" title="Close" class="btn-icon btn-sm">
+                <mat-icon class="icon-sm">close</mat-icon>
               </button>
             </div>
 
             <!-- Feature / Page Selector (like global search) -->
             <div class="feature-search-wrap">
-              <label for="which_feature_has_a_" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Which feature has a problem?</label>
+              <label for="which_feature_has_a_" class="field-label mb-1.5">Which feature has a problem?</label>
               <div class="relative">
-                <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[18px] w-4.5 h-4.5 pointer-events-none">search</mat-icon>
+                <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none icon-md">search</mat-icon>
                 <input id="which_feature_has_a_"
                   [ngModel]="featureSearch()"
                   (ngModelChange)="onFeatureSearch($event)"
                   (focus)="showFeatureDropdown.set(true)"
                   type="text"
                   placeholder="Search menus and pages..."
-                  class="w-full pl-9 pr-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400"
+                  class="input-field w-full pl-9 pr-3"
                 />
                 @if (selectedFeature()) {
-                  <button (click)="clearFeature()" title="Clear" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors">
-                    <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+                  <button (click)="clearFeature()" title="Clear" class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2 transition-colors">
+                    <mat-icon class="icon-sm">close</mat-icon>
                   </button>
                 }
                 @if (showFeatureDropdown() && featureSearch().length >= 1 && filteredFeatures().length > 0) {
-                  <div class="absolute left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg z-10 max-h-56 overflow-y-auto">
+                  <div class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-lg shadow-lg z-10 max-h-56 overflow-y-auto">
                     @for (item of filteredFeatures(); track $index) {
                       <button
                         (click)="selectFeature(item)"
-                        class="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-zinc-100 transition-colors border-b border-zinc-100 last:border-b-0"
+                        class="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-muted transition-colors border-b border-line-soft last:border-b-0"
                       >
-                        <mat-icon class="text-zinc-400 text-[18px] w-[18px] h-[18px] mt-0.5 shrink-0">{{ item.subIcon || item.mainIcon }}</mat-icon>
+                        <mat-icon class="text-ink-4 mt-0.5 shrink-0 icon-md">{{ item.subIcon || item.mainIcon }}</mat-icon>
                         <div class="min-w-0 flex-1">
                           <div class="flex items-baseline gap-2">
-                            <span class="text-meta font-medium text-zinc-400 shrink-0">{{ item.mainMenu }}</span>
+                            <span class="text-meta font-medium text-ink-3 shrink-0">{{ item.mainMenu }}</span>
                             @if (item.submenu) {
-                              <span class="text-xs font-semibold text-zinc-800 truncate">{{ item.submenu }}</span>
+                              <span class="text-xs font-semibold text-ink truncate">{{ item.submenu }}</span>
                             } @else {
-                              <span class="text-xs font-semibold text-zinc-800 truncate">{{ item.mainMenu }}</span>
+                              <span class="text-xs font-semibold text-ink truncate">{{ item.mainMenu }}</span>
                             }
                           </div>
-                          <p class="text-meta text-zinc-500 mt-0.5 leading-tight">{{ item.action }}</p>
+                          <p class="text-meta text-ink-3 mt-0.5 leading-tight">{{ item.action }}</p>
                         </div>
                       </button>
                     }
                   </div>
                 }
                 @if (showFeatureDropdown() && featureSearch().length >= 1 && filteredFeatures().length === 0) {
-                  <div class="absolute left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg z-10 p-3 text-center">
-                    <p class="text-sm text-zinc-400">No results found</p>
+                  <div class="absolute left-0 right-0 mt-1 bg-surface border border-line rounded-lg shadow-lg z-10 p-3 text-center">
+                    <p class="text-sm text-ink-3">No results found</p>
                   </div>
                 }
               </div>
@@ -129,32 +129,32 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Contact Method -->
             <div>
-              <label for="contact_via" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Contact via</label>
+              <label for="contact_via" class="field-label mb-1.5">Contact via</label>
               <div class="flex gap-2">
                 <button
                   (click)="contactMethod.set('email')"
                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all"
-                  [class.bg-zinc-100]="contactMethod() === 'email'"
-                  [class.border-zinc-400]="contactMethod() === 'email'"
-                  [class.text-zinc-950]="contactMethod() === 'email'"
-                  [class.border-zinc-200]="contactMethod() !== 'email'"
-                  [class.text-zinc-600]="contactMethod() !== 'email'"
-                  [class.hover:bg-zinc-50]="contactMethod() !== 'email'"
+                  [class.bg-muted]="contactMethod() === 'email'"
+                  [class.border-line-strong]="contactMethod() === 'email'"
+                  [class.text-ink]="contactMethod() === 'email'"
+                  [class.border-line]="contactMethod() !== 'email'"
+                  [class.text-ink-2]="contactMethod() !== 'email'"
+                  [class.hover:bg-subtle]="contactMethod() !== 'email'"
                 >
-                  <mat-icon class="text-[18px] w-4.5 h-4.5">email</mat-icon>
+                  <mat-icon class="icon-md">email</mat-icon>
                   Email
                 </button>
                 <button
                   (click)="contactMethod.set('whatsapp')"
                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all"
-                  [class.bg-zinc-100]="contactMethod() === 'whatsapp'"
-                  [class.border-zinc-400]="contactMethod() === 'whatsapp'"
-                  [class.text-zinc-950]="contactMethod() === 'whatsapp'"
-                  [class.border-zinc-200]="contactMethod() !== 'whatsapp'"
-                  [class.text-zinc-600]="contactMethod() !== 'whatsapp'"
-                  [class.hover:bg-zinc-50]="contactMethod() !== 'whatsapp'"
+                  [class.bg-muted]="contactMethod() === 'whatsapp'"
+                  [class.border-line-strong]="contactMethod() === 'whatsapp'"
+                  [class.text-ink]="contactMethod() === 'whatsapp'"
+                  [class.border-line]="contactMethod() !== 'whatsapp'"
+                  [class.text-ink-2]="contactMethod() !== 'whatsapp'"
+                  [class.hover:bg-subtle]="contactMethod() !== 'whatsapp'"
                 >
-                  <mat-icon class="text-[18px] w-4.5 h-4.5">chat</mat-icon>
+                  <mat-icon class="icon-md">chat</mat-icon>
                   WhatsApp
                 </button>
               </div>
@@ -162,54 +162,54 @@ const SEARCH_ITEMS: SearchItem[] = [
 
             <!-- Description -->
             <div>
-              <label for="describe_the_bug_or_" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Describe the bug or request</label>
+              <label for="describe_the_bug_or_" class="field-label mb-1.5">Describe the bug or request</label>
               <textarea id="describe_the_bug_or_"
                 [(ngModel)]="description"
                 rows="4"
                 placeholder="Please describe what happened, what you expected, and any steps to reproduce..."
-                class="w-full border border-zinc-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-700/20 focus:border-zinc-700 transition-all placeholder:text-zinc-400 resize-none"
+                class="input-field w-full resize-none"
               ></textarea>
             </div>
 
             <!-- Drag & Drop File Upload -->
             <div>
-              <label for="attachments" class="block text-xs font-semibold text-zinc-500 uppercase mb-1.5">Attachments <span class="font-normal normal-case text-zinc-400">(screenshots, recordings, documents)</span></label>
+              <label for="attachments" class="field-label mb-1.5">Attachments <span class="font-normal normal-case text-ink-3">(screenshots, recordings, documents)</span></label>
               <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
               <div
                 class="drop-zone border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all"
                 [class.dragging]="isDragging()"
-                [class.border-zinc-200]="!isDragging()"
-                [class.bg-zinc-50]="!isDragging()"
+                [class.border-line]="!isDragging()"
+                [class.bg-subtle]="!isDragging()"
                 (dragover)="onDragOver($event)"
                 (dragleave)="onDragLeave($event)"
                 (drop)="onDrop($event)"
                 (click)="fileInput.click()"
               >
-                <mat-icon class="text-zinc-300 text-[32px] w-8 h-8 mb-1">cloud_upload</mat-icon>
-                <p class="text-sm text-zinc-500">
-                  <span class="text-zinc-900 font-medium">Click to upload</span> or drag and drop
+                <mat-icon class="text-ink-4 mb-1 icon-xl">cloud_upload</mat-icon>
+                <p class="text-sm text-ink-3">
+                  <span class="text-ink font-medium">Click to upload</span> or drag and drop
                 </p>
-                <p class="text-xs text-zinc-400 mt-0.5">PNG, JPG, MP4, PDF up to 10MB</p>
+                <p class="text-xs text-ink-3 mt-0.5">PNG, JPG, MP4, PDF up to 10MB</p>
                 <input #fileInput type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx" (change)="onFileSelected($event)" class="hidden" />
               </div>
 
               @if (files().length > 0) {
                 <div class="mt-2 space-y-1.5">
                   @for (file of files(); track file.name) {
-                    <div class="flex items-center justify-between bg-zinc-50 rounded-lg px-3 py-1.5">
+                    <div class="flex items-center justify-between bg-subtle rounded-lg px-3 py-1.5">
                       <div class="flex items-center gap-2 min-w-0">
                         @if (file.type.startsWith('image/')) {
-                          <mat-icon class="text-zinc-500 text-[16px] w-4 h-4 shrink-0">image</mat-icon>
+                          <mat-icon class="text-ink-3 shrink-0 icon-sm">image</mat-icon>
                         } @else if (file.type.startsWith('video/')) {
-                          <mat-icon class="text-zinc-500 text-[16px] w-4 h-4 shrink-0">videocam</mat-icon>
+                          <mat-icon class="text-ink-3 shrink-0 icon-sm">videocam</mat-icon>
                         } @else {
-                          <mat-icon class="text-zinc-500 text-[16px] w-4 h-4 shrink-0">description</mat-icon>
+                          <mat-icon class="text-ink-3 shrink-0 icon-sm">description</mat-icon>
                         }
-                        <span class="text-sm text-zinc-700 truncate">{{ file.name }}</span>
-                        <span class="text-xs text-zinc-400 shrink-0">{{ formatSize(file.size) }}</span>
+                        <span class="text-sm text-ink-2 truncate">{{ file.name }}</span>
+                        <span class="text-xs text-ink-3 shrink-0">{{ formatSize(file.size) }}</span>
                       </div>
-                      <button (click)="removeFile(file.name)" title="Remove file" class="text-zinc-400 hover:text-zinc-700 transition-colors shrink-0 ml-2">
-                        <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+                      <button (click)="removeFile(file.name)" title="Remove file" class="btn-icon btn-sm shrink-0 ml-2">
+                        <mat-icon class="icon-sm">close</mat-icon>
                       </button>
                     </div>
                   }
@@ -221,9 +221,9 @@ const SEARCH_ITEMS: SearchItem[] = [
             <button
               (click)="submit()"
               [disabled]="!description().trim()"
-              class="w-full py-2.5 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+              class="btn-primary w-full"
             >
-              <mat-icon class="text-[18px] w-4.5 h-4.5">send</mat-icon>
+              <mat-icon class="icon-md">send</mat-icon>
               Send via {{ contactMethod() === 'email' ? 'Email' : 'WhatsApp' }}
             </button>
           }
@@ -231,16 +231,16 @@ const SEARCH_ITEMS: SearchItem[] = [
           <!-- Success Message -->
           @if (submitted()) {
             <div class="py-8 text-center space-y-4">
-              <div class="w-16 h-16 bg-zinc-200 rounded-full flex items-center justify-center mx-auto">
-                <mat-icon class="text-zinc-900 text-[32px] w-8 h-8">check_circle</mat-icon>
+              <div class="w-16 h-16 bg-muted-strong rounded-full flex items-center justify-center mx-auto">
+                <mat-icon class="text-ink icon-xl">check_circle</mat-icon>
               </div>
-              <h3 class="text-xl font-bold text-zinc-950">Thank you!</h3>
-              <p class="text-sm text-zinc-500 max-w-sm mx-auto">
+              <h3 class="modal-title">Thank you!</h3>
+              <p class="text-sm text-ink-3 max-w-sm mx-auto">
                 Your message has been sent successfully. You will be contacted shortly by our support team.
               </p>
               <button
                 (click)="closeModal()"
-                class="mt-2 px-6 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-sm transition-all"
+                class="btn-primary mt-2"
               >
                 Done
               </button>

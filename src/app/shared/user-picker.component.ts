@@ -20,27 +20,27 @@ import { UserAvatarComponent } from './user-avatar.component';
       <button
         type="button"
         (click)="toggle()"
-        class="w-full input-field rounded-lg p-1.5 text-sm bg-white flex items-center gap-2 text-left"
+        class="w-full input-field rounded-lg p-1.5 text-sm bg-surface flex items-center gap-2 text-left"
       >
         @if (selectedUser(); as user) {
           <app-user-avatar [userId]="user.id" [size]="24" />
-          <span class="flex-1 min-w-0 truncate text-zinc-900 font-medium">{{ user.displayName }}</span>
+          <span class="flex-1 min-w-0 truncate text-ink font-medium">{{ user.displayName }}</span>
         } @else {
-          <div class="h-6 w-6 rounded-full border border-dashed border-zinc-300 shrink-0"></div>
-          <span class="flex-1 min-w-0 truncate text-zinc-400">{{ placeholder() }}</span>
+          <div class="h-6 w-6 rounded-full border border-dashed border-line-strong shrink-0"></div>
+          <span class="flex-1 min-w-0 truncate text-ink-3">{{ placeholder() }}</span>
         }
-        <mat-icon class="text-[18px] w-4.5 h-4.5 text-zinc-400 shrink-0">expand_more</mat-icon>
+        <mat-icon class="text-ink-4 shrink-0 icon-md">expand_more</mat-icon>
       </button>
 
       @if (open()) {
-        <div class="absolute z-20 mt-1 w-full bg-white border border-zinc-200 rounded-lg shadow-lg overflow-hidden">
-          <div class="p-2 border-b border-zinc-100">
+        <div class="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg overflow-hidden">
+          <div class="p-2 border-b border-line-soft">
             <input
               #searchInput
               type="text"
               [(ngModel)]="query"
               placeholder="Search people…"
-              class="w-full input-field rounded-md px-2 py-1.5 text-sm"
+              class="input-field w-full"
               (click)="$event.stopPropagation()"
             />
           </div>
@@ -49,30 +49,30 @@ import { UserAvatarComponent } from './user-avatar.component';
               <button
                 type="button"
                 (click)="select('')"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-50 transition-colors"
+                class="menu-item"
               >
-                <div class="h-6 w-6 rounded-full border border-dashed border-zinc-300 shrink-0"></div>
-                <span class="text-zinc-500 italic">{{ placeholder() }}</span>
+                <div class="h-6 w-6 rounded-full border border-dashed border-line-strong shrink-0"></div>
+                <span class="text-ink-3 italic">{{ placeholder() }}</span>
               </button>
             }
             @for (user of filteredUsers(); track user.id) {
               <button
                 type="button"
                 (click)="select(user.id)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-50 transition-colors"
-                [class.bg-zinc-50]="user.id === value()"
+                class="menu-item"
+                [class.bg-subtle]="user.id === value()"
               >
                 <app-user-avatar [userId]="user.id" [size]="28" />
                 <span class="flex-1 min-w-0 text-left">
-                  <span class="block truncate text-zinc-900 font-medium">{{ user.displayName }}</span>
+                  <span class="block truncate text-ink font-medium">{{ user.displayName }}</span>
                   @if (user.jobTitle || user.role) {
-                    <span class="block truncate text-xs text-zinc-400">{{ user.jobTitle || user.role }}</span>
+                    <span class="block truncate text-xs text-ink-3">{{ user.jobTitle || user.role }}</span>
                   }
                 </span>
               </button>
             }
             @if (filteredUsers().length === 0) {
-              <p class="px-3 py-2 text-xs text-zinc-400 italic">No people found.</p>
+              <p class="px-3 py-2 text-xs text-ink-3 italic">No people found.</p>
             }
           </div>
         </div>

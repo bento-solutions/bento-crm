@@ -15,7 +15,7 @@ import { CrmStateService } from '../services/crm-state.service';
         'font-size.px': getFontSize(),
         'line-height.px': size
       }"
-      class="rounded-full text-white font-semibold text-center select-none uppercase flex items-center justify-center border border-white/10 shrink-0 shadow-xs"
+      class="rounded-full text-white font-semibold text-center select-none uppercase flex items-center justify-center border border-line-soft shrink-0 shadow-xs"
     >
       {{ getInitials() }}
     </div>
@@ -32,9 +32,9 @@ export class UserAvatarComponent {
   getBgColor(): string {
     if (this.userId) {
       const user = this.state.users().find(u => u.id === this.userId);
-      return user?.avatarColor || '#64748b';
+      return user?.avatarColor || 'var(--color-text-tertiary)';
     }
-    return this.color || '#64748b';
+    return this.color || 'var(--color-text-tertiary)';
   }
 
   getInitials(): string {

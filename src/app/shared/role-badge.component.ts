@@ -9,7 +9,7 @@ import { RoleId, CRM_ROLES } from '../services/crm-state.service';
   template: `
     <span
       [class]="getBadgeClass()"
-      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-meta font-bold tracking-wide uppercase border font-sans"
+      class="badge"
     >
       {{ getRoleLabel() }}
     </span>
@@ -21,16 +21,16 @@ export class RoleBadgeComponent {
   getBadgeClass(): string {
     switch (this.roleId) {
       case 'admin':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'badge-danger';
       case 'manager':
-        return 'bg-violet-50 text-violet-700 border-violet-200';
+        return 'badge-violet';
       case 'salesperson':
-        return 'bg-sky-50 text-sky-700 border-sky-200';
+        return 'badge-info';
       case 'support':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'badge-success';
       case 'viewer':
       default:
-        return 'bg-zinc-50 text-zinc-600 border-zinc-200';
+        return 'bg-subtle text-ink-2 border-line';
     }
   }
 

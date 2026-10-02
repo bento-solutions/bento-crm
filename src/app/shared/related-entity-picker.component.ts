@@ -18,14 +18,14 @@ import { EntityLink, findKind, isLinked } from './related-entity.model';
   template: `
     <div class="space-y-3">
       <div>
-        <label for="kind-select" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
-          {{ label() }} <span class="text-zinc-400 normal-case font-medium">(optional)</span>
+        <label for="kind-select" class="field-label mb-1.5">
+          {{ label() }} <span class="text-ink-3 normal-case font-medium">(optional)</span>
         </label>
         <select
           id="kind-select"
           [ngModel]="selectedKind()"
           (ngModelChange)="onKindChange($event)"
-          class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+          class="input-field w-full">
           <option value="">Not linked</option>
           @for (kind of kinds(); track kind.key) {
             <option [value]="kind.key">{{ kind.label }}</option>
@@ -35,19 +35,19 @@ import { EntityLink, findKind, isLinked } from './related-entity.model';
 
       @if (selectedKind()) {
         <div>
-          <label for="entity-select" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">{{ selectedKindLabel() }}</label>
+          <label for="entity-select" class="field-label mb-1.5">{{ selectedKindLabel() }}</label>
           <select
             id="entity-select"
             [ngModel]="selectedId()"
             (ngModelChange)="onEntityChange($event)"
-            class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+            class="input-field w-full">
             <option value="">Select…</option>
             @for (option of options(); track option.id) {
               <option [value]="option.id">{{ option.label }}</option>
             }
           </select>
           @if (options().length === 0) {
-            <p class="text-xs text-zinc-400 italic mt-1">No {{ selectedKindLabel().toLowerCase() }} records yet.</p>
+            <p class="text-xs text-ink-3 italic mt-1">No {{ selectedKindLabel().toLowerCase() }} records yet.</p>
           }
         </div>
       }

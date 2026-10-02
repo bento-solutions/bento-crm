@@ -34,27 +34,27 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
     @let c = conversation();
     <div class="flex items-center gap-3 px-3 sm:px-4 py-2.5">
       @if (showBack()) {
-        <button type="button" class="wa-icon-btn p-1.5 rounded-lg md:hidden" (click)="back.emit()" [attr.aria-label]="'inbox.back' | translate">
+        <button type="button" class="btn-icon btn-sm" (click)="back.emit()" [attr.aria-label]="'inbox.back' | translate">
           <mat-icon class="rtl:-scale-x-100">arrow_back</mat-icon>
         </button>
       }
-      <span class="wa-avatar h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0">{{ avatar() }}</span>
+      <span class="wa-avatar h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0">{{ avatar() }}</span>
       <div class="min-w-0 flex-1">
-        <h2 class="text-sm font-bold truncate">{{ title() }}</h2>
+        <h2 class="card-title truncate">{{ title() }}</h2>
         <p class="text-xs wa-muted truncate">
           <span dir="ltr">{{ phone() }}</span>
           @if (c.displayName && c.displayName !== title()) { · ~{{ c.displayName }} }
         </p>
         <div class="flex flex-wrap gap-1 mt-1">
           @if (c.optedOut) {
-            <span class="wa-pill-bad text-meta font-semibold px-1.5 py-0.5 rounded">{{ 'inbox.header.optedOut' | translate }}</span>
+            <span class="wa-pill-bad text-meta font-semibold px-1.5 py-0.5 rounded-sm">{{ 'inbox.header.optedOut' | translate }}</span>
           } @else if (c.windowOpen) {
-            <span class="wa-pill-ok text-meta font-semibold px-1.5 py-0.5 rounded">{{ 'inbox.header.windowOpen' | translate }}</span>
+            <span class="wa-pill-ok text-meta font-semibold px-1.5 py-0.5 rounded-sm">{{ 'inbox.header.windowOpen' | translate }}</span>
           } @else {
-            <span class="wa-pill-off text-meta font-semibold px-1.5 py-0.5 rounded">{{ 'inbox.header.windowClosed' | translate }}</span>
+            <span class="wa-pill-off text-meta font-semibold px-1.5 py-0.5 rounded-sm">{{ 'inbox.header.windowClosed' | translate }}</span>
           }
           @if (!c.partnerId) {
-            <span class="wa-pill-off text-meta font-semibold px-1.5 py-0.5 rounded">{{ 'inbox.header.unknown' | translate }}</span>
+            <span class="wa-pill-off text-meta font-semibold px-1.5 py-0.5 rounded-sm">{{ 'inbox.header.unknown' | translate }}</span>
           }
         </div>
       </div>
@@ -62,15 +62,15 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
       <div class="flex items-center gap-1 shrink-0">
         @if (c.partnerId && c.partnerType === 'LEAD') {
           <a [routerLink]="['/partners/lead', c.partnerId]" class="wa-icon-btn text-xs font-semibold px-2 py-1.5 rounded-lg hidden sm:inline-flex items-center gap-1">
-            <mat-icon class="!text-[16px] !w-4 !h-4">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
+            <mat-icon class="!text-lg !w-4 !h-4">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
           </a>
         } @else if (!c.partnerId && canCreateLead()) {
           <button type="button" class="wa-icon-btn text-xs font-semibold px-2 py-1.5 rounded-lg inline-flex items-center gap-1" (click)="createLead.emit()">
-            <mat-icon class="!text-[16px] !w-4 !h-4">person_add</mat-icon><span class="hidden sm:inline">{{ 'inbox.header.createLead' | translate }}</span>
+            <mat-icon class="!text-lg !w-4 !h-4">person_add</mat-icon><span class="hidden sm:inline">{{ 'inbox.header.createLead' | translate }}</span>
           </button>
         }
         <div class="relative">
-          <button type="button" class="wa-icon-btn p-1.5 rounded-lg" (click)="menuOpen.set(!menuOpen())"
+          <button type="button" class="btn-icon btn-sm" (click)="menuOpen.set(!menuOpen())"
                   [attr.aria-expanded]="menuOpen()" [attr.aria-label]="'inbox.header.more' | translate">
             <mat-icon>more_vert</mat-icon>
           </button>
@@ -78,13 +78,13 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
             <div class="wa-menu absolute end-0 top-10 z-30 w-64 rounded-xl py-1 text-sm">
               @if (c.partnerId && c.partnerType === 'LEAD') {
                 <a [routerLink]="['/partners/lead', c.partnerId]" class="flex items-center gap-2 px-3 py-2 sm:hidden" (click)="menuOpen.set(false)">
-                  <mat-icon class="!text-[18px] wa-muted">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
+                  <mat-icon class="!text-lg wa-muted">open_in_new</mat-icon>{{ 'inbox.header.openLead' | translate }}
                 </a>
               }
               @if (canLink()) {
                 @if (linking()) {
                   <div class="px-3 py-2 space-y-1.5">
-                    <input type="search" class="wa-input w-full rounded-lg px-2 py-1.5 text-sm"
+                    <input type="search" class="input-field w-full"
                            [placeholder]="'inbox.linkPartner.search' | translate"
                            [ngModel]="partnerQuery()" (ngModelChange)="searchPartners($event)" />
                     <div class="max-h-48 overflow-y-auto">
@@ -102,18 +102,18 @@ interface PartnerHit { id: string; name: string; phone?: string; type?: string }
                   </div>
                 } @else {
                   <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start" (click)="linking.set(true)">
-                    <mat-icon class="!text-[18px] wa-muted">link</mat-icon>{{ 'inbox.header.linkPartner' | translate }}
+                    <mat-icon class="!text-lg wa-muted">link</mat-icon>{{ 'inbox.header.linkPartner' | translate }}
                   </button>
                   @if (c.partnerId) {
                     <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start" (click)="linkPartner.emit(null); close()">
-                      <mat-icon class="!text-[18px] wa-muted">link_off</mat-icon>{{ 'inbox.header.unlink' | translate }}
+                      <mat-icon class="!text-lg wa-muted">link_off</mat-icon>{{ 'inbox.header.unlink' | translate }}
                     </button>
                   }
                 }
               }
               @if (canIgnore()) {
                 <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-start wa-danger" (click)="confirmIgnore()">
-                  <mat-icon class="!text-[18px]">block</mat-icon>{{ 'inbox.header.ignore' | translate }}
+                  <mat-icon class="!text-lg">block</mat-icon>{{ 'inbox.header.ignore' | translate }}
                 </button>
               }
             </div>

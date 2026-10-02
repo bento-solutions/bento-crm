@@ -16,7 +16,7 @@ import { TranslationService } from '../services/translation.service';
     :host {
       display: block;
       min-height: 100vh;
-      background: var(--color-bg, #FAFAFA);
+      background: var(--color-bg);
     }
 
     .login-container {
@@ -30,10 +30,10 @@ import { TranslationService } from '../services/translation.service';
     .login-card {
       width: 100%;
       max-width: 400px;
-      background: #FFFFFF;
-      border: 1px solid #E4E4E7;
-      border-radius: 16px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--r-overlay);
+      box-shadow: var(--shadow-xs);
       padding: 40px 32px 32px;
     }
 
@@ -56,7 +56,7 @@ import { TranslationService } from '../services/translation.service';
       font-weight: 700;
       font-size: 20px;
       letter-spacing: -0.02em;
-      color: #09090B;
+      color: var(--color-text-primary);
     }
 
     .login-title {
@@ -67,13 +67,13 @@ import { TranslationService } from '../services/translation.service';
     .login-title h1 {
       font-size: 18px;
       font-weight: 700;
-      color: #09090B;
+      color: var(--color-text-primary);
       margin: 0;
     }
 
     .login-title p {
       font-size: 13px;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       margin: 4px 0 0;
     }
 
@@ -85,31 +85,32 @@ import { TranslationService } from '../services/translation.service';
       display: block;
       font-size: 12px;
       font-weight: 600;
-      color: #09090B;
+      color: var(--color-text-primary);
       margin-bottom: 6px;
     }
 
     .form-input {
       width: 100%;
-      padding: 9px 12px;
-      background: #FAFAFA;
-      border: 1px solid #E4E4E7;
-      border-radius: 8px;
+      height: var(--control-height);
+      padding: 0 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--r-control);
       font-size: 13px;
-      color: #09090B;
+      color: var(--color-text-primary);
       outline: none;
       transition: all 150ms ease;
       box-sizing: border-box;
     }
 
     .form-input::placeholder {
-      color: #A1A1AA;
+      color: var(--color-text-placeholder);
     }
 
     .form-input:focus {
-      background: #FFFFFF;
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      background: var(--color-surface);
+      border-color: var(--color-focus);
+      box-shadow: 0 0 0 3px var(--color-focus-ring);
     }
 
     .password-input-wrapper {
@@ -136,14 +137,14 @@ import { TranslationService } from '../services/translation.service';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       border-radius: 6px;
       transition: color 150ms ease, background-color 150ms ease;
     }
 
     .password-toggle-btn:hover {
-      color: #09090B;
-      background-color: #F4F4F5;
+      color: var(--color-text-primary);
+      background-color: var(--color-surface-hover);
     }
 
     .toggle-icon {
@@ -155,20 +156,21 @@ import { TranslationService } from '../services/translation.service';
 
     .login-btn {
       width: 100%;
-      padding: 10px 16px;
-      background: var(--color-text-primary);
-      color: #FFFFFF;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
       border: none;
-      border-radius: 8px;
+      border-radius: var(--r-control);
+      height: var(--control-height-lg);
+      padding: 0 16px;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
       transition: background 150ms ease;
       margin-top: 8px;
     }
 
     .login-btn:hover {
-      background: #27272A;
+      background: var(--color-primary-hover);
     }
 
     .login-btn:disabled {
@@ -177,12 +179,12 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .error-msg {
-      background: #FEF2F2;
-      border: 1px solid #FECACA;
+      background: var(--color-danger-light);
+      border: 1px solid var(--color-danger-border);
       border-radius: 8px;
       padding: 8px 12px;
       font-size: 12px;
-      color: #991B1B;
+      color: var(--color-danger-text);
       margin-bottom: 16px;
       text-align: center;
     }
@@ -192,32 +194,32 @@ import { TranslationService } from '../services/translation.service';
       text-align: right;
       font-size: 11px;
       font-weight: 500;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       margin-top: 4px;
       cursor: pointer;
       text-decoration: none;
     }
 
     .forgot-link:hover {
-      color: #09090B;
+      color: var(--color-text-primary);
     }
 
     .signup-link {
       text-align: center;
       font-size: 12px;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       margin: 20px 0 0;
     }
 
     .signup-link a {
-      color: #09090B;
+      color: var(--color-text-primary);
       font-weight: 600;
       text-decoration: none;
       cursor: pointer;
     }
 
     .signup-link a:hover {
-      color: var(--color-accent);
+      color: var(--color-accent-text);
     }
 
     .org-selection-header {
@@ -228,13 +230,13 @@ import { TranslationService } from '../services/translation.service';
     .org-selection-header h2 {
       font-size: 18px;
       font-weight: 700;
-      color: #09090B;
+      color: var(--color-text-primary);
       margin: 0;
     }
 
     .org-selection-header p {
       font-size: 13px;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       margin: 6px 0 0;
       line-height: 1.4;
     }
@@ -252,17 +254,17 @@ import { TranslationService } from '../services/translation.service';
       gap: 12px;
       width: 100%;
       padding: 12px 14px;
-      background: #FAFAFA;
-      border: 1px solid #E4E4E7;
-      border-radius: 10px;
+      background: var(--color-subtle);
+      border: 1px solid var(--color-border);
+      border-radius: var(--r-card);
       cursor: pointer;
       text-align: start;
       transition: all 150ms ease;
     }
 
     .org-item-card:hover:not(:disabled) {
-      background: #F4F4F5;
-      border-color: #D4D4D8;
+      background: var(--color-surface-hover);
+      border-color: var(--color-border-strong);
       transform: translateY(-1px);
     }
 
@@ -275,8 +277,8 @@ import { TranslationService } from '../services/translation.service';
       width: 36px;
       height: 36px;
       border-radius: 8px;
-      background: #09090B;
-      color: #FFFFFF;
+      background: var(--color-inverse);
+      color: var(--color-on-inverse);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -301,7 +303,7 @@ import { TranslationService } from '../services/translation.service';
     .org-item-name {
       font-size: 13px;
       font-weight: 600;
-      color: #09090B;
+      color: var(--color-text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -317,8 +319,8 @@ import { TranslationService } from '../services/translation.service';
     .org-item-role {
       font-size: 11px;
       font-weight: 600;
-      color: #52525B;
-      background: #E4E4E7;
+      color: var(--color-text-secondary);
+      background: var(--color-border);
       padding: 1px 6px;
       border-radius: 4px;
       text-transform: uppercase;
@@ -326,7 +328,7 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .org-item-arrow {
-      color: #A1A1AA;
+      color: var(--color-text-placeholder);
       font-size: 20px;
       width: 20px;
       height: 20px;
@@ -335,8 +337,8 @@ import { TranslationService } from '../services/translation.service';
     .spinner {
       width: 18px;
       height: 18px;
-      border: 2px solid #E4E4E7;
-      border-top-color: #09090B;
+      border: 2px solid var(--color-border);
+      border-top-color: var(--color-text-primary);
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
     }
@@ -347,20 +349,20 @@ import { TranslationService } from '../services/translation.service';
 
     .org-item-date {
       font-size: 11px;
-      color: #71717A;
+      color: var(--color-text-tertiary);
     }
 
     .org-warning-box {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
-      border-radius: 10px;
+      background: var(--color-warning-light);
+      border: 1px solid var(--color-warning-border);
+      border-radius: var(--r-card);
       padding: 10px 12px;
       margin-bottom: 16px;
       font-size: 12px;
-      color: #92400E;
+      color: var(--color-warning-text);
       line-height: 1.4;
       text-align: start;
     }
@@ -369,7 +371,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: #D97706;
+      color: var(--color-warning);
       flex-shrink: 0;
       margin-top: 1px;
     }
@@ -391,9 +393,9 @@ import { TranslationService } from '../services/translation.service';
       width: 100%;
       padding: 9px 14px;
       background: transparent;
-      border: 1px solid #E4E4E7;
+      border: 1px solid var(--color-border);
       border-radius: 8px;
-      color: #71717A;
+      color: var(--color-text-tertiary);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
@@ -401,8 +403,8 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .back-btn:hover:not(:disabled) {
-      background: #FAFAFA;
-      color: #09090B;
+      background: var(--color-subtle);
+      color: var(--color-text-primary);
     }
 
     .back-icon {
@@ -502,7 +504,7 @@ import { TranslationService } from '../services/translation.service';
                 type="email"
                 [(ngModel)]="email"
                 name="email"
-                class="form-input"
+                class="input-field"
                 [placeholder]="'login.emailPlaceholder' | translate"
                 autocomplete="email"
                 required
@@ -517,7 +519,7 @@ import { TranslationService } from '../services/translation.service';
                   [type]="showPassword() ? 'text' : 'password'"
                   [(ngModel)]="password"
                   name="password"
-                  class="form-input password-input"
+                  class="input-field"
                   [placeholder]="'login.passwordPlaceholder' | translate"
                   autocomplete="current-password"
                   required

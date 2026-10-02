@@ -9,7 +9,9 @@
     "build:dev": "ng build --configuration dev",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "lint:design": "node scripts/design-lint.mjs",
+    "lint:all": "npm run lint:design && npm run lint"
   },
   "private": true,
   "dependencies": {

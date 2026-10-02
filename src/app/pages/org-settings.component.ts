@@ -4,64 +4,61 @@ import { FormsModule } from '@angular/forms';
 import { CrmStateService } from '../services/crm-state.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { StatCardComponent } from '../shared/ui/stat-card.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-org-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule, StatCardComponent],
   template: `
-    <div class="space-y-8 font-sans">
+    <div class="space-y-6">
 
       <!-- Success Banner -->
       @if (showSuccess()) {
-        <div class="bg-zinc-100 border border-zinc-300 text-zinc-950 text-sm px-4 py-3 rounded-xl flex items-center gap-2 animate-in fade-in duration-200">
-          <mat-icon class="text-zinc-900 text-base w-5 h-5 flex items-center justify-center">check_circle</mat-icon>
+        <div class="alert alert-success" role="status">
+          <mat-icon>check_circle</mat-icon>
           <span>Changes saved successfully.</span>
         </div>
       }
 
-      <!-- Tabs -->
-      <div class="flex gap-5 sm:gap-6 border-b border-zinc-200">
-        <button (click)="orgTab.set('profile')" [class]="orgTab() === 'profile' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-          Profile
-        </button>
-        <button (click)="orgTab.set('metrics')" [class]="orgTab() === 'metrics' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-          Metrics
-        </button>
+      <!-- Sections -->
+      <div class="segmented self-start" role="group" aria-label="Organization sections">
+        <button (click)="orgTab.set('profile')" [class.is-active]="orgTab() === 'profile'" class="segmented__item">Profile</button>
+        <button (click)="orgTab.set('metrics')" [class.is-active]="orgTab() === 'metrics'" class="segmented__item">Metrics</button>
         @if (isAdmin()) {
-          <button (click)="orgTab.set('danger')" [class]="orgTab() === 'danger' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-            Danger Zone
-          </button>
+          <button (click)="orgTab.set('danger')" [class.is-active]="orgTab() === 'danger'" class="segmented__item">Danger Zone</button>
         }
       </div>
 
       @if (orgTab() === 'profile') {
-      <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-6 max-w-2xl">
-        <div class="flex items-center justify-between pb-4 border-b border-zinc-100">
-          <h3 class="font-bold text-zinc-800 text-base">Profile Details</h3>
+      <div class="card p-5 space-y-6 max-w-2xl">
+        <div class="flex items-center justify-between pb-4 border-b border-line-soft">
+          <h3 class="card-title">Profile Details</h3>
           @if (isAdmin()) {
             <button
               (click)="toggleEdit()"
-              class="text-zinc-900 hover:bg-zinc-100 p-1.5 rounded-lg transition-colors flex items-center cursor-pointer"
-              title="Edit Profile"
+              class="btn-icon btn-sm"
+              [title]="isEditing() ? 'Cancel editing' : 'Edit profile'" [attr.aria-label]="isEditing() ? 'Cancel editing' : 'Edit profile'"
             >
-              <mat-icon class="text-lg w-5 h-5 flex items-center justify-center">{{ isEditing() ? 'close' : 'edit' }}</mat-icon>
+              <mat-icon class="icon-sm">{{ isEditing() ? 'close' : 'edit' }}</mat-icon>
             </button>
           }
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center gap-5 p-4 rounded-xl bg-zinc-50 border border-zinc-200/60">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-subtle border border-line">
           <div class="relative group shrink-0">
             @if (state.organization().logoUrl) {
               <img
                 [src]="resolvedLogoUrl()"
                 [alt]="state.organization().name"
-                class="w-16 h-16 rounded-2xl object-contain bg-white border border-zinc-200 p-1 shadow-xs"
+                class="card w-16 h-16 object-contain p-1"
               />
             } @else {
               <div
                 [style.background-color]="state.organization().logoColor"
-                class="w-16 h-16 rounded-2xl text-white font-extrabold text-2xl flex items-center justify-center uppercase shadow-xs"
+                class="w-16 h-16 rounded-2xl text-white font-semibold text-2xl flex items-center justify-center uppercase shadow-xs"
               >
                 {{ state.organization().logoInitials }}
               </div>
@@ -70,10 +67,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
           <div class="flex-1 min-w-0 space-y-1">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Workspace Logo</span>
+              <span class="eyebrow">Workspace Logo</span>
               @if (isUploadingLogo()) {
-                <span class="text-xs text-blue-600 flex items-center gap-1">
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 animate-spin">refresh</mat-icon>
+                <span class="text-xs text-accent-ink flex items-center gap-1">
+                  <mat-icon class="animate-spin icon-xs">refresh</mat-icon>
                   Uploading...
                 </span>
               }
@@ -91,9 +88,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
                 type="button"
                 (click)="fileInput.click()"
                 [disabled]="!isAdmin() || isUploadingLogo()"
-                class="px-3 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                class="btn-secondary btn-sm"
               >
-                <mat-icon class="text-sm w-4 h-4 text-zinc-500">upload</mat-icon>
+                <mat-icon class="text-ink-3 icon-sm">upload</mat-icon>
                 <span>{{ state.organization().logoUrl ? 'Change Logo' : 'Upload Logo' }}</span>
               </button>
               @if (state.organization().logoUrl && isAdmin()) {
@@ -101,41 +98,41 @@ import { MatTooltipModule } from '@angular/material/tooltip';
                   type="button"
                   (click)="removeLogo()"
                   [disabled]="isUploadingLogo()"
-                  class="px-3 py-1.5 bg-white border border-red-200 hover:bg-red-50 text-red-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  class="btn-danger-soft btn-sm"
                 >
-                  <mat-icon class="text-sm w-4 h-4 text-red-500">delete_outline</mat-icon>
+                  <mat-icon class="icon-sm">delete_outline</mat-icon>
                   <span>Remove</span>
                 </button>
               }
             </div>
-            <p class="text-[11px] text-zinc-400 pt-0.5">PNG, JPG, SVG or WebP up to 5MB.</p>
+            <p class="text-meta text-ink-3 pt-0.5">PNG, JPG, SVG or WebP up to 5MB.</p>
           </div>
         </div>
 
         <div class="flex items-center gap-4">
           <div class="flex-1 min-w-0">
             @if (isEditing()) {
-              <label for="org_name" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Organization Name</label>
+              <label for="org_name" class="field-label mb-1.5">Organization Name</label>
               <input
                 id="org_name"
                 [(ngModel)]="editName"
                 placeholder="Organization Name"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-blue-600 font-semibold text-zinc-800"
+                class="input-field w-full font-semibold"
               />
             } @else {
-              <h2 class="text-lg font-bold text-zinc-900 truncate">{{ state.organization().name }}</h2>
-              <p class="text-xs text-zinc-400 font-sans mt-0.5">ID: {{ state.organization().id }}</p>
+              <h2 class="section-title truncate">{{ state.organization().name }}</h2>
+              <p class="text-xs text-ink-3 mt-0.5">ID: {{ state.organization().id }}</p>
             }
           </div>
         </div>
 
         <div class="space-y-4">
           <div>
-            <label for="industry" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Industry</label>
+            <label for="industry" class="field-label mb-1.5">Industry</label>
             @if (isEditing()) {
               <select id="industry"
                 [(ngModel)]="editIndustry"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 font-semibold text-zinc-700 cursor-pointer"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 <option value="Technology">Technology</option>
                 <option value="Finance">Finance</option>
@@ -145,36 +142,36 @@ import { MatTooltipModule } from '@angular/material/tooltip';
                 <option value="Education">Education</option>
               </select>
             } @else {
-              <div class="text-sm font-semibold text-zinc-800">{{ state.organization().industry }}</div>
+              <div class="text-sm font-semibold text-ink">{{ state.organization().industry }}</div>
             }
           </div>
 
           <div>
-            <label for="timezone" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Timezone</label>
+            <label for="timezone" class="field-label mb-1.5">Timezone</label>
             @if (isEditing()) {
               <input
                 [(ngModel)]="editTimezone"
                 placeholder="e.g. Africa/Casablanca"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-blue-600 text-zinc-700"
+                class="input-field w-full"
               />
             } @else {
-              <div class="text-sm font-semibold text-zinc-800 font-sans">{{ state.organization().timezone }}</div>
+              <div class="text-sm font-semibold text-ink">{{ state.organization().timezone }}</div>
             }
           </div>
 
           <div>
-            <label for="fiscal_year_start_mo" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Fiscal Year Start Month</label>
+            <label for="fiscal_year_start_mo" class="field-label mb-1.5">Fiscal Year Start Month</label>
             @if (isEditing()) {
               <select
                 [(ngModel)]="editFiscalStart"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 font-semibold text-zinc-700 cursor-pointer"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 @for (m of months; track m.value) {
                   <option [value]="m.value">{{ m.name }}</option>
                 }
               </select>
             } @else {
-              <div class="text-sm font-semibold text-zinc-800">{{ getMonthName(state.organization().fiscalYearStart) }}</div>
+              <div class="text-sm font-semibold text-ink">{{ getMonthName(state.organization().fiscalYearStart) }}</div>
             }
           </div>
         </div>
@@ -183,7 +180,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           <div class="pt-2">
             <button
               (click)="saveOrgDetails()"
-              class="w-full bg-zinc-900 hover:bg-zinc-950 text-white py-2 px-4 rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer font-sans"
+              class="btn-primary w-full"
             >
               Save Changes
             </button>
@@ -193,188 +190,56 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       }
 
       @if (orgTab() === 'metrics') {
-      <div class="space-y-8">
+      <div class="space-y-6">
 
         <div class="space-y-3">
-          <h3 class="font-bold text-zinc-800 text-base">Team</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="blue">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="All member accounts" matTooltipPosition="above">
-                  Total Users
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">group</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.users().length }}</div>
-            </div>
+          <h3 class="card-title">Team</h3>
+          <div class="stat-grid">
+            <app-stat-card label="Total Users" [value]="state.users().length" icon="group" tone="blue" tooltip="All member accounts" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="emerald">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Currently enabled accounts" matTooltipPosition="above">
-                  Active Users
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">how_to_reg</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.activeUsers().length }}</div>
-            </div>
+            <app-stat-card label="Active Users" [value]="state.activeUsers().length" icon="how_to_reg" tone="emerald" tooltip="Currently enabled accounts" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="slate">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Departments in org" matTooltipPosition="above">
-                  Active Teams
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">groups</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.teams().length }}</div>
-            </div>
+            <app-stat-card label="Active Teams" [value]="state.teams().length" icon="groups" tone="slate" tooltip="Departments in org" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="sky">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Shared chat spaces" matTooltipPosition="above">
-                  Collaboration Groups
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">forum</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.groups().length }}</div>
-            </div>
+            <app-stat-card label="Collaboration Groups" [value]="state.groups().length" icon="forum" tone="sky" tooltip="Shared chat spaces" />
           </div>
         </div>
 
         <div class="space-y-3">
-          <h3 class="font-bold text-zinc-800 text-base">Sales &amp; Pipeline</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="violet">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Leads, customers &amp; vendors" matTooltipPosition="above">
-                  Total Partners
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">handshake</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.partners().length }}</div>
-            </div>
+          <h3 class="card-title">Sales &amp; Pipeline</h3>
+          <div class="stat-grid">
+            <app-stat-card label="Total Partners" [value]="state.partners().length" icon="handshake" tone="violet" tooltip="Leads, customers &amp; vendors" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="blue">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="In active pipeline" matTooltipPosition="above">
-                  Open Deals
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">point_of_sale</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ openDeals() }}</div>
-            </div>
+            <app-stat-card label="Open Deals" [value]="openDeals()" icon="point_of_sale" tone="blue" tooltip="In active pipeline" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="emerald">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Won/confirmed revenue" matTooltipPosition="above">
-                  Sales This Month
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">paid</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ formatCurrency(state.salesThisMonth()) }}</div>
-            </div>
+            <app-stat-card label="Sales This Month" [value]="formatCurrency(state.salesThisMonth())" icon="paid" tone="emerald" tooltip="Won/confirmed revenue" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="amber">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Won vs lost deals" matTooltipPosition="above">
-                  Win Rate
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">emoji_events</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.winRate() }}%</div>
-            </div>
+            <app-stat-card label="Win Rate" [value]="state.winRate() + '%'" icon="emoji_events" tone="amber" tooltip="Won vs lost deals" />
           </div>
         </div>
 
         <div class="space-y-3">
-          <h3 class="font-bold text-zinc-800 text-base">Operations</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="sky">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Open or in progress" matTooltipPosition="above">
-                  Open Tickets
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">support_agent</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ openTickets() }}</div>
-            </div>
+          <h3 class="card-title">Operations</h3>
+          <div class="stat-grid">
+            <app-stat-card label="Open Tickets" [value]="openTickets()" icon="support_agent" tone="sky" tooltip="Open or in progress" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="amber">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Across all teams" matTooltipPosition="above">
-                  Pending Tasks
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">checklist</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ pendingTasks() }}</div>
-            </div>
+            <app-stat-card label="Pending Tasks" [value]="pendingTasks()" icon="checklist" tone="amber" tooltip="Across all teams" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="rose">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Needs collection" matTooltipPosition="above">
-                  Overdue Invoices
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">receipt_long</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ state.overdueInvoices().length }}</div>
-            </div>
+            <app-stat-card label="Overdue Invoices" [value]="state.overdueInvoices().length" icon="receipt_long" tone="rose" tooltip="Needs collection" />
 
-            <div class="card tone-card rounded-2xl p-4 lg:p-6 flex flex-col justify-between hover:shadow-md transition-all" data-tone="violet">
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-meta font-bold text-zinc-400 uppercase tracking-wider font-sans flex items-center gap-1 cursor-help" matTooltip="Currently running" matTooltipPosition="above">
-                  Active Campaigns
-                  <mat-icon class="text-[13px] w-3.5 h-3.5 flex items-center justify-center text-zinc-300">info</mat-icon>
-                </h4>
-                <div class="h-9 w-9 tone-icon rounded-xl flex items-center justify-center">
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">campaign</mat-icon>
-                </div>
-              </div>
-              <div class="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 font-sans truncate">{{ activeCampaigns() }}</div>
-            </div>
+            <app-stat-card label="Active Campaigns" [value]="activeCampaigns()" icon="campaign" tone="violet" tooltip="Currently running" />
           </div>
         </div>
       </div>
       }
 
       @if (orgTab() === 'danger') {
-      <div class="bg-zinc-100 border border-zinc-300/80 rounded-2xl p-6 shadow-xs">
-        <h3 class="font-bold text-zinc-950 text-base mb-2">Danger Zone</h3>
-        <p class="text-xs text-zinc-900/90 mb-4">Deactivating the organization will disable all user accounts and freeze CRM data collections. This action requires high administrative verification.</p>
+      <div class="card p-5 max-w-2xl border-danger-line">
+        <h3 class="card-title text-danger-ink mb-2">Danger Zone</h3>
+        <p class="text-sm text-ink-2 mb-4">Deactivating the organization will disable all user accounts and freeze CRM data collections. This action requires high administrative verification.</p>
         <button
           disabled
-          class="bg-zinc-200/50 text-rose-450 px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-300/50 cursor-not-allowed select-none"
+          class="btn-danger-soft"
           title="Contact support to deactivate your organization"
         >
           Deactivate Organization
@@ -385,6 +250,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   `
 })
 export class OrgSettingsComponent {
+  private notify = inject(ToastService);
+  private confirmDialog = inject(ConfirmService);
   state = inject(CrmStateService);
 
   orgTab = signal('profile');
@@ -456,7 +323,7 @@ export class OrgSettingsComponent {
 
     // Maximum 5MB validation
     if (file.size > 5 * 1024 * 1024) {
-      alert('File is too large. Maximum size is 5MB.');
+      this.notify.show('File is too large. Maximum size is 5MB.', { type: 'warning' });
       input.value = '';
       return;
     }
@@ -475,9 +342,9 @@ export class OrgSettingsComponent {
     );
   }
 
-  removeLogo() {
+  async removeLogo() {
     if (!this.isAdmin()) return;
-    if (confirm('Are you sure you want to remove the organization logo?')) {
+    if (await this.confirmDialog.ask({ title: 'Remove logo?', message: 'Your workspace will fall back to its initials.', confirmLabel: 'Remove logo', danger: true })) {
       this.state.updateOrganization({ logoUrl: '' });
     }
   }

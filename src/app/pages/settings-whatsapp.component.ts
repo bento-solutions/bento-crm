@@ -11,6 +11,8 @@ import {
   AutoCreateLeads, InboxVisibility, WhatsAppAccountApi, WhatsAppSession, WhatsAppSettings
 } from '../services/domains/whatsapp-account.service';
 import { BlockedNumber, WhatsAppInboxStore } from '../services/domains/whatsapp-inbox.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
 
 const PAIRING_STATES = new Set(['pairing', 'connecting']);
 
@@ -21,67 +23,45 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
  */
 @Component({
   selector: 'app-settings-whatsapp',
-  imports: [FormsModule, MatIconModule, TranslatePipe, UserPickerComponent],
-  styles: [`
-    .ws-card { background: var(--color-surface); border: 1px solid var(--color-border); }
-    .ws-muted { color: var(--color-text-secondary); }
-    .ws-faint { color: var(--color-text-tertiary); }
-    .ws-input { background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text-primary); }
-    .ws-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); }
-    .ws-btn-primary { background: var(--color-text-primary); color: var(--color-surface); }
-    .ws-btn-primary:disabled, .ws-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .ws-danger { color: var(--color-danger); }
-    .ws-code { background: var(--color-bg); border: 1px dashed var(--color-border-strong, var(--color-border)); }
-    .ws-chip-ok { background: var(--color-success-light); color: var(--color-success); }
-    .ws-chip-wait { background: var(--color-warning-light); color: var(--color-warning); }
-    .ws-chip-bad { background: var(--color-danger-light); color: var(--color-danger); }
-    .ws-chip-off { background: var(--color-surface-active); color: var(--color-text-secondary); }
-    .ws-note { background: var(--color-warning-light); color: var(--color-text-primary); }
-    .ws-option { border: 1px solid var(--color-border); }
-    .ws-option:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent-light); }
-  `],
+  imports: [FormsModule, MatIconModule, TranslatePipe, UserPickerComponent, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
+    <div class="page max-w-3xl">
+      <app-page-header size="section" [title]="'waSettings.title' | translate" [subtitle]="'waSettings.subtitle' | translate">
+        @if (chip(); as c) {
+          <span meta class="badge" [class]="c.cls">{{ c.label | translate }}</span>
+        }
+      </app-page-header>
+
       @if (session(); as s) {
         @if (!s.botConfigured) {
-          <p class="ws-note text-sm rounded-xl px-4 py-3 flex gap-2">
+          <p class="alert alert-warning">
             <mat-icon class="shrink-0">warning</mat-icon>{{ 'waSettings.botMissing' | translate }}
           </p>
         }
       }
 
       <!-- Connection -->
-      <section class="ws-card rounded-2xl p-6 space-y-5">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-base font-bold">{{ 'waSettings.title' | translate }}</h2>
-            <p class="text-sm ws-muted mt-1">{{ 'waSettings.subtitle' | translate }}</p>
-          </div>
-          @if (chip(); as c) {
-            <span class="text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap" [class]="c.cls">{{ c.label | translate }}</span>
-          }
-        </div>
-
+      <section class="card p-5 space-y-5">
         @if (loading()) {
-          <p class="text-sm ws-faint">{{ 'inbox.loading' | translate }}</p>
+          <p class="text-sm text-ink-3">{{ 'inbox.loading' | translate }}</p>
         } @else if (state() === 'open') {
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p class="text-lg font-bold" dir="ltr">{{ phone(session()?.linkedPhone) }}</p>
+              <p class="text-lg font-semibold" dir="ltr">{{ phone(session()?.linkedPhone) }}</p>
               @if (session()?.linkedAt) {
-                <p class="text-xs ws-muted">{{ 'waSettings.linkedSince' | translate: { date: date(session()?.linkedAt) } }}</p>
+                <p class="text-xs text-ink-2">{{ 'waSettings.linkedSince' | translate: { date: date(session()?.linkedAt) } }}</p>
               }
             </div>
-            <button type="button" class="ws-btn ws-danger text-sm font-semibold px-3 py-2 rounded-lg" [disabled]="busy()" (click)="unlink()">
+            <button type="button" class="btn-danger-soft" [disabled]="busy()" (click)="unlink()">
               {{ 'waSettings.unlink' | translate }}
             </button>
           </div>
         } @else if (state() === 'pairing' && session()?.pairingCode) {
-          <div class="grid gap-5 sm:grid-cols-2 items-start">
-            <div class="ws-code rounded-2xl p-5 text-center">
-              <p class="text-xs ws-muted mb-2">{{ 'waSettings.codeFor' | translate: { phone: phone(session()?.requestedPhone) } }}</p>
-              <p class="text-3xl font-mono font-bold tracking-[0.25em]" dir="ltr" aria-live="polite">{{ session()?.pairingCode }}</p>
-              <p class="text-xs ws-muted mt-3">
+          <div class="grid gap-4 sm:grid-cols-2 items-start">
+            <div class="rounded-xl border border-dashed border-line-strong bg-subtle p-5 text-center">
+              <p class="text-xs text-ink-2 mb-2">{{ 'waSettings.codeFor' | translate: { phone: phone(session()?.requestedPhone) } }}</p>
+              <p class="text-3xl font-mono font-semibold tracking-[0.25em]" dir="ltr" aria-live="polite">{{ session()?.pairingCode }}</p>
+              <p class="text-xs text-ink-2 mt-3">
                 {{ 'waSettings.expiresIn' | translate: { time: countdown() } }}
                 · {{ 'waSettings.attempt' | translate: { n: session()?.pairingAttempt ?? 1, max: 5 } }}
               </p>
@@ -93,55 +73,55 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
               <li>{{ 'waSettings.step4' | translate }}</li>
             </ol>
           </div>
-          <p class="text-xs ws-faint">{{ 'waSettings.pairingHint' | translate }}</p>
+          <p class="text-xs text-ink-3">{{ 'waSettings.pairingHint' | translate }}</p>
         } @else if (state() === 'connecting' || state() === 'reconnecting' || (state() === 'pairing' && !session()?.pairingCode)) {
-          <p class="text-sm ws-muted flex items-center gap-2">
+          <p class="text-sm text-ink-2 flex items-center gap-2">
             <mat-icon class="animate-spin">progress_activity</mat-icon>{{ 'waSettings.connecting' | translate }}
           </p>
         } @else {
           @if (state() === 'replaced') {
-            <p class="ws-note text-sm rounded-xl px-4 py-3">{{ 'waSettings.replacedHelp' | translate }}</p>
+            <p class="alert alert-warning">{{ 'waSettings.replacedHelp' | translate }}</p>
           } @else if (state() === 'logged_out') {
-            <p class="ws-note text-sm rounded-xl px-4 py-3">{{ 'waSettings.loggedOutHelp' | translate }}</p>
+            <p class="alert alert-warning">{{ 'waSettings.loggedOutHelp' | translate }}</p>
           } @else if (state() === 'pairing_failed') {
-            <p class="ws-note text-sm rounded-xl px-4 py-3">{{ 'waSettings.pairingFailedHelp' | translate }}</p>
+            <p class="alert alert-warning">{{ 'waSettings.pairingFailedHelp' | translate }}</p>
           }
           @if (session()?.error && state() !== 'stopped') {
-            <p class="text-xs ws-danger">{{ session()?.error }}</p>
+            <p class="text-xs text-danger-ink">{{ session()?.error }}</p>
           }
           <div class="flex flex-wrap items-end gap-3">
             <label class="flex-1 min-w-[220px]">
-              <span class="text-xs font-semibold ws-muted">{{ 'waSettings.phoneLabel' | translate }}</span>
-              <input type="tel" dir="ltr" class="ws-input w-full rounded-lg px-3 py-2 mt-1 text-sm" placeholder="+212 6 12 34 56 78"
+              <span class="field-label">{{ 'waSettings.phoneLabel' | translate }}</span>
+              <input type="tel" dir="ltr" class="input-field w-full mt-1" placeholder="+212 6 12 34 56 78"
                      [ngModel]="phoneInput()" (ngModelChange)="phoneInput.set($event)" autocomplete="tel" />
             </label>
-            <button type="button" class="ws-btn-primary text-sm font-semibold px-4 py-2 rounded-lg"
+            <button type="button" class="btn-primary"
                     [disabled]="busy() || !phoneInput().trim() || !session()?.botConfigured" (click)="link()">
               {{ 'waSettings.getCode' | translate }}
             </button>
             @if (state() === 'replaced' || (state() === 'stopped' && session()?.linkedPhone)) {
-              <button type="button" class="ws-btn text-sm font-semibold px-4 py-2 rounded-lg" [disabled]="busy()" (click)="reconnect()">
+              <button type="button" class="btn-secondary" [disabled]="busy()" (click)="reconnect()">
                 {{ 'waSettings.reconnect' | translate }}
               </button>
             }
           </div>
-          <p class="text-xs ws-faint">{{ 'waSettings.linkHint' | translate }}</p>
+          <p class="text-xs text-ink-3">{{ 'waSettings.linkHint' | translate }}</p>
         }
       </section>
 
       <!-- Leads & visibility -->
       @if (settings(); as st) {
-        <section class="ws-card rounded-2xl p-6 space-y-5">
-          <h2 class="text-base font-bold">{{ 'waSettings.leadsTitle' | translate }}</h2>
+        <section class="card p-5 space-y-5">
+          <h2 class="card-title">{{ 'waSettings.leadsTitle' | translate }}</h2>
           <fieldset class="space-y-2">
             <legend class="text-sm font-semibold mb-2">{{ 'waSettings.autoLeads' | translate }}</legend>
             @for (opt of autoOptions; track opt) {
-              <label class="ws-option flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer">
+              <label class="choice-row">
                 <input type="radio" name="autoLeads" class="mt-1" [value]="opt" [ngModel]="st.autoCreateLeads"
                        (ngModelChange)="patch({ autoCreateLeads: $event })" />
                 <span>
                   <span class="text-sm font-semibold block">{{ ('waSettings.auto.' + opt) | translate }}</span>
-                  <span class="text-xs ws-muted">{{ ('waSettings.auto.' + opt + '.hint') | translate }}</span>
+                  <span class="text-xs text-ink-2">{{ ('waSettings.auto.' + opt + '.hint') | translate }}</span>
                 </span>
               </label>
             }
@@ -149,30 +129,30 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
           <fieldset class="space-y-2">
             <legend class="text-sm font-semibold mb-2">{{ 'waSettings.visibility' | translate }}</legend>
             @for (opt of visibilityOptions; track opt) {
-              <label class="ws-option flex items-start gap-3 rounded-xl px-3 py-2.5 cursor-pointer">
+              <label class="choice-row">
                 <input type="radio" name="visibility" class="mt-1" [value]="opt" [ngModel]="st.visibility"
                        (ngModelChange)="patch({ visibility: $event })" />
                 <span>
                   <span class="text-sm font-semibold block">{{ ('waSettings.visibility.' + opt) | translate }}</span>
-                  <span class="text-xs ws-muted">{{ ('waSettings.visibility.' + opt + '.hint') | translate }}</span>
+                  <span class="text-xs text-ink-2">{{ ('waSettings.visibility.' + opt + '.hint') | translate }}</span>
                 </span>
               </label>
             }
           </fieldset>
           <div class="max-w-sm">
             <span class="text-sm font-semibold">{{ 'waSettings.defaultAssignee' | translate }}</span>
-            <p class="text-xs ws-muted mb-2">{{ 'waSettings.defaultAssigneeHint' | translate }}</p>
+            <p class="text-xs text-ink-2 mb-2">{{ 'waSettings.defaultAssigneeHint' | translate }}</p>
             <app-user-picker [value]="st.defaultAssigneeUserId ?? ''" (valueChange)="patch({ defaultAssigneeUserId: $event || null })" />
           </div>
 
           <details class="pt-2">
             <summary class="text-sm font-semibold cursor-pointer">{{ 'waSettings.limits' | translate }}</summary>
-            <p class="text-xs ws-muted mt-2 mb-3">{{ 'waSettings.limitsHint' | translate }}</p>
+            <p class="text-xs text-ink-2 mt-2 mb-3">{{ 'waSettings.limitsHint' | translate }}</p>
             <div class="grid gap-3 sm:grid-cols-2">
               @for (f of limitFields; track f.key) {
                 <label>
-                  <span class="text-xs font-semibold ws-muted">{{ f.label | translate }}</span>
-                  <input type="number" min="0" class="ws-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [placeholder]="f.placeholder"
+                  <span class="field-label">{{ f.label | translate }}</span>
+                  <input type="number" min="0" class="input-field w-full mt-1" [placeholder]="f.placeholder"
                          [ngModel]="st[f.key]" (ngModelChange)="patchNumber(f.key, $event)" />
                 </label>
               }
@@ -180,7 +160,7 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
           </details>
 
           <div class="flex justify-end">
-            <button type="button" class="ws-btn-primary text-sm font-semibold px-4 py-2 rounded-lg" [disabled]="busy() || !dirty()" (click)="saveSettings()">
+            <button type="button" class="btn-primary" [disabled]="busy() || !dirty()" (click)="saveSettings()">
               {{ 'waSettings.save' | translate }}
             </button>
           </div>
@@ -188,22 +168,23 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
       }
 
       <!-- Ignored numbers -->
-      <section class="ws-card rounded-2xl p-6 space-y-3">
-        <h2 class="text-base font-bold">{{ 'waSettings.ignoredTitle' | translate }}</h2>
-        <p class="text-sm ws-muted">{{ 'waSettings.ignoredHint' | translate }}</p>
+      <section class="card p-5 space-y-3">
+        <h2 class="card-title">{{ 'waSettings.ignoredTitle' | translate }}</h2>
+        <p class="text-sm text-ink-2">{{ 'waSettings.ignoredHint' | translate }}</p>
         @for (b of blocked(); track b.id) {
-          <div class="flex items-center justify-between py-2" style="border-top: 1px solid var(--color-border-light)">
+          <div class="flex items-center justify-between py-2 border-t border-line-soft">
             <span class="text-sm" dir="ltr">{{ phone(b.phone) }}</span>
-            <button type="button" class="ws-btn text-xs px-2.5 py-1 rounded-lg" (click)="unblock(b)">{{ 'waSettings.stopIgnoring' | translate }}</button>
+            <button type="button" class="btn-secondary btn-sm" (click)="unblock(b)">{{ 'waSettings.stopIgnoring' | translate }}</button>
           </div>
         } @empty {
-          <p class="text-xs ws-faint">{{ 'waSettings.noIgnored' | translate }}</p>
+          <p class="text-xs text-ink-3">{{ 'waSettings.noIgnored' | translate }}</p>
         }
       </section>
     </div>
   `
 })
 export class SettingsWhatsAppComponent implements OnInit, OnDestroy {
+  private confirmDialog = inject(ConfirmService);
   private api = inject(WhatsAppAccountApi);
   private inbox = inject(WhatsAppInboxStore);
   private i18n = inject(TranslationService);
@@ -234,15 +215,15 @@ export class SettingsWhatsAppComponent implements OnInit, OnDestroy {
 
   protected chip = computed(() => {
     switch (this.state()) {
-      case 'open': return { label: 'waSettings.state.open', cls: 'ws-chip-ok' };
+      case 'open': return { label: 'waSettings.state.open', cls: 'badge-success' };
       case 'pairing':
       case 'connecting':
-      case 'reconnecting': return { label: 'waSettings.state.' + this.state(), cls: 'ws-chip-wait' };
+      case 'reconnecting': return { label: 'waSettings.state.' + this.state(), cls: 'badge-warning' };
       case 'logged_out':
       case 'replaced':
       case 'pairing_failed':
-      case 'error': return { label: 'waSettings.state.' + this.state(), cls: 'ws-chip-bad' };
-      default: return { label: 'waSettings.state.notLinked', cls: 'ws-chip-off' };
+      case 'error': return { label: 'waSettings.state.' + this.state(), cls: 'badge-danger' };
+      default: return { label: 'waSettings.state.notLinked', cls: 'badge-neutral' };
     }
   });
 
@@ -323,7 +304,7 @@ export class SettingsWhatsAppComponent implements OnInit, OnDestroy {
 
   async unlink(): Promise<void> {
     const phone = formatPhone(this.session()?.linkedPhone);
-    if (!confirm(this.i18n.t('waSettings.unlinkConfirm', { phone }))) return;
+    if (!(await this.confirmDialog.ask({ title: this.i18n.t('waSettings.unlink'), message: this.i18n.t('waSettings.unlinkConfirm', { phone }), danger: true, confirmLabel: this.i18n.t('waSettings.unlink') }))) return;
     await this.run(async () => this.session.set(await firstValueFrom(this.api.unlink())));
   }
 

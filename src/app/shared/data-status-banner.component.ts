@@ -22,12 +22,12 @@ import { CommonModule } from '@angular/common';
   template: `
     @if (loading()) {
       @if (variant() === 'rows') {
-        <div class="card rounded-2xl overflow-hidden">
+        <div class="card overflow-hidden">
           @for (r of rowsArray(); track r) {
-            <div class="flex items-center gap-4 px-4 py-3 border-b border-zinc-100 last:border-b-0">
+            <div class="flex items-center gap-4 px-5 py-3.5 border-b border-line-soft last:border-b-0">
               @for (c of columnsArray(); track c) {
                 <div class="flex-1">
-                  <div class="skeleton-shimmer h-3.5 rounded" [style.width.%]="skeletonWidth(c)"></div>
+                  <div class="skeleton-shimmer h-3.5 rounded-sm" [style.width.%]="skeletonWidth(c)"></div>
                 </div>
               }
             </div>
@@ -35,19 +35,19 @@ import { CommonModule } from '@angular/common';
         </div>
       }
       @if (variant() === 'tiles') {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (t of tilesArray(); track t) {
-            <div class="card rounded-2xl p-6">
+            <div class="card p-5">
               <div class="flex items-center gap-3 mb-4">
                 <div class="skeleton-shimmer w-10 h-10 rounded-full shrink-0"></div>
                 <div class="flex-1 space-y-2">
-                  <div class="skeleton-shimmer h-3.5 rounded w-3/5"></div>
-                  <div class="skeleton-shimmer h-2.5 rounded w-2/5"></div>
+                  <div class="skeleton-shimmer h-3.5 rounded-sm w-3/5"></div>
+                  <div class="skeleton-shimmer h-2.5 rounded-sm w-2/5"></div>
                 </div>
               </div>
               <div class="space-y-2">
-                <div class="skeleton-shimmer h-2.5 rounded w-full"></div>
-                <div class="skeleton-shimmer h-2.5 rounded w-4/5"></div>
+                <div class="skeleton-shimmer h-2.5 rounded-sm w-full"></div>
+                <div class="skeleton-shimmer h-2.5 rounded-sm w-4/5"></div>
               </div>
             </div>
           }
@@ -55,8 +55,8 @@ import { CommonModule } from '@angular/common';
       }
     }
     @if (error()) {
-      <div class="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-body">
-        <mat-icon class="text-[18px] w-[18px] h-[18px]">warning</mat-icon>
+      <div class="alert alert-warning mb-4" role="alert">
+        <mat-icon>warning</mat-icon>
         <span>{{ error() }}</span>
       </div>
     }

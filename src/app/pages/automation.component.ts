@@ -7,6 +7,11 @@ import { AutomationRulesService, AutomationRule } from '../services/domains/auto
 import { DataStatusBannerComponent } from '../shared/data-status-banner.component';
 import { PaginatorComponent } from '../shared/paginator.component';
 import { errorMessage } from '../shared/error-message.util';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { StatCardComponent } from '../shared/ui/stat-card.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
+import { ToastService } from '../services/toast.service';
 
 const RULE_TEMPLATES: Omit<AutomationRule, 'id'>[] = [
   {
@@ -128,11 +133,13 @@ const RULE_TEMPLATES: Omit<AutomationRule, 'id'>[] = [
 @Component({
   selector: 'app-automation',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, DataStatusBannerComponent, PaginatorComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, DataStatusBannerComponent, PaginatorComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   templateUrl: './automation.component.html',
   styleUrls: ['./automation.component.css']
 })
 export class AutomationComponent {
+  private notify = inject(ToastService);
+  private confirmDialog = inject(ConfirmService);
   state = inject(CrmStateService);
   automationRulesService = inject(AutomationRulesService);
 
@@ -344,7 +351,7 @@ export class AutomationComponent {
     const allowed = this.editingRuleId() ? this.canWrite() : this.canCreate();
     if (!allowed) return;
     if (!this.ruleName()) {
-      alert('Please enter a rule name.');
+      this.notify.show('Please enter a rule name.', { type: 'warning' });
       return;
     }
 
@@ -378,9 +385,9 @@ export class AutomationComponent {
     }
   }
 
-  deleteRule(ruleId: string) {
+  async deleteRule(ruleId: string) {
     if (!this.canDelete()) return;
-    if (confirm('Are you sure you want to delete this automation rule?')) {
+    if (await this.confirmDialog.ask({ title: 'Delete automation rule?', message: 'The rule will stop firing immediately. This cannot be undone.', confirmLabel: 'Delete rule', danger: true })) {
       this.automationRulesService.deleteRule(ruleId);
     }
   }
@@ -455,7 +462,7 @@ export class AutomationComponent {
       if (this.sandboxIsLiveRun()) {
         // Mutation run
         await this.state.evaluateRules(trigger, entity, label);
-        alert('Simulation executed and state changes written successfully.');
+        this.notify.show('Simulation executed and state changes written successfully.', { type: 'success' });
         this.isSandboxOpen.set(false);
       } else {
         // Dry run
@@ -463,7 +470,7 @@ export class AutomationComponent {
         this.sandboxLogs.set(results);
       }
     } catch (e: unknown) {
-      alert('Failed to parse JSON payload or run simulation: ' + errorMessage(e));
+      this.notify.show('Failed to parse JSON payload or run simulation: ' + errorMessage(e), { type: 'error', duration: 6000 });
     } finally {
       this.sandboxLoading.set(false);
     }

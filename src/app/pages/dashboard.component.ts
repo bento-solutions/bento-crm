@@ -6,6 +6,8 @@ import { CrmStateService, Task, Ticket, TaskStatus } from '../services/crm-state
 import { PartnerScheduleCalendarComponent } from '../shared/partner-schedule-calendar.component';
 import { BentoGrid, BentoTile } from '../shared/bento-grid';
 import { CountUpDirective } from '../shared/count-up.directive';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { ENTITY_TONE } from '../shared/ui/tones';
 
 type Tone = 'slate' | 'blue' | 'sky' | 'violet' | 'emerald' | 'amber' | 'rose';
 type TileKind = 'today' | 'pipeline' | 'late' | 'donut' | 'schedule' | 'queue' | 'kpi';
@@ -23,10 +25,13 @@ interface TileDef {
 }
 
 interface Delta {
-  pct: number;
+  /** Text shown in the chip: "+25%", "−10%" or "New" when the previous period was empty. */
+  label: string;
   direction: 'up' | 'down' | 'flat';
   /** True when "up" is bad news (overdue invoices, lost deals). */
   inverted?: boolean;
+  /** Comparison window, spelled out in the chip's tooltip. */
+  period: 'day' | 'week' | 'month';
 }
 
 interface Spark {
@@ -42,6 +47,8 @@ interface KpiData {
   hint: string;
   delta: Delta | null;
   spark: Spark;
+  /** Where the tile drills down to. */
+  route: string;
 }
 
 interface TodayItem {
@@ -89,32 +96,44 @@ interface Slice {
  * sliver nothing else can fit into.
  */
 const CATALOG: TileDef[] = [
-  { id: 'today', kind: 'today', title: 'Focus Today', icon: 'bolt', tone: 'slate', w: 4, h: 4 },
-  { id: 'pipeline', kind: 'pipeline', title: 'Pipeline Value', icon: 'trending_up', tone: 'violet', w: 4, h: 4 },
-  { id: 'tasks-queue', kind: 'queue', title: 'Pending Tasks', icon: 'checklist', tone: 'amber', w: 4, h: 4, hSm: 5 },
-  { id: 'schedule', kind: 'schedule', title: 'Partner Schedule', icon: 'calendar_month', tone: 'blue', w: 4, h: 4, hSm: 6 },
-  { id: 'tickets-queue', kind: 'queue', title: 'Pending Tickets', icon: 'support_agent', tone: 'sky', w: 4, h: 4, hSm: 5 },
-  { id: 'partner-mix', kind: 'donut', title: 'Partner Mix', icon: 'groups', tone: 'blue', w: 2, h: 4 },
-  { id: 'task-status', kind: 'donut', title: 'Task Status', icon: 'donut_small', tone: 'emerald', w: 2, h: 4 },
-  { id: 'late-payers', kind: 'late', title: 'Late Payers', icon: 'running_with_errors', tone: 'rose', w: 2, h: 2 },
-  { id: 'kpi:totalDeals', kind: 'kpi', title: 'Deal Value', icon: 'payments', tone: 'emerald', w: 2, h: 2 },
-  { id: 'kpi:newDeals', kind: 'kpi', title: 'New Deals', icon: 'handshake', tone: 'violet', w: 2, h: 2 },
-  { id: 'kpi:totalProspects', kind: 'kpi', title: 'Prospects', icon: 'person_search', tone: 'blue', w: 2, h: 2 },
-  { id: 'kpi:openTickets', kind: 'kpi', title: 'Open Tickets', icon: 'confirmation_number', tone: 'amber', w: 2, h: 2 },
-  { id: 'kpi:activeCampaigns', kind: 'kpi', title: 'Campaigns', icon: 'campaign', tone: 'sky', w: 2, h: 2 },
-  { id: 'kpi:marketingSpend', kind: 'kpi', title: 'Reach', icon: 'send', tone: 'violet', w: 2, h: 2 },
-  { id: 'kpi:newTasksWeek', kind: 'kpi', title: 'New Tasks', icon: 'assignment_add', tone: 'emerald', w: 2, h: 2 },
-  { id: 'kpi:newProspects', kind: 'kpi', title: 'New Prospects', icon: 'group_add', tone: 'sky', w: 2, h: 2 },
-  { id: 'kpi:lostProspects', kind: 'kpi', title: 'Lost Deals', icon: 'trending_down', tone: 'rose', w: 2, h: 2 },
-  { id: 'kpi:todaysDeal', kind: 'kpi', title: 'Best Today', icon: 'star', tone: 'amber', w: 2, h: 2 }
+  { id: 'today', kind: 'today', title: 'Focus Today', icon: 'bolt', tone: ENTITY_TONE.focus, w: 4, h: 4 },
+  { id: 'pipeline', kind: 'pipeline', title: 'Pipeline Value', icon: 'trending_up', tone: ENTITY_TONE.pipeline, w: 4, h: 4 },
+  { id: 'tasks-queue', kind: 'queue', title: 'Pending Tasks', icon: 'checklist', tone: ENTITY_TONE.tasks, w: 4, h: 4, hSm: 5 },
+  { id: 'schedule', kind: 'schedule', title: 'Partner Schedule', icon: 'calendar_month', tone: ENTITY_TONE.partners, w: 4, h: 4, hSm: 6 },
+  { id: 'tickets-queue', kind: 'queue', title: 'Pending Tickets', icon: 'support_agent', tone: ENTITY_TONE.tickets, w: 4, h: 4, hSm: 5 },
+  { id: 'partner-mix', kind: 'donut', title: 'Partner Mix', icon: 'groups', tone: ENTITY_TONE.partners, w: 2, h: 4 },
+  { id: 'task-status', kind: 'donut', title: 'Task Status', icon: 'donut_small', tone: ENTITY_TONE.tasks, w: 2, h: 4 },
+  { id: 'late-payers', kind: 'late', title: 'Late Payers', icon: 'running_with_errors', tone: ENTITY_TONE.late, w: 2, h: 2 },
+  { id: 'kpi:totalDeals', kind: 'kpi', title: 'Deal Value', icon: 'payments', tone: ENTITY_TONE.deals, w: 2, h: 2 },
+  { id: 'kpi:newDeals', kind: 'kpi', title: 'New Deals', icon: 'handshake', tone: ENTITY_TONE.deals, w: 2, h: 2 },
+  { id: 'kpi:totalProspects', kind: 'kpi', title: 'Prospects', icon: 'person_search', tone: ENTITY_TONE.partners, w: 2, h: 2 },
+  { id: 'kpi:openTickets', kind: 'kpi', title: 'Open Tickets', icon: 'confirmation_number', tone: ENTITY_TONE.tickets, w: 2, h: 2 },
+  { id: 'kpi:activeCampaigns', kind: 'kpi', title: 'Campaigns', icon: 'campaign', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
+  { id: 'kpi:marketingSpend', kind: 'kpi', title: 'Reach', icon: 'send', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
+  { id: 'kpi:newTasksWeek', kind: 'kpi', title: 'New Tasks', icon: 'assignment_add', tone: ENTITY_TONE.tasks, w: 2, h: 2 },
+  { id: 'kpi:newProspects', kind: 'kpi', title: 'New Prospects', icon: 'group_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
+  { id: 'kpi:lostProspects', kind: 'kpi', title: 'Lost Deals', icon: 'trending_down', tone: ENTITY_TONE.late, w: 2, h: 2 },
+  { id: 'kpi:todaysDeal', kind: 'kpi', title: 'Best Today', icon: 'star', tone: ENTITY_TONE.deals, w: 2, h: 2 }
 ];
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, MatTooltipModule, PartnerScheduleCalendarComponent, BentoGrid, BentoTile, CountUpDirective],
+  imports: [MatIconModule, MatTooltipModule, PartnerScheduleCalendarComponent, BentoGrid, BentoTile, CountUpDirective, PageHeaderComponent],
   template: `
-    <div class="dash">
+    <div class="page dash">
+      <app-page-header [title]="greeting()" [subtitle]="subtitle()">
+        <button
+          actions
+          class="btn-secondary"
+          (click)="state.isCustomizing.set(!state.isCustomizing())"
+          [attr.aria-pressed]="state.isCustomizing()"
+        >
+          <mat-icon>{{ state.isCustomizing() ? 'check' : 'dashboard_customize' }}</mat-icon>
+          {{ state.isCustomizing() ? 'Done' : 'Customize' }}
+        </button>
+      </app-page-header>
+
       <!-- Customise tray -->
       @if (state.isCustomizing()) {
         <div class="dash-tray">
@@ -216,24 +235,26 @@ const CATALOG: TileDef[] = [
                   <div class="dash-figure">
                     <span class="dash-value" [appCountUp]="pipelineValueNum()" [appCountUpFormat]="moneyFormat">0</span>
                     @if (pipelineDelta(); as d) {
-                      <span class="dash-delta" [attr.data-dir]="dirOf(d)">
+                      <span class="dash-delta" [attr.data-dir]="dirOf(d)" [attr.title]="deltaTitle(d)">
                         <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
                       </span>
                     }
                   </div>
                   <div class="dash-caption">across {{ openDealCount() }} open deals</div>
 
-                  <svg class="dash-area" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="grad-pipeline" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--tile)" stop-opacity="0.28" />
-                        <stop offset="100%" stop-color="var(--tile)" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path class="dash-area__fill" [attr.d]="pipelineSpark().area" fill="url(#grad-pipeline)" />
-                    <path class="dash-area__line" [attr.d]="pipelineSpark().line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="2"
-                          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-                  </svg>
+@if (pipelineSpark().line) {
+                                      <svg class="dash-area" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
+                      <defs>
+                        <linearGradient id="grad-pipeline" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="var(--tile)" stop-opacity="0.28" />
+                          <stop offset="100%" stop-color="var(--tile)" stop-opacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <path class="dash-area__fill" [attr.d]="pipelineSpark().area" fill="url(#grad-pipeline)" />
+                      <path class="dash-area__line" [attr.d]="pipelineSpark().line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                    </svg>
+                  }
 
                   <div class="dash-sublabel">Top open deals</div>
                   <div class="dash-stack">
@@ -254,7 +275,7 @@ const CATALOG: TileDef[] = [
                   <div class="dash-figure">
                     <span class="dash-value" [appCountUp]="latePayers().count" [appCountUpFormat]="intFormat">0</span>
                     @if (latePayers().delta; as d) {
-                      <span class="dash-delta" [attr.data-dir]="dirOf(d)">
+                      <span class="dash-delta" [attr.data-dir]="dirOf(d)" [attr.title]="deltaTitle(d)">
                         <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
                       </span>
                     }
@@ -337,21 +358,23 @@ const CATALOG: TileDef[] = [
                 <!-- ── KPI ── -->
                 @case ('kpi') {
                   @let k = kpi(tile.id);
-                  <div class="kpi">
+                  <button type="button" class="kpi kpi--link" data-no-drag (click)="openKpi(k.route)" [attr.aria-label]="tile.title + ': open ' + k.route.slice(1)">
                     <span class="dash-value dash-value--kpi" [appCountUp]="k.raw" [appCountUpFormat]="k.format">0</span>
-                  </div>
+                  </button>
                   <div class="kpi__foot">
                     @if (k.delta; as delta) {
-                      <span class="dash-delta" [attr.data-dir]="dirOf(delta)">
+                      <span class="dash-delta" [attr.data-dir]="dirOf(delta)" [attr.title]="deltaTitle(delta)">
                         <mat-icon class="dash-delta__icon">{{ arrow(delta) }}</mat-icon>{{ pctLabel(delta) }}
                       </span>
                     } @else {
-                      <span class="dash-delta" data-dir="flat">—</span>
+                      <span class="dash-caption dash-caption--tight">{{ k.hint }}</span>
                     }
-                    <svg class="kpi__spark" viewBox="0 0 90 26" preserveAspectRatio="none" aria-hidden="true">
-                      <path class="kpi__spark-line" [attr.d]="k.spark.line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="1.75"
-                            stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-                    </svg>
+                    @if (k.spark.line) {
+                      <svg class="kpi__spark" viewBox="0 0 90 26" preserveAspectRatio="none" aria-hidden="true">
+                        <path class="kpi__spark-line" [attr.d]="k.spark.line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="1.75"
+                              stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                      </svg>
+                    }
                   </div>
                 }
               }
@@ -363,72 +386,74 @@ const CATALOG: TileDef[] = [
   `,
   styles: [`
     :host { display: block; }
-    .dash { padding-bottom: 24px; }
+
+    /* Type roles on this board: 11 eyebrow · 12 secondary · 13 body · 24/20 numerals (see DESIGN_SYSTEM.md). */
 
     /* ── Customise tray ── */
     .dash-tray {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-      padding: 10px 14px; margin-bottom: 12px;
+      padding: 10px 14px;
       background: var(--color-surface); border: 1px dashed var(--color-border-strong);
-      border-radius: var(--radius-lg);
+      border-radius: var(--r-card);
     }
-    .dash-tray__hint { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
-    .dash-tray__hint-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-text-tertiary); }
+    .dash-tray__hint { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
+    .dash-tray__hint-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; color: var(--color-text-tertiary); }
     .dash-tray__chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
     .dash-tray__empty { font-size: 12px; color: var(--color-text-tertiary); }
     .dash-chip, .dash-reset {
       display: inline-flex; align-items: center; gap: 4px;
-      font-size: 11px; font-weight: 600; padding: 4px 10px 4px 6px;
+      height: 28px; font-size: 12px; font-weight: 500; padding: 0 12px 0 8px;
       border-radius: 999px; border: 1px solid var(--color-border);
       background: var(--color-surface); color: var(--color-text-secondary);
       cursor: pointer; transition: all var(--transition-fast); white-space: nowrap;
     }
-    .dash-chip:hover { border-color: var(--color-text-tertiary); color: var(--color-text-primary); }
-    .dash-reset { padding: 4px 10px; }
+    .dash-chip:hover { border-color: var(--color-border-strong); color: var(--color-text-primary); background: var(--color-surface-hover); }
+    .dash-reset { padding: 0 12px; }
     .dash-chip__icon { font-size: 14px; width: 14px; height: 14px; line-height: 14px; }
 
     /* ── Shared atoms ── */
     .dash-count {
-      font-size: 10px; font-weight: 700; line-height: 1;
-      padding: 3px 6px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+      padding: 3px 7px; border-radius: 999px;
       background: var(--tile-soft); color: var(--tile);
     }
-    .dash-stack { display: flex; flex-direction: column; gap: 5px; }
+    .dash-stack { display: flex; flex-direction: column; gap: 4px; }
     .dash-figure { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .dash-value {
-      font-size: 24px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em;
-      color: var(--color-text-primary); font-variant-numeric: tabular-nums;
+      font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em;
+      color: var(--color-text-heading); font-variant-numeric: tabular-nums;
     }
     .dash-value--kpi { font-size: 20px; }
-    .dash-caption { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); margin-top: 2px; }
+    .dash-caption { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+    .dash-caption--tight { margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .dash-sublabel {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-      color: var(--color-text-tertiary); margin: 10px 0 5px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--color-text-tertiary); margin: 12px 0 6px;
     }
-    .dash-note { font-size: 11px; color: var(--color-text-tertiary); padding: 6px 0; }
+    .dash-note { font-size: 12px; color: var(--color-text-tertiary); padding: 6px 0; }
 
     .dash-delta {
-      display: inline-flex; align-items: center; gap: 1px;
-      font-size: 11px; font-weight: 700; line-height: 1;
-      padding: 3px 7px 3px 4px; border-radius: 999px;
-      font-variant-numeric: tabular-nums; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 2px;
+      font-size: 11px; font-weight: 600; line-height: 1;
+      padding: 4px 8px 4px 5px; border-radius: 999px;
+      font-variant-numeric: tabular-nums; white-space: nowrap; cursor: default;
     }
-    .dash-delta[data-dir='good'] { background: var(--color-success-light); color: var(--color-success); }
-    .dash-delta[data-dir='bad']  { background: var(--color-danger-light);  color: var(--color-danger); }
-    .dash-delta[data-dir='flat'] { background: var(--color-surface-hover); color: var(--color-text-tertiary); padding: 3px 7px; }
-    .dash-delta__icon { font-size: 13px; width: 13px; height: 13px; line-height: 13px; }
+    .dash-delta[data-dir='good'] { background: var(--color-success-light); color: var(--color-success-text); }
+    .dash-delta[data-dir='bad']  { background: var(--color-danger-light);  color: var(--color-danger-text); }
+    .dash-delta[data-dir='flat'] { background: var(--color-surface-hover); color: var(--color-text-tertiary); padding: 4px 8px; }
+    .dash-delta__icon { font-size: 12px; width: 12px; height: 12px; line-height: 12px; }
 
     .dash-empty {
       flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; gap: 3px; padding: 12px 8px;
+      text-align: center; gap: 4px; padding: 12px 8px;
     }
-    .dash-empty__icon { font-size: 22px; width: 22px; height: 22px; color: var(--tile); opacity: 0.5; }
-    .dash-empty__title { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
-    .dash-empty__sub { font-size: 11px; color: var(--color-text-tertiary); max-width: 24ch; }
+    .dash-empty__icon { font-size: 24px; width: 24px; height: 24px; line-height: 24px; color: var(--tile); opacity: 0.55; margin-bottom: 4px; }
+    .dash-empty__title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+    .dash-empty__sub { font-size: 12px; color: var(--color-text-tertiary); max-width: 26ch; }
 
     /* Charts bleed to the tile edges — the bento look, and it buys chart width back. */
-    .dash-area { display: block; width: calc(100% + 28px); margin: 6px -14px 0; height: 58px; }
-    .dash-area--bleed { margin-top: auto; margin-bottom: -12px; height: 34px; }
+    .dash-area { display: block; width: calc(100% + 2 * var(--tile-padding)); margin: 8px calc(-1 * var(--tile-padding)) 0; height: 58px; }
+    .dash-area--bleed { margin-top: auto; margin-bottom: calc(-1 * var(--tile-padding)); height: 34px; }
 
     /* ── Graph entrance animation ──
        pathLength="1" normalises every path to a unit length, so the same
@@ -449,57 +474,57 @@ const CATALOG: TileDef[] = [
 
     /* ── Focus rows ── */
     .focus-row {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 9px; border-radius: var(--radius-md);
-      background: var(--color-surface-hover); border: 1px solid var(--color-border-light);
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: var(--r-control);
+      background: var(--color-subtle); border: 1px solid var(--color-border-light);
     }
     .focus-row__icon {
-      width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: var(--r-control); flex-shrink: 0;
       display: inline-flex; align-items: center; justify-content: center;
       background: var(--color-surface); border: 1px solid var(--color-border);
       color: var(--color-text-secondary);
     }
-    .focus-row[data-tone='rose'] .focus-row__icon { color: var(--color-danger); }
-    .focus-row[data-tone='amber'] .focus-row__icon { color: var(--color-warning); }
-    .focus-row[data-tone='sky'] .focus-row__icon { color: var(--color-info); }
-    .focus-row__icon .mat-icon { font-size: 14px; width: 14px; height: 14px; line-height: 14px; }
+    .focus-row[data-tone='rose'] .focus-row__icon { color: var(--color-danger-text); }
+    .focus-row[data-tone='amber'] .focus-row__icon { color: var(--color-warning-text); }
+    .focus-row[data-tone='sky'] .focus-row__icon { color: var(--color-info-text); }
+    .focus-row__icon .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
     .focus-row__text { flex: 1; min-width: 0; }
-    .focus-row__title { font-size: 12px; font-weight: 600; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .focus-row__meta { font-size: 10.5px; color: var(--color-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .focus-row__title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .focus-row__meta { font-size: 12px; color: var(--color-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .focus-row__action {
-      flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 9px;
-      border-radius: var(--radius-sm); cursor: pointer;
+      flex-shrink: 0; height: 28px; font-size: 12px; font-weight: 500; padding: 0 10px;
+      border-radius: var(--r-control); cursor: pointer;
       background: var(--color-surface); color: var(--color-text-primary);
       border: 1px solid var(--color-border-strong);
       transition: all var(--transition-fast);
     }
-    .focus-row__action:hover { background: var(--color-text-primary); color: var(--color-surface); border-color: var(--color-text-primary); }
+    .focus-row__action:hover { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
 
     /* ── Deal rows ── */
     .deal-row {
       display: flex; align-items: center; gap: 8px; width: 100%;
-      padding: 5px 8px; border-radius: var(--radius-sm); cursor: pointer;
-      background: var(--color-surface-hover); border: 1px solid transparent;
-      text-align: left; transition: all var(--transition-fast);
+      padding: 6px 8px; border-radius: var(--r-control); cursor: pointer;
+      background: var(--color-subtle); border: 1px solid transparent;
+      text-align: start; transition: all var(--transition-fast);
     }
     .deal-row:hover { border-color: var(--tile); background: var(--tile-soft); }
     .deal-row__rank {
-      width: 17px; height: 17px; border-radius: 5px; flex-shrink: 0;
+      width: 20px; height: 20px; border-radius: var(--r-sm); flex-shrink: 0;
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; background: var(--tile-soft); color: var(--tile);
+      font-size: 11px; font-weight: 600; background: var(--tile-soft); color: var(--tile);
     }
-    .deal-row__name { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .deal-row__amount { font-size: 11.5px; font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .deal-row__name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .deal-row__amount { font-size: 13px; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
     /* ── Facts (late payers) ── */
     .dash-facts { display: flex; gap: 8px; margin-top: 10px; }
-    .dash-facts > div { flex: 1; min-width: 0; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--color-surface-hover); }
-    .dash-facts dt { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-tertiary); }
-    .dash-facts dd { font-size: 12px; font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dash-facts > div { flex: 1; min-width: 0; padding: 6px 10px; border-radius: var(--r-control); background: var(--color-subtle); border: 1px solid var(--color-border-light); }
+    .dash-facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-tertiary); }
+    .dash-facts dd { font-size: 13px; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ── Donut ── */
     /* margin-block: auto centres the ring in whatever height is left above the legend. */
-    .donut { position: relative; width: 104px; height: 104px; margin: auto auto 10px; flex-shrink: 0; }
+    .donut { position: relative; width: 112px; height: 112px; margin: auto auto 12px; flex-shrink: 0; }
     .donut__svg { width: 100%; height: 100%; transform: rotate(-90deg); }
     .donut__track { stroke: var(--color-border); }
     .donut__slice {
@@ -510,20 +535,20 @@ const CATALOG: TileDef[] = [
       .donut__slice { transition: none; }
     }
     .donut__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .donut__total { font-size: 19px; font-weight: 700; line-height: 1; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
-    .donut__unit { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-tertiary); }
-    .legend { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
-    .legend__row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .donut__total { font-size: 20px; font-weight: 600; line-height: 1; color: var(--color-text-heading); font-variant-numeric: tabular-nums; }
+    .donut__unit { margin-top: 2px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-tertiary); }
+    .legend { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+    .legend__row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
     .legend__dot { width: 8px; height: 8px; border-radius: 3px; background: var(--tile); flex-shrink: 0; }
-    .legend__label { color: var(--color-text-secondary); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .legend__pct { margin-left: auto; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
-    .legend__count { min-width: 20px; text-align: right; font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+    .legend__label { color: var(--color-text-secondary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend__pct { margin-inline-start: auto; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
+    .legend__count { min-width: 20px; text-align: end; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
 
     /* ── Queues ── */
     .queue-head {
       display: flex; align-items: center; gap: 6px; width: 100%;
-      padding: 7px 2px 4px; background: none; border: none; cursor: pointer;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 8px 2px 4px; border: none; cursor: pointer;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
       color: var(--color-text-tertiary); position: sticky; top: 0; z-index: 1;
       background: var(--color-surface);
     }
@@ -532,22 +557,24 @@ const CATALOG: TileDef[] = [
     .queue-head[data-tone='rose'] .queue-head__dot { background: var(--color-danger); }
     .queue-head[data-tone='amber'] .queue-head__dot { background: var(--color-warning); }
     .queue-head[data-tone='slate'] .queue-head__dot { background: var(--color-text-tertiary); }
-    .queue-head__count { margin-left: auto; font-variant-numeric: tabular-nums; }
+    .queue-head__count { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
     .queue-row {
       display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 8px; width: 100%;
-      padding: 5px 8px; border-radius: var(--radius-sm); cursor: pointer; text-align: left;
+      padding: 6px 8px; border-radius: var(--r-control); cursor: pointer; text-align: start;
       border: 1px solid transparent; background: none; transition: background var(--transition-fast);
     }
     .queue-row:hover { background: var(--color-surface-hover); }
-    .queue-row__title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .queue-row__sub { grid-column: 1; font-size: 10px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .queue-row__date { grid-row: 1; grid-column: 2; font-size: 10px; font-weight: 600; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
-    .queue-row__date.is-overdue { color: var(--color-danger); }
+    .queue-row__title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .queue-row__sub { grid-column: 1; font-size: 12px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .queue-row__date { grid-row: 1; grid-column: 2; font-size: 12px; font-weight: 500; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
+    .queue-row__date.is-overdue { color: var(--color-danger-text); font-weight: 600; }
 
     /* ── KPI ── */
     .kpi { display: flex; flex-direction: column; justify-content: center; flex: 1; min-height: 0; }
-    .kpi__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 4px; }
-    .kpi__spark { width: 72px; height: 24px; flex-shrink: 0; opacity: 0.85; }
+    .kpi--link { background: none; border: 0; padding: 0; text-align: start; cursor: pointer; border-radius: var(--r-sm); }
+    .kpi--link:hover .dash-value { color: var(--tile); }
+    .kpi__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 4px; min-height: 24px; }
+    .kpi__spark { width: 72px; height: 24px; flex-shrink: 0; opacity: 0.85; margin-inline-start: auto; }
   `]
 })
 export class DashboardComponent {
@@ -566,6 +593,27 @@ export class DashboardComponent {
     this.state.loadInvoices();
     this.state.loadCampaigns();
   }
+
+  // ────────────────────────────────────────────────────────
+  // Page header
+  // ────────────────────────────────────────────────────────
+
+  private firstName = computed(() => {
+    const me = this.state.users().find(u => u.id === this.state.currentUserId());
+    return me?.displayName?.trim().split(/\s+/)[0] ?? '';
+  });
+
+  greeting = computed(() => {
+    const hour = new Date().getHours();
+    const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    return this.firstName() ? `${part}, ${this.firstName()}` : part;
+  });
+
+  subtitle = computed(() => {
+    const day = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const n = this.attentionCount();
+    return `${day} · ${n ? `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention` : 'You are all caught up'}`;
+  });
 
   // ────────────────────────────────────────────────────────
   // Layout
@@ -608,7 +656,8 @@ export class DashboardComponent {
   // Focus Today — overdue tasks, stale deals, unassigned tickets
   // ────────────────────────────────────────────────────────
 
-  todayItems = computed((): TodayItem[] => {
+  /** Everything that needs a human, by reason — the Focus tile shows a sample, the header counts all. */
+  private focusLists = computed(() => {
     const todayStr = this.isoToday();
     const staleCutoff = new Date();
     staleCutoff.setDate(staleCutoff.getDate() - 14);
@@ -658,6 +707,14 @@ export class DashboardComponent {
             assignedToUserId: this.state.currentUserId()
           })
       }));
+
+    return [overdueTasks, staleDeals, unassignedTickets];
+  });
+
+  attentionCount = computed(() => this.focusLists().reduce((sum, list) => sum + list.length, 0));
+
+  todayItems = computed((): TodayItem[] => {
+    const [overdueTasks, staleDeals, unassignedTickets] = this.focusLists();
 
     // One of each kind first, then backfill by urgency so the tile is always full.
     const picks: TodayItem[] = [];
@@ -893,34 +950,38 @@ export class DashboardComponent {
       format: (v: number) => string,
       hint: string,
       series: number[],
-      opts: { inverted?: boolean } = {}
+      route: string,
+      opts: { inverted?: boolean; period?: Delta['period'] } = {}
     ): KpiData => ({
       label,
       icon,
       raw,
       format,
       hint,
-      delta: this.delta(series, opts.inverted),
-      spark: this.spark(series, 90, 26)
+      delta: this.delta(series, opts.inverted, opts.period),
+      spark: this.spark(series, 90, 26),
+      route
     });
 
     return {
-      totalDeals: make('Total Deals Value', 'payments', this.last(dealValue), v => this.moneyCompact(v), 'cumulative booked', dealValue),
-      newDeals: make('New Deals', 'handshake', this.last(newDeals), this.intFormat, 'closed this month', newDeals),
-      totalProspects: make('Prospects', 'person_search', prospects.length, this.intFormat, `${this.last(prospectSeries)} added this month`, prospectSeries),
-      openTickets: make('Open Tickets', 'confirmation_number', openTickets, this.intFormat, 'open or in progress', ticketSeries, { inverted: true }),
-      activeCampaigns: make('Active Campaigns', 'campaign', activeCampaigns, this.intFormat, 'running now', campaignSeries),
-      marketingSpend: make('Campaign Reach', 'send', this.last(reachSeries), v => this.compact(v), 'messages sent this month', reachSeries),
-      newTasksWeek: make('New Tasks', 'assignment_add', this.last(taskSeries), this.intFormat, 'created this week', taskSeries),
-      newProspects: make('New Prospects', 'group_add', this.last(prospectSeries), this.intFormat, 'added this month', prospectSeries),
-      lostProspects: make('Lost Deals', 'trending_down', this.last(lostSeries), v => this.moneyCompact(v), 'value lost this month', lostSeries, { inverted: true }),
+      totalDeals: make('Total Deals Value', 'payments', this.last(dealValue), v => this.moneyCompact(v), 'cumulative booked', dealValue, '/sales'),
+      newDeals: make('New Deals', 'handshake', this.last(newDeals), this.intFormat, 'closed this month', newDeals, '/sales'),
+      totalProspects: make('Prospects', 'person_search', prospects.length, this.intFormat, `${this.last(prospectSeries)} added this month`, prospectSeries, '/partners'),
+      openTickets: make('Open Tickets', 'confirmation_number', openTickets, this.intFormat, 'open or in progress', ticketSeries, '/tickets', { inverted: true }),
+      activeCampaigns: make('Active Campaigns', 'campaign', activeCampaigns, this.intFormat, 'running now', campaignSeries, '/marketing'),
+      marketingSpend: make('Campaign Reach', 'send', this.last(reachSeries), v => this.compact(v), 'messages sent this month', reachSeries, '/marketing'),
+      newTasksWeek: make('New Tasks', 'assignment_add', this.last(taskSeries), this.intFormat, 'created this week', taskSeries, '/tasks', { period: 'week' }),
+      newProspects: make('New Prospects', 'group_add', this.last(prospectSeries), this.intFormat, 'added this month', prospectSeries, '/partners'),
+      lostProspects: make('Lost Deals', 'trending_down', this.last(lostSeries), v => this.moneyCompact(v), 'value lost this month', lostSeries, '/sales', { inverted: true }),
       todaysDeal: make(
         "Today's Best Deal",
         'star',
         todaysDeals[0]?.amount ?? 0,
         v => (todaysDeals[0] ? this.moneyCompact(v) : '—'),
         todaysDeals.length ? `${todaysDeals.length} closed today` : 'nothing closed yet',
-        dailyDeals
+        dailyDeals,
+        '/sales',
+        { period: 'day' }
       )
     };
   });
@@ -935,7 +996,8 @@ export class DashboardComponent {
         format: () => '—',
         hint: '',
         delta: null,
-        spark: { line: '', area: '' }
+        spark: { line: '', area: '' },
+        route: '/'
       }
     );
   }
@@ -956,7 +1018,18 @@ export class DashboardComponent {
   }
 
   pctLabel(d: Delta): string {
-    return `${Math.abs(d.pct)}%`;
+    return d.label;
+  }
+
+  /** Tooltip / screen-reader text for a delta chip. */
+  deltaTitle(d: Delta): string {
+    if (d.label === 'New') return `New this ${d.period} — nothing in the previous ${d.period}`;
+    if (d.direction === 'flat') return `No change vs previous ${d.period}`;
+    return `${d.direction === 'up' ? 'Up' : 'Down'} ${d.label} vs previous ${d.period}`;
+  }
+
+  openKpi(route: string) {
+    this.router.navigate([route]);
   }
 
   openDeal(id: string) {
@@ -1080,17 +1153,25 @@ export class DashboardComponent {
     return series.map(v => (sum += v));
   }
 
-  /** % change across the last two buckets. Null when there is nothing real to compare. */
-  private delta(series: number[], inverted = false): Delta | null {
+  /**
+   * Change across the last two buckets. Null when there is nothing real to compare; "New" when the
+   * previous bucket was empty (a "+100%" off a zero base says nothing).
+   */
+  private delta(series: number[], inverted = false, period: Delta['period'] = 'month'): Delta | null {
     if (series.length < 2) return null;
     const curr = series[series.length - 1];
     const prev = series[series.length - 2];
     if (prev === 0) {
-      if (curr === 0) return null;
-      return { pct: 100, direction: 'up', inverted };
+      return curr === 0 ? null : { label: 'New', direction: 'up', inverted, period };
     }
     const pct = Math.round(((curr - prev) / Math.abs(prev)) * 100);
-    return { pct, direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat', inverted };
+    // The arrow icon carries the direction, so the label is the magnitude only.
+    return {
+      label: `${Math.min(Math.abs(pct), 999)}%`,
+      direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat',
+      inverted,
+      period
+    };
   }
 
   /**
@@ -1103,7 +1184,9 @@ export class DashboardComponent {
     const pad = 2;
     const max = Math.max(...trimmed, 0);
     const min = Math.min(...trimmed, 0);
-    const range = max - min || 1;
+    // A flat series (all zeros, or one constant) is not a trend — draw nothing rather than a dead line.
+    if (max === min) return { line: '', area: '' };
+    const range = max - min;
     const step = w / (trimmed.length - 1);
     const y = (v: number) => pad + (h - pad * 2) - ((v - min) / range) * (h - pad * 2);
 

@@ -22,10 +22,10 @@ export interface StoredFileDto {
   template: `
     <div class="space-y-2">
       <div class="flex items-center justify-between">
-        <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide">Attachments</h4>
+        <h4 class="eyebrow">Attachments</h4>
         @if (canWrite()) {
-          <label class="text-xs font-semibold text-blue-700 hover:text-blue-800 cursor-pointer flex items-center gap-1">
-            <mat-icon class="text-[16px] w-4 h-4">attach_file</mat-icon>
+          <label class="text-xs font-semibold text-accent-ink hover:text-accent-ink cursor-pointer flex items-center gap-1">
+            <mat-icon class="icon-sm">attach_file</mat-icon>
             {{ uploading() ? 'Uploading…' : 'Add file' }}
             <input type="file" class="hidden" [disabled]="uploading()" (change)="onFileSelected($event)" />
           </label>
@@ -33,34 +33,34 @@ export interface StoredFileDto {
       </div>
 
       @if (loading()) {
-        <p class="text-xs text-zinc-400 italic">Loading attachments…</p>
+        <p class="text-xs text-ink-3 italic">Loading attachments…</p>
       } @else if (files().length === 0) {
-        <p class="text-xs text-zinc-400 italic">No attachments yet.</p>
+        <p class="text-xs text-ink-3 italic">No attachments yet.</p>
       } @else {
         <div class="space-y-1.5">
           @for (file of files(); track file.id) {
-            <div class="flex items-center justify-between gap-2 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
+            <div class="flex items-center justify-between gap-2 bg-subtle border border-line-soft rounded-lg px-3 py-2">
               <div class="flex items-center gap-2 min-w-0">
                 @if (isImage(file) && previewUrls()[file.id]; as previewUrl) {
-                  <img [src]="previewUrl" [alt]="file.fileName" (click)="openPreview(file)" class="w-8 h-8 rounded object-cover shrink-0 cursor-pointer" />
+                  <img [src]="previewUrl" [alt]="file.fileName" (click)="openPreview(file)" class="w-8 h-8 rounded-sm object-cover shrink-0 cursor-pointer" />
                 } @else {
-                  <mat-icon class="text-[16px] w-4 h-4 text-zinc-400 shrink-0">description</mat-icon>
+                  <mat-icon class="text-ink-4 shrink-0 icon-sm">description</mat-icon>
                 }
                 <span
-                  class="text-xs font-semibold text-zinc-800 truncate"
+                  class="text-xs font-semibold text-ink truncate"
                   [class.cursor-pointer]="isImage(file) && previewUrls()[file.id]"
                   [class.hover:underline]="isImage(file) && previewUrls()[file.id]"
                   (click)="isImage(file) && openPreview(file)"
                 >{{ file.fileName }}</span>
-                <span class="text-meta text-zinc-400 shrink-0">{{ formatFileSize(file.sizeBytes) }}</span>
+                <span class="text-meta text-ink-3 shrink-0">{{ formatFileSize(file.sizeBytes) }}</span>
               </div>
               <div class="flex items-center gap-0.5 shrink-0">
-                <button (click)="downloadFile(file)" title="Download" class="text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors">
-                  <mat-icon class="text-[16px] w-4 h-4">file_download</mat-icon>
+                <button (click)="downloadFile(file)" title="Download" class="btn-icon btn-sm">
+                  <mat-icon class="icon-sm">file_download</mat-icon>
                 </button>
                 @if (canWrite()) {
-                  <button (click)="deleteFile(file.id)" title="Delete" class="text-zinc-400 hover:text-red-600 p-1 rounded transition-colors">
-                    <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+                  <button (click)="deleteFile(file.id)" title="Delete" class="btn-icon btn-sm btn-danger-hover">
+                    <mat-icon class="icon-sm">close</mat-icon>
                   </button>
                 }
               </div>
@@ -71,7 +71,7 @@ export interface StoredFileDto {
     </div>
 
     @if (previewFile(); as preview) {
-      <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" (click)="closePreview()">
+      <div class="modal-backdrop" (click)="closePreview()">
         <img [src]="preview.url" [alt]="preview.fileName" class="max-w-full max-h-full rounded-lg shadow-2xl" (click)="$event.stopPropagation()" />
         <button (click)="closePreview()" title="Close" class="absolute top-4 right-4 text-white/80 hover:text-white p-2">
           <mat-icon>close</mat-icon>

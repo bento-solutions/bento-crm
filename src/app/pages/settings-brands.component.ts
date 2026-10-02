@@ -8,6 +8,8 @@ import { ToastService } from '../services/toast.service';
 import { CrmStateService, Brand } from '../services/crm-state.service';
 import { ApiService } from '../services/api.service';
 import { ApiClientError } from '../core/services/base-api.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 
 interface BrandForm {
   name: string;
@@ -18,7 +20,7 @@ interface BrandForm {
   isActive: boolean;
 }
 
-const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: '#2563EB', isDefault: false, isActive: true };
+const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: IDENTITY_PALETTE[8], isDefault: false, isActive: true };
 
 /**
  * Settings → Brands: the product-line referential (BentoCars, BentoTravel, CRMbento...) leads
@@ -26,57 +28,49 @@ const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: '
  */
 @Component({
   selector: 'app-settings-brands',
-  imports: [FormsModule, MatIconModule, TranslatePipe],
-  styles: [`
-    .bd-card { background: var(--color-surface); border: 1px solid var(--color-border); }
-    .bd-muted { color: var(--color-text-secondary); }
-    .bd-faint { color: var(--color-text-tertiary); }
-    .bd-input { background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text-primary); }
-    .bd-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); }
-    .bd-btn-primary { background: var(--color-text-primary); color: var(--color-surface); }
-    .bd-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .bd-danger { color: var(--color-danger); }
-    .bd-row { border-top: 1px solid var(--color-border-light); }
-    .bd-swatch { width: 1.5rem; height: 1.5rem; border-radius: 9999px; border: 1px solid var(--color-border); }
-    .bd-badge { background: var(--color-bg); border: 1px solid var(--color-border); }
-  `],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
-      <section class="bd-card rounded-2xl p-6 space-y-4">
-        <div>
-          <h2 class="text-base font-bold">{{ 'brands.title' | translate }}</h2>
-          <p class="text-sm bd-muted mt-1">{{ 'brands.subtitle' | translate }}</p>
-        </div>
+    <div class="page max-w-3xl">
+      <app-page-header size="section" [title]="'brands.title' | translate" [subtitle]="'brands.subtitle' | translate">
+        @if (editing() === null && canWrite()) {
+          <button actions type="button" class="btn-primary" (click)="startCreate()">
+            <mat-icon>add</mat-icon>
+            {{ 'brands.new' | translate }}
+          </button>
+        }
+      </app-page-header>
 
+      @if (editing() !== null) {
+      <section class="card p-5 space-y-4">
         @if (editing() !== null) {
           <div class="space-y-4 pt-2">
             <div class="grid gap-3 sm:grid-cols-2">
               <label class="block">
-                <span class="text-xs font-semibold bd-muted">{{ 'brands.name' | translate }}</span>
-                <input class="bd-input w-full rounded-lg px-3 py-2 mt-1 text-sm"
+                <span class="field-label">{{ 'brands.name' | translate }}</span>
+                <input class="input-field w-full mt-1"
                        [placeholder]="'brands.namePlaceholder' | translate"
                        [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" maxlength="100" />
               </label>
               <label class="block">
-                <span class="text-xs font-semibold bd-muted">{{ 'brands.code' | translate }}</span>
-                <input class="bd-input w-full rounded-lg px-3 py-2 mt-1 text-sm"
+                <span class="field-label">{{ 'brands.code' | translate }}</span>
+                <input class="input-field w-full mt-1"
                        [placeholder]="'brands.codePlaceholder' | translate"
                        [ngModel]="form().code" (ngModelChange)="patchForm({ code: $event })" maxlength="20" />
               </label>
             </div>
             <label class="block">
-              <span class="text-xs font-semibold bd-muted">{{ 'brands.description' | translate }}</span>
-              <textarea class="bd-input w-full rounded-lg px-3 py-2 mt-1 text-sm" rows="2"
+              <span class="field-label">{{ 'brands.description' | translate }}</span>
+              <textarea class="input-field w-full mt-1" rows="2"
                         [placeholder]="'brands.descriptionPlaceholder' | translate"
                         [ngModel]="form().description" (ngModelChange)="patchForm({ description: $event })"></textarea>
             </label>
             <div class="flex flex-wrap items-end gap-4">
               <label class="block">
-                <span class="text-xs font-semibold bd-muted block mb-1">{{ 'brands.color' | translate }}</span>
+                <span class="field-label mb-1.5">{{ 'brands.color' | translate }}</span>
                 <div class="flex items-center gap-2">
                   <input type="color" class="w-9 h-9 rounded-lg cursor-pointer border-0 bg-transparent"
                          [ngModel]="form().colorHex" (ngModelChange)="patchForm({ colorHex: $event })" />
-                  <input class="bd-input rounded-lg px-2 py-1.5 text-xs w-24" dir="ltr" maxlength="7"
+                  <input class="input-field w-24" dir="ltr" maxlength="7"
                          [ngModel]="form().colorHex" (ngModelChange)="patchForm({ colorHex: $event })" />
                 </div>
               </label>
@@ -90,47 +84,59 @@ const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: '
               </label>
             </div>
             <div class="flex gap-2">
-              <button type="button" class="bd-btn-primary text-sm font-semibold px-4 py-2 rounded-lg"
+              <button type="button" class="btn-primary"
                       [disabled]="busy() || !form().name.trim()" (click)="save()">
                 {{ (editing() === 'new' ? 'brands.create' : 'brands.saveChanges') | translate }}
               </button>
-              <button type="button" class="bd-btn text-sm px-4 py-2 rounded-lg" (click)="cancelEdit()">{{ 'inbox.cancel' | translate }}</button>
+              <button type="button" class="btn-secondary" (click)="cancelEdit()">{{ 'inbox.cancel' | translate }}</button>
             </div>
           </div>
-        } @else if (canWrite()) {
-          <button type="button" class="bd-btn-primary text-sm font-semibold px-4 py-2 rounded-lg" (click)="startCreate()">
-            {{ 'brands.new' | translate }}
-          </button>
         }
       </section>
+      }
 
-      <section class="bd-card rounded-2xl p-6">
-        <h3 class="text-sm font-bold mb-2">{{ 'brands.list' | translate }}</h3>
+      <section class="card p-5">
+        <h3 class="card-title mb-2">{{ 'brands.list' | translate }}</h3>
         @for (b of state.brands(); track b.id) {
-          <div class="bd-row flex flex-wrap items-center justify-between gap-3 py-3">
+          <div class="border-t border-line-soft first:border-t-0 flex flex-wrap items-center justify-between gap-3 py-3">
             <div class="flex items-center gap-3 min-w-0">
-              <span class="bd-swatch shrink-0" [style.background-color]="b.colorHex || '#a1a1aa'"></span>
+              <span class="w-6 h-6 rounded-full border border-line shrink-0" [style.background-color]="b.colorHex || 'var(--color-text-placeholder)'"></span>
               <div class="min-w-0">
                 <p class="text-sm font-semibold flex items-center gap-2 flex-wrap">
                   {{ b.name }}
-                  @if (b.code) { <code class="bd-badge text-[11px] px-1.5 py-0.5 rounded" dir="ltr">{{ b.code }}</code> }
-                  @if (b.isDefault) { <span class="bd-badge text-[11px] px-1.5 py-0.5 rounded">{{ 'brands.default' | translate }}</span> }
-                  @if (!b.isActive) { <span class="bd-badge text-[11px] px-1.5 py-0.5 rounded bd-muted">{{ 'brands.inactive' | translate }}</span> }
+                  @if (b.code) { <code class="badge badge-neutral font-mono" dir="ltr">{{ b.code }}</code> }
+                  @if (b.isDefault) { <span class="badge badge-accent">{{ 'brands.default' | translate }}</span> }
+                  @if (!b.isActive) { <span class="badge badge-neutral">{{ 'brands.inactive' | translate }}</span> }
                 </p>
-                @if (b.description) { <p class="text-xs bd-muted truncate">{{ b.description }}</p> }
+                @if (b.description) { <p class="text-xs text-ink-2 truncate">{{ b.description }}</p> }
               </div>
             </div>
             @if (canWrite()) {
               <div class="flex items-center gap-2 shrink-0">
-                <button type="button" class="bd-btn text-xs font-semibold px-3 py-1.5 rounded-lg" (click)="startEdit(b)">{{ 'brands.edit' | translate }}</button>
-                <button type="button" class="bd-btn bd-danger text-xs font-semibold px-3 py-1.5 rounded-lg" (click)="remove(b)">{{ 'brands.delete' | translate }}</button>
+                <button type="button" class="btn-secondary btn-sm" (click)="startEdit(b)">{{ 'brands.edit' | translate }}</button>
+                <button type="button" class="btn-danger-soft btn-sm" (click)="brandToDelete.set(b)">{{ 'brands.delete' | translate }}</button>
               </div>
             }
           </div>
         } @empty {
-          <p class="text-xs bd-faint">{{ 'brands.none' | translate }}</p>
+          <p class="text-xs text-ink-3">{{ 'brands.none' | translate }}</p>
         }
       </section>
+
+      @if (brandToDelete(); as target) {
+        <div class="modal-backdrop" role="presentation">
+          <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="brand-delete-title">
+            <div class="modal-header">
+              <h3 class="modal-title" id="brand-delete-title">{{ 'brands.delete' | translate }}</h3>
+            </div>
+            <p class="text-sm text-ink-2">{{ 'brands.deleteConfirm' | translate: { name: target.name } }}</p>
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="brandToDelete.set(null)">{{ 'inbox.cancel' | translate }}</button>
+              <button type="button" class="btn-danger" (click)="remove(target)">{{ 'brands.delete' | translate }}</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -141,6 +147,7 @@ export class SettingsBrandsComponent implements OnInit {
   private toast = inject(ToastService);
 
   protected editing = signal<string | null>(null); // brand id being edited, or 'new'
+  protected brandToDelete = signal<Brand | null>(null);
   protected busy = signal(false);
   protected form = signal<BrandForm>({ ...EMPTY_FORM });
 
@@ -164,7 +171,7 @@ export class SettingsBrandsComponent implements OnInit {
       name: b.name,
       code: b.code || '',
       description: b.description || '',
-      colorHex: b.colorHex || '#2563EB',
+      colorHex: b.colorHex || IDENTITY_PALETTE[8],
       isDefault: !!b.isDefault,
       isActive: b.isActive !== false
     });
@@ -204,7 +211,7 @@ export class SettingsBrandsComponent implements OnInit {
   }
 
   async remove(b: Brand): Promise<void> {
-    if (!confirm(this.i18n.t('brands.deleteConfirm', { name: b.name }))) return;
+    this.brandToDelete.set(null);
     try {
       await firstValueFrom(this.api.deleteBrand(b.id));
       this.state.loadBrandsFromApi(true);

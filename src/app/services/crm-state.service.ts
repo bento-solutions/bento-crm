@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
+import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 import { ToastService } from './toast.service';
 import { ApiService } from './api.service';
 import { TranslationService } from './translation.service';
@@ -257,14 +258,7 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
   ])
 };
 
-const AVATAR_COLORS = [
-  '#7F77DD',  // purple
-  '#1D9E75',  // teal
-  '#D85A30',  // coral
-  '#378ADD',  // blue
-  '#BA7517',  // amber
-  '#D4537E'   // pink
-];
+const AVATAR_COLORS = IDENTITY_PALETTE;
 
 export type PartnerType = 'Customer' | 'Prospect' | 'Vendor' | 'Lead';
 
@@ -1289,7 +1283,7 @@ export class CrmStateService {
       description: dto.description,
       leadUserId: dto.lead_user_id ?? '',
       memberUserIds: this.users().filter(u => u.teamId === dto.id).map(u => u.id),
-      color: dto.color || '#7F77DD',
+      color: dto.color || IDENTITY_PALETTE[4],
       createdAt: dto.created_at ? new Date(dto.created_at) : new Date()
     };
   }
@@ -1817,7 +1811,7 @@ export class CrmStateService {
       id: raw.id || current.id,
       name: name,
       logoInitials: initials,
-      logoColor: current.logoColor || '#09090B',
+      logoColor: current.logoColor || IDENTITY_PALETTE[8],
       logoUrl: logo,
       logo_url: logo,
       industry: raw.industry !== undefined ? raw.industry : current.industry,

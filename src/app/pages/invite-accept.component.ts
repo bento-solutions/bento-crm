@@ -34,38 +34,38 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-[var(--color-bg,#FAFAFA)] p-6 font-sans">
-      <div class="w-full max-w-[440px] bg-white border border-zinc-200 rounded-2xl shadow-xs px-8 pt-10 pb-8">
+    <div class="min-h-screen flex items-center justify-center bg-canvas p-6">
+      <div class="card w-full max-w-[440px] px-8 pt-10 pb-8">
 
         <div class="flex items-center justify-center gap-2.5 mb-8">
           <img src="logo.webp" alt="Bento Logo" class="w-8 h-8 rounded-lg object-contain" />
-          <span class="font-bold text-xl tracking-tight text-zinc-950">Bento</span>
+          <span class="font-semibold text-xl tracking-tight text-ink">Bento</span>
         </div>
 
         <!-- Resolving the token -->
         @if (loadingPreview()) {
           <div class="py-10 text-center space-y-3">
-            <div class="w-8 h-8 mx-auto border-2 border-zinc-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p class="text-body text-zinc-500">Checking your invitation…</p>
+            <div class="w-8 h-8 mx-auto border-2 border-line border-t-accent rounded-full animate-spin"></div>
+            <p class="text-body text-ink-3">Checking your invitation…</p>
           </div>
         }
 
         <!-- Token missing, expired, revoked or already used -->
         @if (!loadingPreview() && invalid()) {
           <div class="py-4 text-center space-y-4">
-            <div class="w-12 h-12 mx-auto bg-zinc-100 text-zinc-500 rounded-full flex items-center justify-center">
-              <mat-icon class="text-xl w-6 h-6 flex items-center justify-center">link_off</mat-icon>
+            <div class="w-12 h-12 mx-auto bg-muted text-ink-3 rounded-full flex items-center justify-center">
+              <mat-icon class="icon-lg">link_off</mat-icon>
             </div>
             <div class="space-y-1.5">
-              <h1 class="text-lg font-bold text-zinc-950">This invitation isn't valid</h1>
-              <p class="text-body text-zinc-500 leading-relaxed">
+              <h1 class="t-title">This invitation isn't valid</h1>
+              <p class="text-body text-ink-3 leading-relaxed">
                 The link may have expired, been revoked, or already been used. Ask whoever invited
                 you to send a new one.
               </p>
             </div>
             <button
               (click)="goToSignIn()"
-              class="w-full py-2.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-body font-semibold rounded-lg transition-colors cursor-pointer"
+              class="btn-secondary w-full"
             >
               Go to sign in
             </button>
@@ -75,8 +75,8 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
         <!-- The acceptance form -->
         @if (!loadingPreview() && preview(); as invite) {
           <div class="text-center mb-6">
-            <h1 class="text-lg font-bold text-zinc-950">Join {{ invite.organization_name }}</h1>
-            <p class="text-body text-zinc-500 mt-1">
+            <h1 class="t-title">Join {{ invite.organization_name }}</h1>
+            <p class="text-body text-ink-3 mt-1">
               @if (invite.invited_by_name) {
                 {{ invite.invited_by_name }} invited you. Set a password to get started.
               } @else {
@@ -87,28 +87,28 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
 
           <!-- The role was pre-assigned by the admin and is not the invitee's to change,
                so it is shown as a fact rather than as a form control. -->
-          <div class="bg-zinc-50 border border-zinc-200/80 rounded-xl px-4 py-3 mb-5 space-y-2">
+          <div class="bg-subtle border border-line rounded-xl px-4 py-3 mb-5 space-y-2">
             <div class="flex items-center justify-between gap-3">
-              <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Your role</span>
-              <span class="inline-flex px-2 py-0.5 rounded-full text-meta font-bold border bg-white border-zinc-200 text-zinc-700">
+              <span class="eyebrow">Your role</span>
+              <span class="badge badge-neutral">
                 {{ roleLabel() }}
               </span>
             </div>
             @if (preview()?.team_name) {
-              <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-200/60">
-                <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Team</span>
-                <span class="text-xs font-bold text-zinc-800 flex items-center gap-1">
-                  <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-500">groups</mat-icon>
+              <div class="flex items-center justify-between gap-3 pt-1 border-t border-line">
+                <span class="eyebrow">Team</span>
+                <span class="text-xs font-semibold text-ink flex items-center gap-1">
+                  <mat-icon class="text-ink-3 icon-xs">groups</mat-icon>
                   {{ preview()?.team_name }}
                 </span>
               </div>
             }
-            <p class="text-meta text-zinc-500 leading-relaxed">{{ roleBlurb() }}</p>
+            <p class="text-meta text-ink-3 leading-relaxed">{{ roleBlurb() }}</p>
           </div>
 
           <!-- Single Workspace Notice -->
-          <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 mb-4 flex items-start gap-2.5 text-xs leading-relaxed">
-            <mat-icon class="text-amber-600 text-base w-4 h-4 shrink-0 mt-0.5">info</mat-icon>
+          <div class="alert alert-warning mb-4">
+            <mat-icon class="text-warning-ink shrink-0 mt-0.5 icon-sm">info</mat-icon>
             <div>
               <strong class="font-semibold">Single Organization Notice:</strong>
               Joining <strong>{{ invite.organization_name }}</strong> will leave any current workspace. Bento accounts are associated with one organization at a time.
@@ -116,32 +116,32 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
           </div>
 
           @if (error()) {
-            <div class="bg-red-50 border border-red-200 text-red-800 text-xs rounded-lg px-3 py-2 mb-4 text-center">
+            <div class="alert alert-danger mb-4 justify-center text-center" role="alert">
               {{ error() }}
             </div>
           }
 
           <!-- Option 1: 1-Click Accept for Logged-in user -->
           @if (canAcceptDirectly() && !showPasswordForm()) {
-            <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-5 text-center space-y-3 mb-4">
-              <div class="w-10 h-10 mx-auto bg-blue-100 text-blue-700 rounded-full flex items-center justify-center">
-                <mat-icon class="text-xl w-5 h-5 flex items-center justify-center">how_to_reg</mat-icon>
+            <div class="bg-accent-soft/70 border border-accent-line/80 rounded-xl p-5 text-center space-y-3 mb-4">
+              <div class="w-10 h-10 mx-auto bg-accent-soft text-accent-ink rounded-full flex items-center justify-center">
+                <mat-icon class="icon-md">how_to_reg</mat-icon>
               </div>
               <div>
-                <p class="text-xs font-medium text-blue-800">You are signed in as</p>
-                <p class="text-xs font-bold text-zinc-950 font-mono mt-0.5">{{ loggedInUser()?.email }}</p>
+                <p class="text-xs font-medium text-accent-ink">You are signed in as</p>
+                <p class="text-xs font-semibold text-ink font-mono mt-0.5">{{ loggedInUser()?.email }}</p>
               </div>
-              <p class="text-xs text-zinc-600 leading-relaxed">
+              <p class="text-xs text-ink-2 leading-relaxed">
                 Accept this invitation to join <strong>{{ invite.organization_name }}</strong>. You will automatically switch to your new workspace.
               </p>
               <button
                 type="button"
                 (click)="acceptAsLoggedIn()"
                 [disabled]="loading()"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-body font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                class="btn-primary w-full"
               >
                 @if (loading()) {
-                  <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div class="w-4 h-4 border-2 border-line-soft border-t-transparent rounded-full animate-spin"></div>
                   <span>Joining workspace…</span>
                 } @else {
                   <span>Accept & Join {{ invite.organization_name }}</span>
@@ -152,7 +152,7 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
               <button
                 type="button"
                 (click)="showPasswordForm.set(true)"
-                class="text-xs text-zinc-500 hover:text-zinc-800 underline cursor-pointer"
+                class="text-xs text-ink-3 hover:text-ink underline cursor-pointer"
               >
                 Or set a new password for this workspace
               </button>
@@ -160,19 +160,19 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
           } @else {
             <form (ngSubmit)="submit()" class="space-y-4">
               <div>
-                <label for="invite_email" class="block text-xs font-semibold text-zinc-700 mb-1.5">Work email</label>
+                <label for="invite_email" class="field-label mb-1.5">Work email</label>
                 <!-- Fixed by the invitation: accepting on a different address would sidestep
                      whatever vetting the admin did before inviting. -->
                 <input id="invite_email"
                   [value]="invite.email"
                   type="email"
                   disabled
-                  class="w-full px-3 py-2.5 bg-zinc-100 border border-zinc-200 rounded-lg text-body text-zinc-500 cursor-not-allowed"
+                  class="input-field w-full cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label for="invite_name" class="block text-xs font-semibold text-zinc-700 mb-1.5">Full name</label>
+                <label for="invite_name" class="field-label mb-1.5">Full name</label>
                 <input id="invite_name"
                   [(ngModel)]="displayName"
                   name="displayName"
@@ -180,13 +180,13 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                   placeholder="Jane Doe"
                   autocomplete="name"
                   required
-                  class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all"
+                  class="input-field w-full"
                 />
               </div>
 
               <div>
-                <label for="invite_phone" class="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  Phone <span class="font-normal text-zinc-400">(optional)</span>
+                <label for="invite_phone" class="field-label mb-1.5">
+                  Phone <span class="font-normal text-ink-3">(optional)</span>
                 </label>
                 <input id="invite_phone"
                   [(ngModel)]="phone"
@@ -194,12 +194,12 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                   type="tel"
                   placeholder="+212-661-234567"
                   autocomplete="tel"
-                  class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all"
+                  class="input-field w-full"
                 />
               </div>
 
               <div>
-                <label for="invite_password" class="block text-xs font-semibold text-zinc-700 mb-1.5">Password</label>
+                <label for="invite_password" class="field-label mb-1.5">Password</label>
                 <input id="invite_password"
                   [(ngModel)]="password"
                   name="password"
@@ -208,12 +208,12 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                   autocomplete="new-password"
                   required
                   minlength="8"
-                  class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all"
+                  class="input-field w-full"
                 />
               </div>
 
               <div>
-                <label for="invite_confirm" class="block text-xs font-semibold text-zinc-700 mb-1.5">Confirm password</label>
+                <label for="invite_confirm" class="field-label mb-1.5">Confirm password</label>
                 <input id="invite_confirm"
                   [(ngModel)]="confirmPassword"
                   name="confirmPassword"
@@ -221,14 +221,14 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                   placeholder="Re-enter your password"
                   autocomplete="new-password"
                   required
-                  class="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-body text-zinc-950 outline-none focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all"
+                  class="input-field w-full"
                 />
               </div>
 
               <button
                 type="submit"
                 [disabled]="loading()"
-                class="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-body font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                class="btn-primary w-full mt-2"
               >
                 {{ loading() ? 'Joining…' : 'Join ' + invite.organization_name }}
               </button>
@@ -239,7 +239,7 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                 <button
                   type="button"
                   (click)="showPasswordForm.set(false)"
-                  class="text-xs text-zinc-500 hover:text-zinc-800 underline cursor-pointer"
+                  class="text-xs text-ink-3 hover:text-ink underline cursor-pointer"
                 >
                   Return to 1-click join
                 </button>
@@ -247,7 +247,7 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
             }
           }
 
-          <p class="text-center text-body text-zinc-400 mt-6">
+          <p class="text-center text-body text-ink-3 mt-6">
             This invitation expires {{ expiryLabel() }}.
           </p>
         }

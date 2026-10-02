@@ -10,6 +10,8 @@ import { WaConversationHeaderComponent } from '../shared/whatsapp/wa-conversatio
 import { WaThreadComponent } from '../shared/whatsapp/wa-thread.component';
 import { WaComposerComponent } from '../shared/whatsapp/wa-composer.component';
 import { formatPhone } from '../shared/whatsapp/wa-format';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
 
 /**
  * WhatsApp inbox: conversation list on the left, the open thread on the right. The open
@@ -19,7 +21,7 @@ import { formatPhone } from '../shared/whatsapp/wa-format';
 @Component({
   selector: 'app-inbox',
   imports: [MatIconModule, TranslatePipe, WaConversationListComponent, WaConversationHeaderComponent,
-    WaThreadComponent, WaComposerComponent],
+    WaThreadComponent, WaComposerComponent, PageHeaderComponent],
   styles: [`
     .wa-shell { background: var(--color-surface); border: 1px solid var(--color-border); }
     .wa-list { border-inline-end: 1px solid var(--color-border); }
@@ -28,15 +30,15 @@ import { formatPhone } from '../shared/whatsapp/wa-format';
     .wa-offline { background: var(--color-text-tertiary); }
   `],
   template: `
-    <div class="flex items-center justify-between mb-3">
-      <h1 class="text-xl font-bold">{{ 'inbox.title' | translate }}</h1>
-      <span class="text-meta flex items-center gap-1.5" style="color: var(--color-text-tertiary)">
+    <div class="page">
+    <app-page-header [title]="'inbox.title' | translate" subtitle="WhatsApp conversations with your leads and customers">
+      <span actions class="flex items-center gap-2 text-xs text-ink-3">
         <span class="h-2 w-2 rounded-full" [class.wa-live]="store.connected()" [class.wa-offline]="!store.connected()"></span>
         {{ (store.connected() ? 'inbox.live' : 'inbox.reconnecting') | translate }}
       </span>
-    </div>
+    </app-page-header>
 
-    <div class="wa-shell rounded-2xl overflow-hidden flex h-[calc(100dvh-11rem)] min-h-[420px]">
+    <div class="wa-shell rounded-xl overflow-hidden flex h-[calc(100dvh-14rem)] min-h-[420px]">
       <aside class="wa-list w-full md:w-[340px] shrink-0 flex-col min-h-0" [class.hidden]="!!store.selectedId()" [class.flex]="!store.selectedId()" [class.md:flex]="true">
         <app-wa-conversation-list
           class="flex-1 min-h-0"
@@ -84,16 +86,18 @@ import { formatPhone } from '../shared/whatsapp/wa-format';
           />
         } @else {
           <div class="wa-empty flex-1 flex flex-col items-center justify-center text-center p-8">
-            <mat-icon class="!text-[48px] !w-12 !h-12 opacity-40 mb-3">forum</mat-icon>
-            <p class="text-sm font-semibold">{{ 'inbox.selectConversation' | translate }}</p>
-            <p class="text-xs mt-1 max-w-xs">{{ 'inbox.selectConversationHint' | translate }}</p>
+            <mat-icon class="icon-xl opacity-40 mb-3">forum</mat-icon>
+            <p class="text-base font-semibold">{{ 'inbox.selectConversation' | translate }}</p>
+            <p class="text-sm mt-1 max-w-xs text-ink-3">{{ 'inbox.selectConversationHint' | translate }}</p>
           </div>
         }
       </section>
     </div>
+    </div>
   `
 })
 export class InboxComponent implements OnInit, OnDestroy {
+  private confirmDialog = inject(ConfirmService);
   protected store = inject(WhatsAppInboxStore);
   private state = inject(CrmStateService);
   private i18n = inject(TranslationService);
@@ -142,7 +146,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   async ignore(): Promise<void> {
     const c = this.store.selected();
     if (!c) return;
-    if (!confirm(this.i18n.t('inbox.header.ignoreConfirm', { phone: formatPhone(c.phone) }))) return;
+    if (!(await this.confirmDialog.ask({ title: this.i18n.t('inbox.header.ignore'), message: this.i18n.t('inbox.header.ignoreConfirm', { phone: formatPhone(c.phone) }), danger: true, confirmLabel: this.i18n.t('inbox.header.ignore') }))) return;
     if (await this.store.ignore()) this.open(null);
   }
 }

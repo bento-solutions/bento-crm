@@ -11,14 +11,14 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
     :host { display: block; background: var(--color-surface); border-top: 1px solid var(--color-border); }
     textarea { background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text-primary); }
     textarea:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
-    .wa-send { background: var(--color-success); color: #fff; }
+    .wa-send { background: var(--color-primary); color: var(--color-on-primary); }
     .wa-send:disabled { background: var(--color-surface-active); color: var(--color-text-tertiary); }
     .wa-note { color: var(--color-text-secondary); background: var(--color-warning-light); }
   `],
   template: `
     @if (blockedReason(); as reason) {
       <p class="wa-note text-xs px-4 py-2 flex items-center gap-2">
-        <mat-icon class="!text-[16px] !w-4 !h-4 shrink-0">info</mat-icon>{{ reason | translate }}
+        <mat-icon class="!text-lg !w-4 !h-4 shrink-0">info</mat-icon>{{ reason | translate }}
       </p>
     }
     @if (canSend()) {
@@ -27,7 +27,7 @@ import { TranslatePipe } from '../../pipes/translate.pipe';
           #box
           rows="1"
           dir="auto"
-          class="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm max-h-40"
+          class="input-field flex-1 resize-none max-h-40"
           [placeholder]="'inbox.composer.placeholder' | translate"
           [attr.aria-label]="'inbox.composer.placeholder' | translate"
           [ngModel]="text()"

@@ -10,11 +10,12 @@ import { RoleBadgeComponent } from '../shared/role-badge.component';
 import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { PaginatorComponent } from '../shared/paginator.component';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PaginatorComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PaginatorComponent, PageHeaderComponent],
   styles: [`
     .panel {
       max-height: 0;
@@ -28,28 +29,24 @@ import { PaginatorComponent } from '../shared/paginator.component';
     }
   `],
   template: `
-    <div class="space-y-6 font-sans">
-      <!-- Header -->
-      @if (canWrite()) {
-      <div class="flex justify-end">
-        <button
-          (click)="openAddPanel()"
-          class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <mat-icon class="text-base w-4 h-4 flex items-center justify-center">mail</mat-icon>
-          Invite User
-        </button>
-      </div>
-      }
+    <div class="page">
+      <app-page-header size="section" title="Users" subtitle="Invite teammates, assign roles and manage account access">
+        @if (canWrite()) {
+          <button actions (click)="openAddPanel()" class="btn-primary">
+            <mat-icon>mail</mat-icon>
+            Invite User
+          </button>
+        }
+      </app-page-header>
 
       <!-- Add/Edit User Panel (Inline) -->
-      <div [class.open]="showAddPanel()" class="panel bg-zinc-50 border border-zinc-200/80 rounded-2xl p-0 shadow-xs">
-        <div class="p-6 space-y-4">
-          <h3 class="font-bold text-zinc-800 text-sm">
+      <div [class.open]="showAddPanel()" class="panel card">
+        <div class="p-5 space-y-4">
+          <h3 class="card-title">
             {{ panelTitle() }}
           </h3>
           @if (!editingUser() && !editingInvitation()) {
-            <p class="text-meta text-zinc-500 -mt-2 leading-relaxed">
+            <p class="text-meta text-ink-3 -mt-2 leading-relaxed">
               We'll email an invitation link. The role and team you pick here are applied the
               moment they accept — they set their own password and never receive one from us.
             </p>
@@ -58,37 +55,37 @@ import { PaginatorComponent } from '../shared/paginator.component';
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Display Name -->
             <div>
-              <label for="display_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">
+              <label for="display_name" class="field-label mb-1.5">
                 Display Name{{ isInviteMode() ? '' : ' *' }}
               </label>
               <input id="display_name"
                 [(ngModel)]="formDisplayName"
                 type="text"
                 placeholder="e.g. Amina Alaoui"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800"
+                class="input-field w-full"
               />
             </div>
 
             <!-- Email -->
             <div>
-              <label for="email_address" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Email address *</label>
+              <label for="email_address" class="field-label mb-1.5">Email address *</label>
               <input id="email_address"
                 [(ngModel)]="formEmail"
                 [disabled]="!!editingUser() || !!editingInvitation()"
                 type="email"
                 placeholder="e.g. a.alaoui@acg.ma"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:cursor-not-allowed"
+                class="input-field w-full"
               />
             </div>
 
             <!-- Job Title -->
             <div>
-              <label for="job_title" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Job Title</label>
+              <label for="job_title" class="field-label mb-1.5">Job Title</label>
               <input id="job_title"
                 [(ngModel)]="formJobTitle"
                 type="text"
                 placeholder="e.g. Accountant Specialist"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800"
+                class="input-field w-full"
               />
             </div>
 
@@ -96,21 +93,21 @@ import { PaginatorComponent } from '../shared/paginator.component';
                  invitee supplies their own on the acceptance form -- so a value typed here
                  would be silently discarded. -->
             <div [hidden]="isInviteMode()">
-              <label for="phone_number" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Phone number</label>
+              <label for="phone_number" class="field-label mb-1.5">Phone number</label>
               <input id="phone_number"
                 [(ngModel)]="formPhone"
                 type="text"
                 placeholder="e.g. +212-661-234567"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800"
+                class="input-field w-full"
               />
             </div>
 
             <!-- Role Dropdown -->
             <div>
-              <label for="system_role" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">System Role</label>
+              <label for="system_role" class="field-label mb-1.5">System Role</label>
               <select id="system_role"
                 [(ngModel)]="formRoleId"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 cursor-pointer font-semibold"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
@@ -122,10 +119,10 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
             <!-- Team Dropdown -->
             <div>
-              <label for="team_assignment" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Assignment</label>
+              <label for="team_assignment" class="field-label mb-1.5">Team Assignment</label>
               <select id="team_assignment"
                 [(ngModel)]="formTeamId"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 cursor-pointer font-semibold"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 <option value="">Unassigned</option>
                 @for (team of state.teams(); track team.id) {
@@ -135,17 +132,17 @@ import { PaginatorComponent } from '../shared/paginator.component';
             </div>
           </div>
 
-          <div class="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+          <div class="flex justify-end gap-2 pt-2 border-t border-line-soft">
             <button
               (click)="closeAddPanel()"
-              class="px-4 py-2 border border-zinc-200 text-zinc-600 text-xs font-semibold rounded-xl hover:bg-zinc-100 cursor-pointer"
+              class="btn-secondary btn-sm"
             >
               Cancel
             </button>
             <button
               (click)="saveUser()"
               [disabled]="!canSubmit()"
-              class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+              class="btn-primary btn-sm"
             >
               {{ submitLabel() }}
             </button>
@@ -156,116 +153,116 @@ import { PaginatorComponent } from '../shared/paginator.component';
       <!-- Pending invitations. Only rendered when there are any, so an organization that
            never invites anyone doesn't carry a permanently empty table. -->
       @if (canRead() && visibleInvitations().length > 0) {
-        <div class="bg-white border border-zinc-200/80 rounded-2xl overflow-hidden shadow-xs">
-          <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between gap-3">
+        <div class="card overflow-hidden">
+          <div class="card-header">
             <div class="flex items-center gap-2">
-              <mat-icon class="text-zinc-400 text-base w-4 h-4 flex items-center justify-center">mail</mat-icon>
-              <h3 class="font-bold text-zinc-800 text-sm">Invitations</h3>
-              <span class="bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full text-meta font-bold">
+              <mat-icon class="text-ink-3 icon-sm">mail</mat-icon>
+              <h3 class="card-title">Invitations</h3>
+              <span class="badge badge-neutral">
                 {{ pendingCount() }} pending
               </span>
             </div>
             <label for="show_resolved_invites" class="inline-flex items-center gap-2 cursor-pointer select-none">
               <input id="show_resolved_invites"
-                type="checkbox"
-                [(ngModel)]="showResolvedInvitations"
-                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
-              />
-              <span class="text-xs font-semibold text-zinc-600">Show accepted &amp; revoked</span>
+        type="checkbox"
+        [(ngModel)]="showResolvedInvitations"
+        
+       />
+              <span class="text-xs font-semibold text-ink-2">Show accepted &amp; revoked</span>
             </label>
           </div>
 
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-zinc-50">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Email</th>
-                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Pre-assigned role</th>
-                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Team</th>
-                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                  <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Invited by</th>
-                  <th class="px-6 py-3.5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Actions</th>
+                  <th>Email</th>
+                  <th>Pre-assigned role</th>
+                  <th>Team</th>
+                  <th>Status</th>
+                  <th>Invited by</th>
+                  <th class="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100 bg-white">
+              <tbody>
                 @for (invite of visibleInvitations(); track invite.id) {
-                  <tr class="hover:bg-zinc-50/40 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="text-xs text-zinc-800 font-medium font-mono block">{{ invite.email }}</span>
+                  <tr>
+                    <td class="whitespace-nowrap">
+                      <span class="text-xs text-ink font-medium font-mono block">{{ invite.email }}</span>
                       @if (invite.display_name) {
-                        <span class="text-meta text-zinc-400 block font-medium mt-0.5">{{ invite.display_name }}</span>
+                        <span class="text-meta text-ink-3 block font-medium mt-0.5">{{ invite.display_name }}</span>
                       }
                     </td>
 
-                    <td class="px-6 py-4 whitespace-nowrap text-xs">
+                    <td class="whitespace-nowrap">
                       <app-role-badge [roleId]="roleIdOf(invite)"></app-role-badge>
                     </td>
 
-                    <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-zinc-700">
+                    <td class="whitespace-nowrap text-ink-2">
                       {{ getTeamName(invite.team_id) }}
                     </td>
 
-                    <td class="px-6 py-4 whitespace-nowrap text-xs">
+                    <td class="whitespace-nowrap">
                       <div class="flex flex-col gap-1">
                         <span [class]="invitationStatusClass(invite.status)"
-                          class="inline-flex w-fit px-2 py-0.5 rounded-full text-meta font-bold border">
+                          class="badge w-fit">
                           {{ invitationStatusLabel(invite.status) }}
                         </span>
-                        <span class="text-meta text-zinc-400 font-medium">{{ invitationSubtext(invite) }}</span>
+                        <span class="text-meta text-ink-3 font-medium">{{ invitationSubtext(invite) }}</span>
                       </div>
                     </td>
 
-                    <td class="px-6 py-4 whitespace-nowrap text-xs font-medium text-zinc-600">
+                    <td class="whitespace-nowrap text-ink-2">
                       {{ invite.invited_by_name || '—' }}
                     </td>
 
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-xs">
+                    <td class="whitespace-nowrap text-right">
                       @if (canWrite() && isOutstanding(invite)) {
                         <div class="flex items-center justify-end gap-2">
                           <button
                             (click)="copyInvitationLink(invite)"
                             title="Copy invitation link"
-                            class="bg-white border border-zinc-200 text-zinc-600 px-2.5 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer inline-flex items-center gap-1"
+                            class="btn-secondary btn-sm"
                           >
-                            <mat-icon class="text-[14px] w-3.5 h-3.5">content_copy</mat-icon>
+                            <mat-icon class="icon-xs">content_copy</mat-icon>
                             {{ copiedInviteId() === invite.id ? 'Copied' : 'Copy link' }}
                           </button>
                           <button
                             (click)="editInvitation(invite)"
-                            class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                            class="btn-secondary btn-sm"
                           >
                             Edit
                           </button>
                           <button
                             (click)="resendInvitation(invite.id)"
-                            class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                            class="btn-secondary btn-sm"
                           >
                             Resend
                           </button>
                           @if (revokeConfirmId() === invite.id) {
                             <button
                               (click)="executeRevoke(invite.id)"
-                              class="bg-zinc-900 text-white px-3 py-1 rounded-lg text-meta font-bold cursor-pointer shadow-xs"
+                              class="btn-primary btn-sm"
                             >
                               Confirm revoke
                             </button>
                             <button
                               (click)="revokeConfirmId.set(null)"
-                              class="text-zinc-500 hover:text-zinc-700 px-1 text-meta font-bold cursor-pointer"
+                              class="text-ink-3 hover:text-ink-2 px-1 text-meta font-semibold cursor-pointer"
                             >
                               Cancel
                             </button>
                           } @else {
                             <button
                               (click)="revokeConfirmId.set(invite.id)"
-                              class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                              class="btn-secondary btn-sm"
                             >
                               Revoke
                             </button>
                           }
                         </div>
                       } @else {
-                        <span class="text-meta text-zinc-300 font-bold">—</span>
+                        <span class="text-meta text-ink-4 font-semibold">—</span>
                       }
                     </td>
                   </tr>
@@ -277,97 +274,71 @@ import { PaginatorComponent } from '../shared/paginator.component';
       }
 
       <!-- Filter Bar -->
-      <div class="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
-        <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-          <!-- Search input -->
-          <div class="relative flex-1 max-w-xs">
-            <input
-              [(ngModel)]="searchTerm"
-              type="text"
-              placeholder="Search by name or email..."
-              class="w-full border border-zinc-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-blue-600 text-zinc-800"
-            />
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
-              <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">search</mat-icon>
-            </div>
-          </div>
-
-          <!-- Role Select -->
-          <select
-            [(ngModel)]="selectedRole"
-            class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-600 cursor-pointer font-semibold focus:outline-blue-600"
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="salesperson">Sales</option>
-            <option value="support">Support</option>
-            <option value="viewer">Viewer</option>
-          </select>
-
-          <!-- Team Select -->
-          <select
-            [(ngModel)]="selectedTeam"
-            class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-600 cursor-pointer font-semibold focus:outline-blue-600"
-          >
-            <option value="all">All Teams</option>
-            <option value="unassigned">Unassigned</option>
-            @for (t of state.teams(); track t.id) {
-              <option [value]="t.id">{{ t.name }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Status Toggle toggleInactive -->
-        <label for="label_6" class="inline-flex items-center gap-2 cursor-pointer select-none">
-          <input id="label_6"
-            type="checkbox"
-            [(ngModel)]="showInactive"
-            class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
-          />
-          <span class="text-xs font-semibold text-zinc-600">Show Inactive accounts</span>
+      <div class="toolbar">
+        <label class="search-field">
+          <mat-icon>search</mat-icon>
+          <input [(ngModel)]="searchTerm" type="search" placeholder="Search by name or email…" aria-label="Search users" class="input-field" />
+        </label>
+        <select [(ngModel)]="selectedRole" class="input-field" aria-label="Filter by role">
+          <option value="all">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="manager">Manager</option>
+          <option value="salesperson">Sales</option>
+          <option value="support">Support</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <select [(ngModel)]="selectedTeam" class="input-field" aria-label="Filter by team">
+          <option value="all">All Teams</option>
+          <option value="unassigned">Unassigned</option>
+          @for (t of state.teams(); track t.id) {
+            <option [value]="t.id">{{ t.name }}</option>
+          }
+        </select>
+        <label for="label_6" class="inline-flex items-center gap-2 cursor-pointer select-none toolbar__spacer">
+          <input id="label_6" type="checkbox" [(ngModel)]="showInactive" />
+          <span class="text-xs font-medium text-ink-2">Show inactive accounts</span>
         </label>
       </div>
 
       <!-- Table / User List -->
-      <div class="bg-white border border-zinc-200/80 rounded-2xl overflow-x-auto shadow-xs">
-        <table class="min-w-full divide-y divide-slate-200">
-          <thead class="bg-zinc-50">
+      <div class="card overflow-x-auto">
+        <table class="data-table">
+          <thead>
             <tr>
-              <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">User details</th>
-              <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Email</th>
-              <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">System Role</th>
-              <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Team</th>
-              <th class="px-6 py-3.5 text-left text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3.5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Actions</th>
+              <th>User details</th>
+              <th>Email</th>
+              <th>System Role</th>
+              <th>Team</th>
+              <th>Status</th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
+          <tbody>
             @for (user of paginatedUsers(); track user.id) {
               <!-- Standard row -->
-              <tr class="hover:bg-zinc-50/40 transition-colors">
+              <tr>
                 <!-- Avatar + Name -->
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="whitespace-nowrap">
                   <div class="flex items-center gap-3">
                     <a [routerLink]="['/settings/users', user.id]" class="hover:opacity-85 transition-opacity">
                       <app-user-avatar [userId]="user.id" [size]="36"></app-user-avatar>
                     </a>
                     <div>
-                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link font-bold text-xs text-zinc-800 hover:text-zinc-900 block transition-colors">
+                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link font-semibold text-xs text-ink hover:text-ink block transition-colors">
                         {{ user.displayName }}
                       </a>
-                      <span class="text-meta text-zinc-400 block font-medium mt-0.5">{{ user.jobTitle || 'No title' }}</span>
+                      <span class="text-meta text-ink-3 block font-medium mt-0.5">{{ user.jobTitle || 'No title' }}</span>
                     </div>
                   </div>
                 </td>
 
                 <!-- Email -->
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-zinc-600 font-medium font-mono">
+                <td class="whitespace-nowrap text-ink-2 font-mono">
                   {{ user.email }}
                 </td>
 
                 <!-- Role badge -->
-                <td class="px-6 py-4 whitespace-nowrap text-xs">
+                <td class="whitespace-nowrap">
                   @if (editingRoleIdUserId() === user.id) {
                     <div class="space-y-1">
                       <select
@@ -375,7 +346,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                         (change)="changeUserRole(user.id, $event)"
                         (blur)="cancelRoleEdit()"
                         (keydown.esc)="cancelRoleEdit()"
-                        class="border border-zinc-200 rounded-lg px-2 py-1 text-xs bg-white text-zinc-700 focus:outline-blue-600 focus:ring-1 focus:ring-zinc-700"
+                        class="input-field"
                        
                       >
                         <option value="admin">Admin</option>
@@ -385,7 +356,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
                         <option value="viewer">Viewer</option>
                       </select>
                       @if (roleErrorUserId() === user.id) {
-                        <p class="text-meta text-zinc-900 leading-tight font-medium">{{ roleErrorMessage() }}</p>
+                        <p class="text-meta text-ink leading-tight font-medium">{{ roleErrorMessage() }}</p>
                       }
                     </div>
                   } @else {
@@ -394,54 +365,56 @@ import { PaginatorComponent } from '../shared/paginator.component';
                 </td>
 
                 <!-- Team -->
-                <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-zinc-700">
+                <td class="whitespace-nowrap text-ink-2">
                   {{ getTeamName(user.teamId) }}
                 </td>
 
                 <!-- Status -->
-                <td class="px-6 py-4 whitespace-nowrap text-xs">
+                <td class="whitespace-nowrap">
                   <span
-                    [class]="user.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'"
-                    class="inline-flex px-2 py-0.5 rounded-full text-meta font-bold border"
+                    [class]="user.isActive ? 'badge-success' : 'bg-muted text-ink-3 border-line'"
+                    class="badge"
                   >
                     {{ user.isActive ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
 
                 <!-- Actions Menu -->
-                <td class="px-6 py-4 whitespace-nowrap text-right text-xs relative">
+                <td class="whitespace-nowrap text-right relative">
                   @if (canWrite()) {
                   <button
                     (click)="toggleMenu(user.id, $event)"
-                    class="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg transition-colors flex items-center ml-auto cursor-pointer"
+                    class="btn-icon btn-sm ml-auto"
+                    [attr.aria-label]="'Actions for ' + user.displayName"
+                    aria-haspopup="menu"
                   >
-                    <mat-icon class="text-base w-5 h-5 flex items-center justify-center">more_vert</mat-icon>
+                    <mat-icon class="icon-sm">more_vert</mat-icon>
                   </button>
                   }
 
                   <!-- Actions Dropdown panel -->
                   @if (activeMenuUserId() === user.id && canWrite()) {
-                    <div class="absolute right-6 top-11 bg-white border border-zinc-200 rounded-xl shadow-lg py-1.5 z-10 w-36 text-left animate-in fade-in slide-in-from-top-1 duration-100">
+                    <div class="menu absolute right-6 top-11 z-10 w-36">
                       <button
                         (click)="editUser(user)"
-                        class="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 font-medium cursor-pointer"
+                        class="menu-item"
                       >
-                        <mat-icon class="text-zinc-400 text-sm w-4 h-4 flex items-center justify-center">edit</mat-icon>
+                        <mat-icon class="text-ink-4 icon-sm">edit</mat-icon>
                         Edit Details
                       </button>
                       <button
                         (click)="startRoleEdit(user.id)"
-                        class="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 font-medium cursor-pointer"
+                        class="menu-item"
                       >
-                        <mat-icon class="text-zinc-400 text-sm w-4 h-4 flex items-center justify-center">swap_horiz</mat-icon>
+                        <mat-icon class="text-ink-4 icon-sm">swap_horiz</mat-icon>
                         Change Role
                       </button>
                       @if (user.isActive && user.id !== state.currentUserId()) {
                         <button
                           (click)="confirmDeactivate(user.id)"
-                          class="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-zinc-900 hover:bg-zinc-100 font-medium cursor-pointer"
+                          class="menu-item"
                         >
-                          <mat-icon class="text-zinc-500 text-sm w-4 h-4 flex items-center justify-center">block</mat-icon>
+                          <mat-icon class="text-ink-3 icon-sm">block</mat-icon>
                           Deactivate
                         </button>
                       }
@@ -452,26 +425,26 @@ import { PaginatorComponent } from '../shared/paginator.component';
 
               <!-- Inline Deactivation Confirmation row -->
               @if (deactivateConfirmUserId() === user.id) {
-                <tr class="bg-zinc-100/40">
-                  <td colspan="6" class="px-6 py-3 border-t border-zinc-200">
+                <tr>
+                  <td colspan="6" class="border-t border-line">
                     <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2 text-zinc-950 text-xs font-semibold">
-                        <mat-icon class="text-zinc-700 text-sm w-4 h-4 flex items-center justify-center">warning</mat-icon>
+                      <div class="flex items-center gap-2 text-ink text-xs font-semibold">
+                        <mat-icon class="text-ink-2 icon-sm">warning</mat-icon>
                         <span>Deactivate {{ user.displayName }}? This cannot be undone.</span>
                       </div>
                       <div class="flex items-center gap-2">
                         @if (deactivateErrorMessage()) {
-                          <span class="text-meta text-zinc-950 font-bold mr-2">{{ deactivateErrorMessage() }}</span>
+                          <span class="text-meta text-ink font-semibold mr-2">{{ deactivateErrorMessage() }}</span>
                         }
                         <button
                           (click)="cancelDeactivate()"
-                          class="bg-white border border-zinc-200 text-zinc-600 px-3 py-1 rounded-lg text-meta font-bold hover:bg-zinc-50 cursor-pointer"
+                          class="btn-secondary btn-sm"
                         >
                           Cancel
                         </button>
                         <button
                           (click)="executeDeactivate(user.id)"
-                          class="bg-zinc-900 text-white px-3 py-1 rounded-lg text-meta font-bold hover:bg-rose-750 cursor-pointer shadow-xs"
+                          class="btn-primary btn-sm"
                         >
                           Confirm Deactivation
                         </button>
@@ -483,16 +456,16 @@ import { PaginatorComponent } from '../shared/paginator.component';
             } @empty {
               <!-- Empty state row -->
               <tr>
-                <td colspan="6" class="px-6 py-12 text-center">
+                <td colspan="6" class="text-center">
                   <div class="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
-                    <div class="w-12 h-12 bg-zinc-100 text-zinc-400 rounded-full flex items-center justify-center">
-                      <i class="ti ti-users-off text-2xl leading-none"></i>
+                    <div class="w-12 h-12 bg-muted text-ink-3 rounded-full flex items-center justify-center">
+                      <mat-icon class="icon-lg">group_off</mat-icon>
                     </div>
-                    <p class="text-xs font-bold text-zinc-800 font-sans">No users match your filters</p>
-                    <p class="text-meta text-zinc-500">Try adjusting your filters, query string or toggle settings to locate the user.</p>
+                    <p class="text-xs font-semibold text-ink">No users match your filters</p>
+                    <p class="text-meta text-ink-3">Try adjusting your filters, query string or toggle settings to locate the user.</p>
                     <button
                       (click)="clearFilters()"
-                      class="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 border border-zinc-200/50 px-3 py-1.5 rounded-lg text-meta font-bold tracking-wide transition-colors cursor-pointer"
+                      class="bg-muted text-ink hover:bg-muted-strong border border-line px-3 py-1.5 rounded-lg text-meta font-semibold tracking-wide transition-colors cursor-pointer"
                     >
                       Clear Filters
                     </button>
@@ -795,11 +768,11 @@ export class UsersComponent {
 
   invitationStatusClass(status: InvitationStatus): string {
     switch (status) {
-      case 'ACCEPTED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'EXPIRED': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
-      case 'REVOKED': return 'bg-zinc-100 text-zinc-500 border-zinc-200';
-      default: return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+      case 'ACCEPTED': return 'badge-success';
+      case 'PENDING': return 'badge-warning';
+      case 'EXPIRED': return 'bg-muted text-ink-2 border-line';
+      case 'REVOKED': return 'bg-muted text-ink-3 border-line';
+      default: return 'bg-muted text-ink-3 border-line';
     }
   }
 

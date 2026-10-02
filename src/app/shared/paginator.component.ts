@@ -13,35 +13,44 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [FormsModule, MatIconModule, CommonModule],
   template: `
-    <div class="px-5 py-3 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-1.5 text-xs text-zinc-500">
-        <span>Rows per page:</span>
-        <select [ngModel]="pageSize()" (ngModelChange)="pageSizeChange.emit($event); pageChange.emit(1)" class="input-field rounded-lg px-2 py-1 text-xs outline-none bg-transparent">
-          <option [value]="5">5</option>
-          <option [value]="10">10</option>
-          <option [value]="20">20</option>
-          <option [value]="50">50</option>
+    <div class="paginator">
+      <label class="paginator__size">
+        <span>Rows per page</span>
+        <select [ngModel]="pageSize()" (ngModelChange)="pageSizeChange.emit($event); pageChange.emit(1)" class="input-field input-sm" aria-label="Rows per page">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
         </select>
-      </div>
-      <div class="flex items-center gap-1">
-        <button (click)="pageChange.emit(1)" [disabled]="currentPage() === 1" title="First page" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold transition-all" [class]="currentPage() === 1 ? 'text-zinc-300 cursor-not-allowed' : 'btn-secondary text-zinc-600 hover:text-zinc-900'">
-          <mat-icon class="text-[14px]! w-3.5 h-3.5">first_page</mat-icon>
+      </label>
+      <div class="paginator__nav">
+        <button (click)="pageChange.emit(1)" [disabled]="currentPage() === 1" title="First page" aria-label="First page" class="btn-icon btn-sm">
+          <mat-icon class="icon-sm">first_page</mat-icon>
         </button>
-        <button (click)="pageChange.emit(currentPage() - 1)" [disabled]="currentPage() === 1" title="Previous page" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold transition-all" [class]="currentPage() === 1 ? 'text-zinc-300 cursor-not-allowed' : 'btn-secondary text-zinc-600 hover:text-zinc-900'">
-          <mat-icon class="text-[14px]! w-3.5 h-3.5">chevron_left</mat-icon>
+        <button (click)="pageChange.emit(currentPage() - 1)" [disabled]="currentPage() === 1" title="Previous page" aria-label="Previous page" class="btn-icon btn-sm">
+          <mat-icon class="icon-sm">chevron_left</mat-icon>
         </button>
-        <span class="text-xs text-zinc-500 font-semibold px-2">
-          Page {{ currentPage() }} of {{ totalPages() }}
-        </span>
-        <button (click)="pageChange.emit(currentPage() + 1)" [disabled]="currentPage() === totalPages()" title="Next page" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold transition-all" [class]="currentPage() === totalPages() ? 'text-zinc-300 cursor-not-allowed' : 'btn-secondary text-zinc-600 hover:text-zinc-900'">
-          <mat-icon class="text-[14px]! w-3.5 h-3.5">chevron_right</mat-icon>
+        <span class="paginator__status">Page {{ currentPage() }} of {{ totalPages() }}</span>
+        <button (click)="pageChange.emit(currentPage() + 1)" [disabled]="currentPage() === totalPages()" title="Next page" aria-label="Next page" class="btn-icon btn-sm">
+          <mat-icon class="icon-sm">chevron_right</mat-icon>
         </button>
-        <button (click)="pageChange.emit(totalPages())" [disabled]="currentPage() === totalPages()" title="Last page" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold transition-all" [class]="currentPage() === totalPages() ? 'text-zinc-300 cursor-not-allowed' : 'btn-secondary text-zinc-600 hover:text-zinc-900'">
-          <mat-icon class="text-[14px]! w-3.5 h-3.5">last_page</mat-icon>
+        <button (click)="pageChange.emit(totalPages())" [disabled]="currentPage() === totalPages()" title="Last page" aria-label="Last page" class="btn-icon btn-sm">
+          <mat-icon class="icon-sm">last_page</mat-icon>
         </button>
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    :host { display: block; }
+    .paginator {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px;
+      padding: 10px 20px; border-top: 1px solid var(--color-border); background: var(--color-surface);
+    }
+    .paginator__size { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
+    .paginator__size select { width: auto; min-width: 64px; }
+    .paginator__nav { display: inline-flex; align-items: center; gap: 2px; }
+    .paginator__status { padding-inline: 10px; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  `]
 })
 export class PaginatorComponent {
   currentPage = input.required<number>();

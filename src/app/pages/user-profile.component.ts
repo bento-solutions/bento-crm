@@ -8,22 +8,23 @@ import { RoleBadgeComponent } from '../shared/role-badge.component';
 import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslationService } from '../services/translation.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule],
+  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PageHeaderComponent],
   template: `
-    <div class="space-y-8 font-sans">
-      <!-- Back button -->
-      <a routerLink="/settings/users" class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-zinc-800 transition-colors">
-        <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">arrow_back</mat-icon>
-        Back to Users List
-      </a>
+    <div class="page">
+      <app-page-header
+        [title]="isOwnProfile() ? 'My Profile' : 'User Profile'"
+        [subtitle]="isOwnProfile() ? 'Your details, preferences and activity' : 'Account details, role and activity'"
+        [backLink]="isOwnProfile() ? null : '/settings/users'"
+        backLabel="Users" />
 
       @if (user(); as u) {
         <!-- PROFILE HEADER CARD -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+        <div class="card p-5 space-y-6">
           <div class="flex items-start justify-between">
             <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
               <!-- Avatar size 56 -->
@@ -34,17 +35,17 @@ import { TranslationService } from '../services/translation.service';
                   @if (isEditingName()) {
                     <input
                       [(ngModel)]="editName"
-                      class="border border-zinc-200 rounded-xl px-2.5 py-1 text-sm font-bold text-zinc-800 focus:outline-blue-600"
+                      class="input-field"
                     />
                   } @else {
-                    <h2 class="text-lg font-bold text-zinc-900">{{ u.displayName }}</h2>
+                    <h2 class="section-title">{{ u.displayName }}</h2>
                   }
                   @if (canEdit()) {
                     <button
                       (click)="toggleEditName()"
-                      class="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg transition-colors cursor-pointer"
+                      class="btn-icon btn-sm"
                     >
-                      <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">
+                      <mat-icon class="icon-sm">
                         {{ isEditingName() ? 'check' : 'edit' }}
                       </mat-icon>
                     </button>
@@ -55,51 +56,51 @@ import { TranslationService } from '../services/translation.service';
                   @if (isEditingJobTitle()) {
                     <input
                       [(ngModel)]="editJobTitle"
-                      class="border border-zinc-200 rounded-xl px-2.5 py-0.5 text-xs text-zinc-700 focus:outline-blue-600"
+                      class="input-field"
                     />
                   } @else {
-                    <span class="text-xs text-zinc-500 font-semibold">{{ u.jobTitle || 'No job title' }}</span>
+                    <span class="text-sm text-ink-3">{{ u.jobTitle || 'No job title' }}</span>
                   }
                   @if (canEdit()) {
                     <button
                       (click)="toggleEditJobTitle()"
-                      class="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors cursor-pointer"
+                      class="btn-icon btn-sm"
                     >
-                      <mat-icon class="text-xs w-3.5 h-3.5 flex items-center justify-center">
+                      <mat-icon class="icon-sm">
                         {{ isEditingJobTitle() ? 'check' : 'edit' }}
                       </mat-icon>
                     </button>
                   }
                 </div>
 
-                <div class="text-xs text-zinc-400 font-sans pt-1">ID: {{ u.id }}</div>
+                <div class="text-xs text-ink-3 pt-1 font-mono">ID: {{ u.id }}</div>
               </div>
             </div>
 
             <!-- Active / Inactive Badge -->
             <span
-              [class]="u.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-100 text-zinc-500 border-zinc-200'"
-              class="inline-flex px-2.5 py-0.5 rounded-full text-meta font-bold border uppercase tracking-wider"
+              [class]="u.isActive ? 'badge-success' : 'bg-muted text-ink-3 border-line'"
+              class="badge"
             >
               {{ u.isActive ? 'Active' : 'Inactive' }}
             </span>
           </div>
 
           <!-- Email & Phone info grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-line-soft">
             <div>
-              <span class="block text-meta font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Email (Immutable)</span>
-              <span class="text-sm font-semibold text-zinc-800 font-sans">{{ u.email }}</span>
+              <span class="eyebrow block mb-0.5">Email (Immutable)</span>
+              <span class="text-sm font-semibold text-ink">{{ u.email }}</span>
             </div>
             <div>
               <div class="flex items-center gap-1.5 mb-0.5">
-                <span class="block text-meta font-bold text-zinc-400 uppercase tracking-wider">Phone</span>
+                <span class="eyebrow block">Phone</span>
                 @if (canEdit()) {
                   <button
                     (click)="toggleEditPhone()"
-                    class="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors cursor-pointer"
+                    class="btn-icon btn-sm"
                   >
-                    <mat-icon class="text-xs w-3.5 h-3.5 flex items-center justify-center">
+                    <mat-icon class="icon-sm">
                       {{ isEditingPhone() ? 'check' : 'edit' }}
                     </mat-icon>
                   </button>
@@ -108,46 +109,39 @@ import { TranslationService } from '../services/translation.service';
               @if (isEditingPhone()) {
                 <input
                   [(ngModel)]="editPhone"
-                  class="border border-zinc-200 rounded-xl px-2.5 py-0.5 text-xs text-zinc-700 focus:outline-blue-600 w-full max-w-xs"
+                  class="input-field w-full max-w-xs"
                 />
               } @else {
-                <span class="text-sm font-semibold text-zinc-800 font-sans">{{ u.phone || '—' }}</span>
+                <span class="text-sm font-semibold text-ink">{{ u.phone || '—' }}</span>
               }
             </div>
           </div>
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-5 sm:gap-6 border-b border-zinc-200">
-          <button (click)="profileTab.set('profile')" [class]="profileTab() === 'profile' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-            Profile
-          </button>
-          <button (click)="profileTab.set('preferences')" [class]="profileTab() === 'preferences' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-            Preferences
-          </button>
-          <button (click)="profileTab.set('groups')" [class]="profileTab() === 'groups' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-            Groups
-          </button>
-          <button (click)="profileTab.set('activity')" [class]="profileTab() === 'activity' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'" class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all whitespace-nowrap">
-            Activity
-          </button>
+        <div class="tabs" role="tablist">
+          @for (tab of profileTabs; track tab.id) {
+            <button role="tab" class="tab" [class.is-active]="profileTab() === tab.id" [attr.aria-selected]="profileTab() === tab.id" (click)="profileTab.set(tab.id)">
+              {{ tab.label }}
+            </button>
+          }
         </div>
 
         @if (profileTab() === 'profile') {
         <!-- ROLE & TEAM SECTION -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-          <h3 class="font-bold text-zinc-800 text-sm">Role & Team Assignment</h3>
+        <div class="card p-5 space-y-4">
+          <h3 class="card-title">Role & Team Assignment</h3>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <!-- Role -->
             <div class="space-y-2">
-              <label for="system_role" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">System Role</label>
+              <label for="system_role" class="field-label">System Role</label>
               @if (isAdmin()) {
                 <div class="space-y-1">
                   <select id="system_role"
                     [value]="u.roleId"
                     (change)="updateUserRole(u.id, $event)"
-                    class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 focus:outline-blue-600 focus:ring-zinc-700 font-semibold cursor-pointer w-full max-w-xs"
+                    class="input-field cursor-pointer w-full max-w-xs font-semibold"
                   >
                     <option value="admin">Admin</option>
                     <option value="manager">Manager</option>
@@ -156,7 +150,7 @@ import { TranslationService } from '../services/translation.service';
                     <option value="viewer">Viewer</option>
                   </select>
                   @if (roleError()) {
-                    <p class="text-meta text-zinc-900 font-semibold mt-1">{{ roleError() }}</p>
+                    <p class="text-meta text-ink font-semibold mt-1">{{ roleError() }}</p>
                   }
                 </div>
               } @else {
@@ -168,18 +162,18 @@ import { TranslationService } from '../services/translation.service';
 
             <!-- Team -->
             <div class="space-y-2">
-              <label for="team_link" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Team Link</label>
+              <label for="team_link" class="field-label">Team Link</label>
               <div>
                 @if (u.teamId) {
                   <a
                     routerLink="/settings/teams"
-                    class="inline-flex items-center gap-1 bg-zinc-100 text-zinc-950 border border-zinc-200 hover:bg-zinc-200 px-3 py-1 rounded-xl text-xs font-bold transition-all shadow-xs"
+                    class="btn-secondary btn-sm"
                   >
-                    <mat-icon class="text-xs w-4 h-4 flex items-center justify-center">groups</mat-icon>
+                    <mat-icon class="icon-sm">groups</mat-icon>
                     {{ getTeamName(u.teamId) }}
                   </a>
                 } @else {
-                  <span class="text-xs text-zinc-400 font-semibold">— Unassigned</span>
+                  <span class="text-xs text-ink-3 font-semibold">— Unassigned</span>
                 }
               </div>
             </div>
@@ -189,59 +183,59 @@ import { TranslationService } from '../services/translation.service';
 
         @if (profileTab() === 'preferences') {
         <!-- PREFERENCES SECTION -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-6">
-          <h3 class="font-bold text-zinc-800 text-sm">Notification Preferences</h3>
+        <div class="card p-5 space-y-6">
+          <h3 class="card-title">Notification Preferences</h3>
 
           <div class="space-y-3 max-w-md">
             <!-- Toggle 1 -->
-            <label for="label_2" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_2" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
               <div>
-                <span class="text-xs font-bold text-zinc-800 block">Notify on lead assignment</span>
-                <span class="text-meta text-zinc-400 block mt-0.5">Send alerts when a lead is assigned to you</span>
+                <span class="text-xs font-semibold text-ink block">Notify on lead assignment</span>
+                <span class="text-meta text-ink-3 block mt-0.5">Send alerts when a lead is assigned to you</span>
               </div>
               <input
-                type="checkbox"
-                [checked]="u.preferences.notifyOnLeadAssign"
-                (change)="togglePreference(u, 'notifyOnLeadAssign')"
-                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
-              />
+        type="checkbox"
+        [checked]="u.preferences.notifyOnLeadAssign"
+        (change)="togglePreference(u, 'notifyOnLeadAssign')"
+        
+       />
             </label>
 
             <!-- Toggle 2 -->
-            <label for="label_3" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_3" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
               <div>
-                <span class="text-xs font-bold text-zinc-800 block">Notify on deal updates</span>
-                <span class="text-meta text-zinc-400 block mt-0.5">Receive updates when status/stage changes on your deals</span>
+                <span class="text-xs font-semibold text-ink block">Notify on deal updates</span>
+                <span class="text-meta text-ink-3 block mt-0.5">Receive updates when status/stage changes on your deals</span>
               </div>
               <input
-                type="checkbox"
-                [checked]="u.preferences.notifyOnDealUpdate"
-                (change)="togglePreference(u, 'notifyOnDealUpdate')"
-                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
-              />
+        type="checkbox"
+        [checked]="u.preferences.notifyOnDealUpdate"
+        (change)="togglePreference(u, 'notifyOnDealUpdate')"
+        
+       />
             </label>
 
             <!-- Toggle 3 -->
-            <label for="label_4" class="flex items-center justify-between p-2.5 rounded-xl border border-zinc-100 hover:bg-zinc-50/50 cursor-pointer select-none transition-colors">
+            <label for="label_4" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
               <div>
-                <span class="text-xs font-bold text-zinc-800 block">Notify on mentions</span>
-                <span class="text-meta text-zinc-400 block mt-0.5">Get notified immediately when mentioned in group chats</span>
+                <span class="text-xs font-semibold text-ink block">Notify on mentions</span>
+                <span class="text-meta text-ink-3 block mt-0.5">Get notified immediately when mentioned in group chats</span>
               </div>
               <input
-                type="checkbox"
-                [checked]="u.preferences.notifyOnMention"
-                (change)="togglePreference(u, 'notifyOnMention')"
-                class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-700 h-4 w-4"
-              />
+        type="checkbox"
+        [checked]="u.preferences.notifyOnMention"
+        (change)="togglePreference(u, 'notifyOnMention')"
+        
+       />
             </label>
           </div>
 
-          <div class="pt-4 border-t border-zinc-100 space-y-2">
-            <label for="appearance" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Appearance</label>
+          <div class="pt-4 border-t border-line-soft space-y-2">
+            <label for="appearance" class="field-label">Appearance</label>
             <select id="appearance"
               [value]="u.preferences.theme"
               (change)="changeTheme(u, $event)"
-              class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 font-semibold cursor-pointer w-full max-w-xs focus:outline-blue-600 focus:ring-zinc-700"
+              class="input-field cursor-pointer w-full max-w-xs font-semibold"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -249,12 +243,12 @@ import { TranslationService } from '../services/translation.service';
             </select>
           </div>
 
-          <div class="pt-4 border-t border-zinc-100 space-y-2">
-            <label for="interface_language" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">Interface Language</label>
+          <div class="pt-4 border-t border-line-soft space-y-2">
+            <label for="interface_language" class="field-label">Interface Language</label>
             <select id="interface_language"
               [value]="u.preferences.language"
               (change)="changeLanguage(u, $event)"
-              class="border border-zinc-200 rounded-xl px-3 py-2 text-xs bg-white text-zinc-700 font-semibold cursor-pointer w-full max-w-xs focus:outline-blue-600 focus:ring-zinc-700"
+              class="input-field cursor-pointer w-full max-w-xs font-semibold"
             >
               @for (lang of translation.availableLanguages; track lang.code) {
                 <option [value]="lang.code">{{ lang.nativeLabel }} ({{ lang.code }})</option>
@@ -266,10 +260,10 @@ import { TranslationService } from '../services/translation.service';
 
         @if (profileTab() === 'groups') {
         <!-- GROUPS SECTION -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+        <div class="card p-5 space-y-4">
           <div class="flex items-center gap-2">
-            <h3 class="font-bold text-zinc-800 text-sm">Collaboration Groups</h3>
-            <span class="bg-zinc-100 text-zinc-600 text-meta font-bold px-2 py-0.5 rounded-full">
+            <h3 class="card-title">Collaboration Groups</h3>
+            <span class="badge badge-neutral">
               {{ getUserGroups(u.id).length }}
             </span>
           </div>
@@ -279,12 +273,12 @@ import { TranslationService } from '../services/translation.service';
               <a
                 [routerLink]="['/groups']"
                 [queryParams]="{ groupId: grp.id }"
-                class="bg-zinc-50 border border-zinc-200/80 hover:bg-zinc-100 hover:text-zinc-950 hover:border-blue-300 px-3 py-1 rounded-xl text-xs font-semibold text-zinc-650 transition-colors shadow-2xs block"
+                class="bg-subtle border border-line hover:bg-muted hover:text-ink hover:border-accent-line px-3 py-1 rounded-xl text-xs font-semibold text-ink-2 transition-colors shadow-2xs block"
               >
                 # {{ grp.name }}
               </a>
             } @empty {
-              <span class="text-xs text-zinc-400 italic">This user does not belong to any collaboration groups.</span>
+              <span class="text-xs text-ink-3 italic">This user does not belong to any collaboration groups.</span>
             }
           </div>
         </div>
@@ -292,15 +286,15 @@ import { TranslationService } from '../services/translation.service';
 
         @if (profileTab() === 'activity') {
         <!-- ACTIVITY SECTION -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs space-y-4">
-          <h3 class="font-bold text-zinc-800 text-sm">Activity Details</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-zinc-600">
+        <div class="card p-5 space-y-4">
+          <h3 class="card-title">Activity Details</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-ink-2">
             <div>
-              <span class="text-meta font-bold text-zinc-400 uppercase block mb-0.5">Member since</span>
+              <span class="eyebrow block mb-0.5">Member since</span>
               <span>{{ u.createdAt | date: 'dd MMMM yyyy, HH:mm' }}</span>
             </div>
             <div>
-              <span class="text-meta font-bold text-zinc-400 uppercase block mb-0.5">Last active</span>
+              <span class="eyebrow block mb-0.5">Last active</span>
               <span>{{ getRelativeTime(u.lastActiveAt) }}</span>
             </div>
           </div>
@@ -308,37 +302,37 @@ import { TranslationService } from '../services/translation.service';
 
         <!-- DANGER ZONE (Admin only & not viewing own profile) -->
         @if (isAdmin() && u.id !== state.currentUserId()) {
-          <div class="bg-zinc-100 border border-zinc-300 rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 class="font-bold text-zinc-950 text-base">Danger Zone</h3>
-            <p class="text-xs text-zinc-900/90 leading-normal">
+          <div class="bg-muted border border-line-strong rounded-2xl p-6 shadow-xs space-y-4">
+            <h3 class="card-title">Danger Zone</h3>
+            <p class="text-xs text-ink/90 leading-normal">
               Deactivating this user will remove them from all assigned teams. They will not be able to log in or schedule meetings until reactivated.
             </p>
 
             @if (showDeactivateConfirm()) {
-              <div class="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
-                <p class="text-xs text-zinc-950 font-bold">Are you absolutely sure you want to deactivate {{ u.displayName }}?</p>
+              <div class="card p-4 space-y-3">
+                <p class="text-xs text-ink font-semibold">Are you absolutely sure you want to deactivate {{ u.displayName }}?</p>
                 <div class="flex items-center gap-2">
                   <button
                     (click)="showDeactivateConfirm.set(false)"
-                    class="bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    class="bg-muted hover:bg-muted-strong text-ink-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     (click)="deactivateAccount(u.id)"
-                    class="bg-zinc-900 hover:bg-zinc-950 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                    class="btn-primary btn-sm"
                   >
                     Confirm Deactivation
                   </button>
                   @if (deactivateError()) {
-                    <span class="text-meta text-zinc-950 font-bold ml-2">{{ deactivateError() }}</span>
+                    <span class="text-meta text-ink font-semibold ml-2">{{ deactivateError() }}</span>
                   }
                 </div>
               </div>
             } @else {
               <button
                 (click)="showDeactivateConfirm.set(true)"
-                class="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-colors cursor-pointer shadow-2xs"
+                class="btn-secondary btn-sm"
               >
                 Deactivate Account
               </button>
@@ -348,17 +342,17 @@ import { TranslationService } from '../services/translation.service';
         }
       } @else {
         <!-- 404 Empty State -->
-        <div class="bg-white border border-zinc-200/80 rounded-2xl p-16 text-center space-y-3">
-          <div class="w-16 h-16 bg-zinc-100 text-zinc-400 rounded-full flex items-center justify-center mx-auto">
-            <mat-icon style="font-size:32px;width:32px;height:32px">error_outline</mat-icon>
+        <div class="bg-surface border border-line rounded-2xl p-16 text-center space-y-3">
+          <div class="w-16 h-16 bg-muted text-ink-3 rounded-full flex items-center justify-center mx-auto">
+            <mat-icon>error_outline</mat-icon>
           </div>
-          <h2 class="text-base font-bold text-zinc-900 font-sans">User profile not found</h2>
-          <p class="text-xs text-zinc-500 max-w-xs mx-auto">
+          <h2 class="card-title">User profile not found</h2>
+          <p class="text-xs text-ink-3 max-w-xs mx-auto">
             The requested user account does not exist or may have been deleted permanently.
           </p>
           <a
             routerLink="/settings/users"
-            class="inline-block bg-zinc-100 text-zinc-950 border border-zinc-200/50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
+            class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-xs"
           >
             Return to list
           </a>
@@ -375,6 +369,12 @@ export class UserProfileComponent {
 
   userId = signal<string | null>(null);
   profileTab = signal('profile');
+  readonly profileTabs = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'preferences', label: 'Preferences' },
+    { id: 'groups', label: 'Groups' },
+    { id: 'activity', label: 'Activity' },
+  ];
 
   // Edit fields
   isEditingName = signal(false);
@@ -407,6 +407,8 @@ export class UserProfileComponent {
       }
     });
   }
+
+  isOwnProfile = computed(() => this.state.currentUserId() === this.userId());
 
   user = computed(() => {
     const id = this.userId();

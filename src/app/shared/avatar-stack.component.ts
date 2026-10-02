@@ -14,12 +14,12 @@ import { UserAvatarComponent } from './user-avatar.component';
             [userId]="uid"
             [size]="size"
             [style.z-index]="userIds.length - idx"
-            class="ring-2 ring-white rounded-full"
+            class="ring-2 ring-surface rounded-full"
           ></app-user-avatar>
         }
       </div>
       @if (userIds.length > maxVisible) {
-        <span class="text-xs font-semibold text-zinc-500 ml-2 font-sans">
+        <span class="text-xs font-semibold text-ink-3 ml-2">
           +{{ userIds.length - maxVisible }}
         </span>
       }

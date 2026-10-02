@@ -15,103 +15,103 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
   imports: [CommonModule, FormsModule, MatIconModule],
   template: `
     @if (campaignId()) {
-      <div class="fixed inset-0 z-40 bg-zinc-900/40 backdrop-blur-xs flex justify-end">
-        <div class="bg-white w-full max-w-3xl h-full shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div class="fixed inset-0 z-40 bg-scrim flex justify-end">
+        <div class="bg-surface w-full max-w-3xl h-full shadow-xl flex flex-col duration-200">
 
-          <div class="flex justify-between items-center p-6 pb-4 border-b border-zinc-100">
+          <div class="flex justify-between items-center p-6 pb-4 border-b border-line-soft">
             <div>
-              <h3 class="text-lg font-bold text-zinc-950">{{ campaignTitle() }}</h3>
-              <p class="text-xs text-zinc-500 mt-0.5">Live delivery and reply status</p>
+              <h3 class="modal-title">{{ campaignTitle() }}</h3>
+              <p class="text-xs text-ink-3 mt-0.5">Live delivery and reply status</p>
             </div>
-            <button (click)="closed.emit()" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
+            <button (click)="closed.emit()" title="Close" class="btn-icon btn-sm">
+              <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
 
           @if (wa.stats(); as s) {
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-px bg-zinc-100 border-b border-zinc-100">
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-zinc-900">{{ s.total }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Total</div>
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-px bg-muted border-b border-line-soft">
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-ink">{{ s.total }}</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div>
               </div>
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-sky-700">{{ s.sent + s.delivered + s.read }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Sent</div>
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-info-ink">{{ s.sent + s.delivered + s.read }}</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Sent</div>
               </div>
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-emerald-700">{{ s.replied }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Replied</div>
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-success-ink">{{ s.replied }}</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Replied</div>
               </div>
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-red-700">{{ s.failed }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Failed</div>
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-danger-ink">{{ s.failed }}</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Failed</div>
               </div>
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-amber-700">{{ s.followupsPending }}</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Relances due</div>
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-warning-ink">{{ s.followupsPending }}</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Relances due</div>
               </div>
-              <div class="bg-white p-3 text-center">
-                <div class="text-lg font-semibold text-zinc-900">{{ s.replyRate }}%</div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Reply rate</div>
+              <div class="bg-surface p-3 text-center">
+                <div class="text-lg font-semibold text-ink">{{ s.replyRate }}%</div>
+                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Reply rate</div>
               </div>
             </div>
           }
 
-          <div class="flex items-center justify-between px-6 py-3 border-b border-zinc-100">
-            <span class="text-xs text-zinc-500">
+          <div class="flex items-center justify-between px-6 py-3 border-b border-line-soft">
+            <span class="text-xs text-ink-3">
               @if (wa.isLoadingRecipients()) { Refreshing… } @else { Auto-refreshing every 5s }
             </span>
             @if ((wa.stats()?.followupsPending ?? 0) > 0) {
               <button (click)="cancelFollowups()"
-                      class="text-xs px-3 py-1.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg font-medium transition-colors">
+                      class="btn-secondary btn-sm">
                 Cancel all pending relances
               </button>
             }
           </div>
 
           <div class="flex-1 overflow-y-auto">
-            <table class="min-w-full divide-y divide-zinc-100">
-              <thead class="bg-zinc-50 sticky top-0">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <th class="px-6 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Contact</th>
-                  <th class="px-6 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Status</th>
-                  <th class="px-6 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Relance</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Relance</th>
                   @if (wa.isMock()) {
-                    <th class="px-6 py-2.5 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">Test</th>
+                    <th>Test</th>
                   }
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-zinc-100">
+              <tbody>
                 @for (r of wa.recipients(); track r.id) {
-                  <tr class="hover:bg-zinc-50 transition-colors">
-                    <td class="px-6 py-3">
-                      <div class="text-sm font-medium text-zinc-900">{{ r.partnerName }}</div>
-                      <div class="text-xs text-zinc-500 font-mono">{{ r.phone || '—' }}</div>
+                  <tr>
+                    <td>
+                      <div class="text-sm font-medium text-ink">{{ r.partnerName }}</div>
+                      <div class="text-xs text-ink-3 font-mono">{{ r.phone || '—' }}</div>
                     </td>
-                    <td class="px-6 py-3">
-                      <span [class]="statusClass(r.status)" class="px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap">
+                    <td>
+                      <span [class]="statusClass(r.status)" class="badge">
                         {{ statusLabel(r.status) }}
                       </span>
                       @if (r.errorTitle) {
-                        <div class="text-[11px] text-red-600 mt-1 max-w-xs">{{ r.errorCode }}: {{ r.errorTitle }}</div>
+                        <div class="text-meta text-danger-ink mt-1 max-w-xs">{{ r.errorCode }}: {{ r.errorTitle }}</div>
                       }
                     </td>
-                    <td class="px-6 py-3 text-xs text-zinc-600">
+                    <td class="text-ink-2">
                       @if (r.followupDueAt) {
-                        <span class="text-amber-700">Due {{ r.followupDueAt | date:'d MMM, HH:mm' }}</span>
+                        <span class="text-warning-ink">Due {{ r.followupDueAt | date:'d MMM, HH:mm' }}</span>
                       } @else if (r.followupCount > 0) {
-                        <span class="text-zinc-500">Sent {{ r.lastFollowupAt | date:'d MMM, HH:mm' }}</span>
+                        <span class="text-ink-3">Sent {{ r.lastFollowupAt | date:'d MMM, HH:mm' }}</span>
                       } @else if (r.status === 'REPLIED') {
-                        <span class="text-emerald-700">Not needed — replied</span>
+                        <span class="text-success-ink">Not needed — replied</span>
                       } @else {
-                        <span class="text-zinc-400">—</span>
+                        <span class="text-ink-3">—</span>
                       }
                     </td>
                     @if (wa.isMock()) {
-                      <td class="px-6 py-3">
+                      <td>
                         @if (r.phone && r.status !== 'REPLIED' && r.status !== 'FAILED') {
                           <button (click)="simulateReply(r)"
-                                  class="text-xs px-2.5 py-1 border border-zinc-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-zinc-600 rounded-lg transition-colors whitespace-nowrap">
+                                  class="btn-secondary btn-sm">
                             Simulate reply
                           </button>
                         }
@@ -120,7 +120,7 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
                   </tr>
                 } @empty {
                   <tr>
-                    <td [attr.colspan]="wa.isMock() ? 4 : 3" class="px-6 py-10 text-center text-sm text-zinc-500">
+                    <td [attr.colspan]="wa.isMock() ? 4 : 3" class="text-center text-ink-3">
                       No recipients yet.
                     </td>
                   </tr>
@@ -186,14 +186,14 @@ export class WhatsAppCampaignDetailComponent {
 
   statusClass(status: string): string {
     switch (status) {
-      case 'REPLIED': return 'bg-emerald-50 text-emerald-700';
-      case 'READ': return 'bg-sky-50 text-sky-700';
-      case 'DELIVERED': return 'bg-sky-50 text-sky-600';
-      case 'SENT': return 'bg-zinc-100 text-zinc-700';
-      case 'FAILED': return 'bg-red-50 text-red-700';
-      case 'OPTED_OUT': return 'bg-orange-50 text-orange-700';
-      case 'SKIPPED': return 'bg-amber-50 text-amber-700';
-      default: return 'bg-zinc-100 text-zinc-600';
+      case 'REPLIED': return 'badge-success';
+      case 'READ': return 'badge-info';
+      case 'DELIVERED': return 'badge-info';
+      case 'SENT': return 'bg-muted text-ink-2';
+      case 'FAILED': return 'badge-danger';
+      case 'OPTED_OUT': return 'badge-warning';
+      case 'SKIPPED': return 'badge-warning';
+      default: return 'bg-muted text-ink-2';
     }
   }
 }

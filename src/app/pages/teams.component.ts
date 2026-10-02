@@ -6,11 +6,13 @@ import { UserAvatarComponent } from '../shared/user-avatar.component';
 import { AvatarStackComponent } from '../shared/avatar-stack.component';
 import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [CommonModule, FormsModule, UserAvatarComponent, AvatarStackComponent, MatIconModule],
+  imports: [CommonModule, FormsModule, UserAvatarComponent, AvatarStackComponent, MatIconModule, PageHeaderComponent],
   styles: [`
     .panel {
       max-height: 0;
@@ -24,43 +26,39 @@ import { MatIconModule } from '@angular/material/icon';
     }
   `],
   template: `
-    <div class="space-y-6 font-sans">
-      <!-- Header -->
-      @if (canCreate()) {
-      <div class="flex justify-end">
-        <button
-          (click)="toggleCreateForm()"
-          class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <mat-icon class="text-base w-4 h-4 flex items-center justify-center">add</mat-icon>
-          Create Team
-        </button>
-      </div>
-      }
+    <div class="page">
+      <app-page-header size="section" title="Teams" subtitle="Group people into departments for assignments and reporting">
+        @if (canCreate()) {
+          <button actions (click)="toggleCreateForm()" class="btn-primary">
+            <mat-icon>add</mat-icon>
+            Create Team
+          </button>
+        }
+      </app-page-header>
 
       <!-- Create Team Form (Inline) -->
-      <div [class.open]="showCreateForm()" class="panel bg-zinc-50 border border-zinc-200/80 rounded-2xl p-0 shadow-xs">
-        <div class="p-6 space-y-4">
-          <h3 class="font-bold text-zinc-800 text-sm">Create New Department Team</h3>
+      <div [class.open]="showCreateForm()" class="panel card">
+        <div class="p-5 space-y-4">
+          <h3 class="card-title">Create New Department Team</h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Name -->
             <div>
-              <label for="team_name" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Name *</label>
+              <label for="team_name" class="field-label mb-1.5">Team Name *</label>
               <input id="team_name"
                 [(ngModel)]="newTeamName"
                 type="text"
                 placeholder="e.g. Casablanca Sales"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800"
+                class="input-field w-full"
               />
             </div>
 
             <!-- Department -->
             <div>
-              <label for="department" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Department</label>
+              <label for="department" class="field-label mb-1.5">Department</label>
               <select id="department"
                 [(ngModel)]="newTeamDept"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 <option value="Sales">Sales</option>
                 <option value="Operations">Operations</option>
@@ -72,10 +70,10 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Team Lead -->
             <div>
-              <label for="team_lead" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Team Lead *</label>
+              <label for="team_lead" class="field-label mb-1.5">Team Lead *</label>
               <select id="team_lead"
                 [(ngModel)]="newTeamLeadId"
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-700 font-semibold cursor-pointer"
+                class="input-field w-full cursor-pointer font-semibold"
               >
                 <option value="">-- Select a team lead --</option>
                 @for (mgr of getAvailableLeads(); track mgr.id) {
@@ -86,7 +84,7 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Color Swatches -->
             <div>
-              <label for="team_badge_accent_co" class="block text-xs font-semibold text-zinc-500 uppercase mb-2">Team Badge Accent Color</label>
+              <label for="team_badge_accent_co" class="field-label mb-1.5">Team Badge Accent Color</label>
               <div class="flex items-center gap-3">
                 @for (c of presetColors; track c) {
                   <button
@@ -95,7 +93,7 @@ import { MatIconModule } from '@angular/material/icon';
                     [style.background-color]="c"
                     [class.ring-2]="selectedColor() === c"
                     [attr.aria-label]="'Select color ' + c"
-                    class="w-6 h-6 rounded-full cursor-pointer ring-offset-2 ring-zinc-900 transition-all"
+                    class="w-6 h-6 rounded-full cursor-pointer ring-offset-2 ring-ink-2 transition-all"
                   ></button>
                 }
               </div>
@@ -103,27 +101,27 @@ import { MatIconModule } from '@angular/material/icon';
 
             <!-- Description -->
             <div class="md:col-span-2">
-              <label for="description_optional" class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description (Optional)</label>
+              <label for="description_optional" class="field-label mb-1.5">Description (Optional)</label>
               <textarea id="description_optional"
                 [(ngModel)]="newTeamDesc"
                 rows="2"
                 placeholder="Brief summary of the team responsibilities..."
-                class="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-blue-600 text-zinc-800"
+                class="input-field w-full"
               ></textarea>
             </div>
           </div>
 
-          <div class="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+          <div class="flex justify-end gap-2 pt-2 border-t border-line-soft">
             <button
               (click)="closeCreateForm()"
-              class="px-4 py-2 border border-zinc-200 text-zinc-600 text-xs font-semibold rounded-xl hover:bg-zinc-100 cursor-pointer"
+              class="btn-secondary btn-sm"
             >
               Cancel
             </button>
             <button
               (click)="saveTeam()"
               [disabled]="!newTeamName.trim() || !newTeamLeadId"
-              class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer font-sans"
+              class="btn-primary btn-sm"
             >
               Create Team
             </button>
@@ -134,7 +132,7 @@ import { MatIconModule } from '@angular/material/icon';
       <!-- Team Cards Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         @for (team of state.teams(); track team.id) {
-          <div class="bg-white border border-zinc-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
+          <div class="card p-5 flex flex-col justify-between hover:shadow-md relative overflow-hidden">
             <!-- Colored accent border at top of card -->
             <div [style.background-color]="team.color" class="absolute top-0 left-0 right-0 h-1.5"></div>
 
@@ -142,26 +140,26 @@ import { MatIconModule } from '@angular/material/icon';
               <!-- Top Row -->
               <div class="flex items-start justify-between">
                 <div>
-                  <h3 class="text-base font-bold text-zinc-900 block font-sans">{{ team.name }}</h3>
+                  <h3 class="card-title">{{ team.name }}</h3>
                   <span
                     [style.background-color]="team.color + '15'"
                     [style.color]="team.color"
-                    class="inline-flex px-2 py-0.5 rounded-full text-meta font-bold border border-transparent tracking-wide uppercase mt-1"
+                    class="inline-flex px-2 py-0.5 rounded-full text-meta font-semibold border border-transparent tracking-wide uppercase mt-1"
                   >
                     {{ team.department }}
                   </span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
-                  <span class="text-xs font-bold text-zinc-400 font-sans">
+                  <span class="text-xs font-semibold text-ink-3">
                     {{ team.memberUserIds.length }} member{{ team.memberUserIds.length === 1 ? '' : 's' }}
                   </span>
                   @if (canDelete()) {
                     <button
                       (click)="openDeleteModal(team)"
-                      class="text-zinc-400 hover:text-red-600 hover:bg-red-50 p-1 rounded-lg transition-colors"
+                      class="btn-icon btn-sm btn-danger-hover"
                       title="Delete Team"
                     >
-                      <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">delete</mat-icon>
+                      <mat-icon class="icon-sm">delete</mat-icon>
                     </button>
                   }
                 </div>
@@ -169,30 +167,30 @@ import { MatIconModule } from '@angular/material/icon';
 
               <!-- Description -->
               @if (team.description) {
-                <p class="text-xs text-zinc-500 leading-normal">{{ team.description }}</p>
+                <p class="text-xs text-ink-3 leading-normal">{{ team.description }}</p>
               }
 
               <!-- Lead Row -->
-              <div class="flex items-center gap-3 bg-zinc-50 border border-zinc-100 rounded-xl p-3">
+              <div class="flex items-center gap-3 bg-subtle border border-line-soft rounded-xl p-3">
                 <app-user-avatar [userId]="team.leadUserId" [size]="36"></app-user-avatar>
                 <div class="flex-1 min-w-0">
-                  <div class="text-xs font-bold text-zinc-800 flex items-center gap-1">
+                  <div class="text-xs font-semibold text-ink flex items-center gap-1">
                     <span>{{ getLeadName(team.leadUserId) }}</span>
-                    <mat-icon class="text-zinc-700 text-xs w-4 h-4 flex items-center justify-center" title="Team Lead">star</mat-icon>
+                    <mat-icon class="text-ink-2 icon-sm" title="Team Lead">star</mat-icon>
                   </div>
-                  <span class="text-meta text-zinc-400 block mt-0.5">Team Lead</span>
+                  <span class="text-meta text-ink-3 block mt-0.5">Team Lead</span>
                 </div>
               </div>
 
               <!-- Members Avatar Stack -->
-              <div class="flex items-center justify-between pt-2 border-t border-zinc-100">
+              <div class="flex items-center justify-between pt-2 border-t border-line-soft">
                 <app-avatar-stack [userIds]="team.memberUserIds" [size]="28" [maxVisible]="4"></app-avatar-stack>
                 <button
                   (click)="toggleAccordion(team.id)"
-                  class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5 cursor-pointer"
+                  class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>{{ isExpanded(team.id) ? 'Hide' : 'View' }} members</span>
-                  <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center transition-transform duration-200" [class.rotate-180]="isExpanded(team.id)">
+                  <mat-icon class="transition-transform duration-200 icon-md" [class.rotate-180]="isExpanded(team.id)">
                     expand_more
                   </mat-icon>
                 </button>
@@ -200,30 +198,30 @@ import { MatIconModule } from '@angular/material/icon';
             </div>
 
             <!-- MEMBER ACCORDION -->
-            <div [class.open]="isExpanded(team.id)" class="panel border-t border-zinc-100 mt-4 pt-4">
+            <div [class.open]="isExpanded(team.id)" class="panel border-t border-line-soft mt-4 pt-4">
               <div class="space-y-4">
-                <h4 class="text-xs font-bold text-zinc-500 uppercase tracking-wide">Member List</h4>
+                <h4 class="eyebrow">Member List</h4>
 
                 <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
                   @for (userId of team.memberUserIds; track userId) {
                     @let user = getUser(userId);
                     @if (user) {
-                      <div class="flex items-center justify-between p-2 hover:bg-zinc-50/80 rounded-xl transition-colors">
+                      <div class="flex items-center justify-between p-2 hover:bg-subtle rounded-xl transition-colors">
                         <div class="flex items-center gap-2 min-w-0">
                           <app-user-avatar [userId]="user.id" [size]="28"></app-user-avatar>
                           <div class="min-w-0">
-                            <span class="text-xs font-bold text-zinc-800 truncate block">{{ user.displayName }}</span>
-                            <span class="text-meta text-zinc-400 block">{{ user.jobTitle || 'No title' }}</span>
+                            <span class="text-xs font-semibold text-ink truncate block">{{ user.displayName }}</span>
+                            <span class="text-meta text-ink-3 block">{{ user.jobTitle || 'No title' }}</span>
                           </div>
                         </div>
 
                         <div class="flex items-center gap-1.5">
                           @if (user.id === team.leadUserId) {
-                            <i class="ti ti-crown text-zinc-700 text-base leading-none" title="Team Lead"></i>
+                            <mat-icon class="icon-sm text-warning" title="Team Lead">workspace_premium</mat-icon>
                             @if (canWrite()) {
                               <button
                                 (click)="startTransferLead(team.id)"
-                                class="text-meta text-zinc-900 hover:text-zinc-950 font-bold hover:underline cursor-pointer"
+                                class="text-meta text-ink hover:text-ink font-semibold hover:underline cursor-pointer"
                               >
                                 Transfer Lead
                               </button>
@@ -231,10 +229,10 @@ import { MatIconModule } from '@angular/material/icon';
                           } @else if (canWrite()) {
                             <button
                               (click)="removeMember(team.id, user.id)"
-                              class="text-zinc-400 hover:text-zinc-900 p-1 rounded transition-colors cursor-pointer"
+                              class="btn-icon btn-sm"
                               title="Remove member"
                             >
-                              <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">close</mat-icon>
+                              <mat-icon class="icon-sm">close</mat-icon>
                             </button>
                           }
                         </div>
@@ -245,12 +243,12 @@ import { MatIconModule } from '@angular/material/icon';
 
                 <!-- Inline lead transfer panel -->
                 @if (transferLeadTeamId() === team.id) {
-                  <div class="bg-zinc-100/50 border border-zinc-200 rounded-xl p-3 space-y-2">
-                    <label for="transfer_lead_to" class="block text-meta font-bold text-zinc-950 uppercase">Transfer Lead to:</label>
+                  <div class="bg-muted border border-line rounded-xl p-3 space-y-2">
+                    <label for="transfer_lead_to" class="field-label">Transfer Lead to:</label>
                     <div class="flex items-center gap-2">
                       <select
                         (change)="executeLeadTransfer(team.id, $event)"
-                        class="border border-zinc-200 rounded-lg px-2 py-1 text-xs bg-white text-zinc-700 focus:outline-blue-600 focus:ring-1 focus:ring-zinc-700 font-semibold flex-1"
+                        class="input-field flex-1 font-semibold"
                       >
                         <option value="">-- Select member --</option>
                         @for (mid of team.memberUserIds; track mid) {
@@ -261,28 +259,28 @@ import { MatIconModule } from '@angular/material/icon';
                       </select>
                       <button
                         (click)="cancelTransferLead()"
-                        class="text-meta text-zinc-500 hover:text-zinc-700 font-bold hover:underline cursor-pointer"
+                        class="text-meta text-ink-3 hover:text-ink-2 font-semibold hover:underline cursor-pointer"
                       >
                         Cancel
                       </button>
                     </div>
                     @if (leadTransferError()) {
-                      <p class="text-meta text-zinc-900 font-semibold mt-1">{{ leadTransferError() }}</p>
+                      <p class="text-meta text-ink font-semibold mt-1">{{ leadTransferError() }}</p>
                     }
                   </div>
                 }
 
                 <!-- Remove member errors -->
                 @if (memberErrorTeamId() === team.id) {
-                  <div class="text-meta text-zinc-900 font-semibold bg-zinc-100 border border-zinc-200 rounded-lg p-2 flex items-center gap-1.5 animate-in fade-in duration-200">
-                    <mat-icon class="text-zinc-700 text-xs w-4 h-4 flex items-center justify-center">error</mat-icon>
+                  <div class="text-meta text-ink font-semibold bg-muted border border-line rounded-lg p-2 flex items-center gap-1.5 duration-200">
+                    <mat-icon class="text-ink-2 icon-sm">error</mat-icon>
                     <span>{{ memberErrorMessage() }}</span>
                   </div>
                 }
 
                 <!-- Add member row -->
                 @if (canWrite()) {
-                <div class="pt-2 border-t border-zinc-100/50">
+                <div class="pt-2 border-t border-line-soft">
                   <div class="relative">
                     <input
                       #searchBox
@@ -291,16 +289,16 @@ import { MatIconModule } from '@angular/material/icon';
                       (input)="searchUsersToAdd(team.id, searchBox.value)"
                       (focus)="searchUsersToAdd(team.id, searchBox.value)"
                       (blur)="clearSearchDelay()"
-                      class="w-full border border-zinc-200 rounded-xl px-3 py-1.5 text-xs bg-zinc-50 focus:bg-white focus:outline-blue-600 text-zinc-800"
+                      class="input-field w-full"
                     />
 
                     <!-- Add matches dropdown -->
                     @if (activeTeamSearchId() === team.id && searchMatches().length > 0) {
-                      <div class="absolute left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg z-10 overflow-hidden max-h-36 overflow-y-auto">
+                      <div class="card absolute left-0 right-0 mt-1 z-10 overflow-hidden max-h-36 overflow-y-auto">
                         @for (match of searchMatches(); track match.id) {
                           <button
                             (click)="addMember(team.id, match.id)"
-                            class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 transition-colors text-xs font-semibold text-zinc-700 cursor-pointer"
+                            class="menu-item"
                           >
                             <app-user-avatar [userId]="match.id" [size]="20"></app-user-avatar>
                             <span>{{ match.displayName }}</span>
@@ -320,26 +318,26 @@ import { MatIconModule } from '@angular/material/icon';
 
     <!-- Delete Team Confirmation Modal -->
     @if (deleteModalOpen() && teamToDelete()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
           <div class="flex justify-between items-center">
-            <h3 class="text-lg font-bold text-zinc-950">Delete Team</h3>
-            <button (click)="cancelDelete()" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
+            <h3 class="modal-title">Delete Team</h3>
+            <button (click)="cancelDelete()" class="btn-icon btn-sm">
+              <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
-          <p class="text-sm text-zinc-600 leading-relaxed">
+          <p class="text-sm text-ink-2 leading-relaxed">
             Are you sure you want to delete this team? Members will be unassigned.
           </p>
-          <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3">
-            <div class="text-sm font-semibold text-zinc-900">{{ teamToDelete()?.name }}</div>
+          <div class="bg-subtle border border-line rounded-xl px-4 py-3">
+            <div class="text-sm font-semibold text-ink">{{ teamToDelete()?.name }}</div>
           </div>
-          <div class="flex justify-end gap-2 pt-2 border-t border-white/30">
-            <button (click)="cancelDelete()" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">
+          <div class="flex justify-end gap-2 pt-2 border-t border-line-soft">
+            <button (click)="cancelDelete()" class="btn-secondary">
               Cancel
             </button>
-            <button (click)="deleteConfirm()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5">
-              <mat-icon class="w-4 h-4 text-[16px]! leading-none!">delete</mat-icon>
+            <button (click)="deleteConfirm()" class="btn-danger">
+              <mat-icon class="icon-sm">delete</mat-icon>
               Delete
             </button>
           </div>
@@ -353,7 +351,7 @@ export class TeamsComponent {
 
   // Signals
   showCreateForm = signal<boolean>(false);
-  selectedColor = signal<string>('#1D9E75');
+  selectedColor = signal<string>(IDENTITY_PALETTE[1]);
 
   newTeamName = '';
   newTeamDept: 'Sales' | 'Operations' | 'Finance' | 'Support' | 'Custom' = 'Sales';
@@ -370,14 +368,7 @@ export class TeamsComponent {
   activeTeamSearchId = signal<string | null>(null);
   searchMatches = signal<CrmUser[]>([]);
 
-  presetColors = [
-    '#1D9E75', // Teal
-    '#378ADD', // Blue
-    '#BA7517', // Amber
-    '#D4537E', // Pink
-    '#7F77DD', // Purple
-    '#D85A30'  // Coral
-  ];
+  presetColors = [...IDENTITY_PALETTE];
 
   // Filters leads
   getAvailableLeads(): CrmUser[] {
@@ -431,7 +422,7 @@ export class TeamsComponent {
       this.newTeamLeadId = '';
       this.newTeamDesc = '';
       this.newTeamDept = 'Sales';
-      this.selectedColor.set('#1D9E75');
+      this.selectedColor.set(IDENTITY_PALETTE[1]);
     }
   }
 

@@ -19,12 +19,17 @@ import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { UserPickerComponent } from '../shared/user-picker.component';
 import { ApiService } from '../services/api.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { StatCardComponent } from '../shared/ui/stat-card.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
+import { ToastService } from '../services/toast.service';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
 @Component({
   selector: 'app-sales',
-  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   template: `
     <!--
       eslint-disable @angular-eslint/template/label-has-associated-control --
@@ -33,74 +38,69 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       visual QA on this 3600-line template, so it is tracked as follow-up a11y work.
       TODO(a11y): wire these labels to their controls and remove this directive.
     -->
-    <div class="space-y-8">
+    <div class="page">
+      <app-page-header title="Sales Pipeline" subtitle="Deals, proposals and purchase orders from first quote to delivery">
+        @if (activeTab() === 'deals' && canCreateDeal()) {
+          <button actions class="btn-primary" (click)="openCreateDealModal()">
+            <mat-icon>add</mat-icon>
+            New Deal
+          </button>
+        } @else if (activeTab() === 'proposals' && canCreateProposal()) {
+          <button actions class="btn-primary" (click)="openCreateProposalModal()">
+            <mat-icon>add</mat-icon>
+            New Proposal
+          </button>
+        }
+      </app-page-header>
+
       @if (activeTab() !== 'deals') {
         <app-data-status-banner [loading]="activeTabLoading()" [error]="activeTabError()" />
       }
-      <div class="flex gap-5 sm:gap-6 border-b border-zinc-200">
-        <button
-          (click)="setActiveTab('deals', 'sales.deals')"
-          [class]="activeTab() === 'deals' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
-          class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
-        >
-          <mat-icon class="text-[18px] w-[18px] h-[18px]">monetization_on</mat-icon>
+
+      @if (activeTab() === 'deals') {
+        <div class="stat-grid">
+          <app-stat-card label="Open Deals" [value]="openDealCount()" icon="handshake" tone="violet" [hint]="money0(openDealValue()) + ' in play'" />
+          <app-stat-card label="Won" [value]="money0(wonValue())" icon="emoji_events" tone="violet" [hint]="wonCount() + ' deal' + (wonCount() === 1 ? '' : 's') + ' closed'" />
+          <app-stat-card label="Lost" [value]="money0(lostValue())" icon="trending_down" tone="rose" [hint]="lostCount() + ' deal' + (lostCount() === 1 ? '' : 's') + ' lost'" />
+          <app-stat-card label="Average Deal" [value]="money0(averageDeal())" icon="payments" tone="violet" hint="across all deals" />
+        </div>
+      }
+
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'deals'" [attr.aria-selected]="activeTab() === 'deals'"
+                (click)="setActiveTab('deals', 'sales.deals')">
+          <mat-icon>monetization_on</mat-icon>
           {{ 'sales.deals' | translate }}
-          <span class="text-xs">{{ dealsService.allDeals().length }}</span>
+          <span class="count-pill">{{ dealsService.allDeals().length }}</span>
         </button>
-        <button
-          (click)="setActiveTab('proposals', 'sales.proposals')"
-          [class]="activeTab() === 'proposals' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
-          class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
-        >
-          <mat-icon class="text-[18px] w-[18px] h-[18px]">description</mat-icon>
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'proposals'" [attr.aria-selected]="activeTab() === 'proposals'"
+                (click)="setActiveTab('proposals', 'sales.proposals')">
+          <mat-icon>description</mat-icon>
           {{ 'sales.proposals' | translate }}
-          <span class="text-xs">{{ proposalsService.allProposals().length }}</span>
+          <span class="count-pill">{{ proposalsService.allProposals().length }}</span>
         </button>
-        <button
-          (click)="setActiveTab('pos', 'sales.purchaseOrders')"
-          [class]="activeTab() === 'pos' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
-          class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
-        >
-          <mat-icon class="text-[18px] w-[18px] h-[18px]">shopping_cart</mat-icon>
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'pos'" [attr.aria-selected]="activeTab() === 'pos'"
+                (click)="setActiveTab('pos', 'sales.purchaseOrders')">
+          <mat-icon>shopping_cart</mat-icon>
           Purchase Orders
-          <span class="text-xs">{{ purchaseOrdersService.allPurchaseOrders().length }}</span>
+          <span class="count-pill">{{ purchaseOrdersService.allPurchaseOrders().length }}</span>
         </button>
       </div>
-      <div class="flex justify-end">
-          <div class="flex gap-2">
-            @if (activeTab() === 'deals' && canCreateDeal()) {
-              <button (click)="openCreateDealModal()" class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-zinc-300">
-                <mat-icon class="w-5 h-5 text-[20px]! leading-none! flex items-center justify-center">add</mat-icon>
-                New Deal
-              </button>
-            } @else if (activeTab() === 'proposals' && canCreateProposal()) {
-              <button (click)="openCreateProposalModal()" class="bg-zinc-900 hover:bg-zinc-950 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-zinc-300">
-                <mat-icon class="w-5 h-5 text-[20px]! leading-none! flex items-center justify-center">add</mat-icon>
-                New Proposal
-              </button>
-            }
-          </div>
-        </div>
 
       <!-- Deals View -->
       @if (activeTab() === 'deals') {
-        <div class="flex gap-5 sm:gap-6 border-b border-zinc-200">
-          <button
-            (click)="dealsView.set('table')"
-            [class]="dealsView() === 'table' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
-            class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
-          >
-            <mat-icon class="text-[18px] w-[18px] h-[18px]">list_alt</mat-icon>
-            Table
-          </button>
-          <button
-            (click)="dealsView.set('board')"
-            [class]="dealsView() === 'board' ? 'border-zinc-900 text-zinc-900' : 'border-transparent text-zinc-400 hover:text-zinc-600'"
-            class="px-1 py-3 -mb-px border-b-2 text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
-          >
-            <mat-icon class="text-[18px] w-[18px] h-[18px]">view_column</mat-icon>
-            Board
-          </button>
+        <div class="toolbar">
+          <div class="segmented" role="group" aria-label="Deals view">
+            <button class="segmented__item" [class.is-active]="dealsView() === 'table'" [attr.aria-pressed]="dealsView() === 'table'" (click)="dealsView.set('table')">
+              <mat-icon>list_alt</mat-icon>
+              Table
+            </button>
+            <button class="segmented__item" [class.is-active]="dealsView() === 'board'" [attr.aria-pressed]="dealsView() === 'board'" (click)="dealsView.set('board')">
+              <mat-icon>view_column</mat-icon>
+              Board
+            </button>
+          </div>
+          <span class="toolbar__count toolbar__spacer">{{ dealsService.allDeals().length }} deal{{ dealsService.allDeals().length !== 1 ? 's' : '' }}</span>
         </div>
       }
 
@@ -109,72 +109,74 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       }
 
       @if (activeTab() === 'deals' && dealsView() === 'table') {
-        <div class="card rounded-2xl overflow-x-auto">
+        <div class="table-card">
           @if (activeTabLoading()) {
             <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="9" [rows]="8" />
           } @else {
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-zinc-50">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th scope="col" class="px-6 py-3 text-left">
+                <th scope="col">
                   <input type="checkbox" [checked]="allDealsSelected()" (click)="toggleSelectAllDeals($event)" (change)="$event.stopPropagation()" class="cursor-pointer" />
                 </th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Deal Title</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Client</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Amount</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Stage</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Est. Delivery</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Order Status</th>
-                <th scope="col" class="px-6 py-3 text-left font-semibold text-zinc-500 uppercase tracking-wider text-xs">Created By</th>
-                <th scope="col" class="px-6 py-3 text-right font-semibold text-zinc-500 uppercase tracking-wider text-xs">Actions</th>
+                <th scope="col">Deal Title</th>
+                <th scope="col">Client</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Stage</th>
+                <th scope="col">Est. Delivery</th>
+                <th scope="col">Order Status</th>
+                <th scope="col">Created By</th>
+                <th scope="col" class="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-100">
+            <tbody>
               @for (deal of paginatedDeals(); track deal.id) {
-                <tr class="hover:bg-zinc-50/80 transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap" (click)="$event.stopPropagation()">
+                <tr>
+                  <td class="whitespace-nowrap" (click)="$event.stopPropagation()">
                     <input type="checkbox" [checked]="isDealSelected(deal.id)" (click)="toggleDealSelect(deal.id, $event)" class="cursor-pointer" />
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <button (click)="openDealDrawer(deal)" class="table-name-link text-sm font-semibold text-zinc-900 text-left" [title]="'View ' + deal.title">{{deal.title}}</button>
+                  <td class="whitespace-nowrap">
+                    <button (click)="openDealDrawer(deal)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View ' + deal.title">{{deal.title}}</button>
                     @if (deal.dealNumber) {
-                      <div class="text-meta text-zinc-400 font-sans font-medium">{{deal.dealNumber}}</div>
+                      <div class="text-meta text-ink-3 font-medium">{{deal.dealNumber}}</div>
                     }
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-600 font-medium">{{getPartnerName(deal.partnerId)}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink-2 font-medium">{{getPartnerName(deal.partnerId)}}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-900 font-sans font-bold">{{formatCurrency(deal.amount)}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink font-semibold">{{formatCurrency(deal.amount)}}</div>
                     @if (deal.discount) {
-                      <div class="text-meta text-zinc-900 font-semibold">-{{deal.discount}}%</div>
+                      <div class="text-meta text-ink font-semibold">-{{deal.discount}}%</div>
                     }
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full bg-zinc-100 text-zinc-950 border border-zinc-200">
+                  <td class="whitespace-nowrap">
+                    <span class="badge" [class]="getDealStageBadge(deal.stage)">
                       {{deal.stage}}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 font-sans">
+                  <td class="whitespace-nowrap text-ink-2">
                     {{deal.estimatedDeliveryDate || 'N/A'}}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex px-2 py-0.5 rounded text-meta font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                  <td class="whitespace-nowrap">
+                    <span class="badge badge-neutral">
                       {{deal.orderStatus || 'N/A'}}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td class="whitespace-nowrap">
                     <app-created-by-badge [createdBy]="deal.createdBy" [createdAt]="deal.createdAt" />
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                    <button (click)="$event.stopPropagation(); openDealDrawer(deal)" class="text-zinc-900 hover:text-zinc-950 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors" title="View details">
-                      <mat-icon class="text-lg w-5 h-5 flex items-center justify-center">visibility</mat-icon>
+                  <td class="whitespace-nowrap text-right">
+                    <button (click)="$event.stopPropagation(); openDealDrawer(deal)" class="btn-icon btn-sm" title="View details">
+                      <mat-icon class="icon-sm">visibility</mat-icon>
                     </button>
                   </td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="9" class="px-6 py-8 text-center text-zinc-500 text-sm">No deals found. Create a confirmed proposal to start.</td>
+                  <td colspan="9" class="row-empty">
+                    <app-empty-state icon="monetization_on" title="No deals yet" text="Deals appear here once a proposal is confirmed. Start with a new proposal or create a deal directly." />
+                  </td>
                 </tr>
               }
             </tbody>
@@ -194,18 +196,18 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
         </div>
         @if (selectedDealIds().size > 0) {
           <div class="bulk-action-bar">
-            <span class="text-body font-semibold">{{ selectedDealIds().size }} selected</span>
-            <div class="w-px h-4 bg-white/20"></div>
-            <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkAssignDealOwner($event)">
+            <span class="font-semibold">{{ selectedDealIds().size }} selected</span>
+            <div class="bulk-action-bar__sep"></div>
+            <select (change)="bulkAssignDealOwner($event)">
               <option value="">Assign owner…</option>
               @for (u of state.users(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
             </select>
-            <select class="text-body bg-white/10 text-white rounded-md px-2 py-1.5 border-none outline-none cursor-pointer" (change)="bulkChangeDealStage($event)">
+            <select (change)="bulkChangeDealStage($event)">
               <option value="">Change stage…</option>
               @for (s of dealStageOptions; track s) { <option [value]="s">{{s}}</option> }
             </select>
-            <button class="text-body font-semibold px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors" (click)="bulkExportDeals()">Export CSV</button>
-            <button class="text-meta ml-2 opacity-70 hover:opacity-100 transition-opacity" (click)="clearDealSelection()">Clear</button>
+            <button class="bulk-action-bar__btn" (click)="bulkExportDeals()">Export CSV</button>
+            <button class="bulk-action-bar__btn is-quiet" (click)="clearDealSelection()">Clear</button>
           </div>
         }
       }
@@ -214,73 +216,73 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       @if (activeTab() === 'proposals') {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           @for (prop of paginatedProposals(); track prop.id) {
-            <div class="card rounded-2xl p-5 flex flex-col justify-between hover:shadow-md transition-all">
+            <div class="card p-5 flex flex-col justify-between transition-all">
               <div class="space-y-3">
                 <div class="flex justify-between items-start">
-                  <span class="px-2 py-0.5 text-meta font-bold rounded-full uppercase"
-                    [class]="prop.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700' : (prop.status === 'Sent' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-800')">
+                  <span class="badge"
+                    [class]="prop.status === 'Confirmed' ? 'badge-success' : (prop.status === 'Sent' ? 'badge-info' : 'bg-muted text-ink')">
                     {{prop.status}}
                   </span>
-                  <span class="font-sans text-sm text-zinc-400">#{{prop.id}}</span>
+                  <span class="text-sm text-ink-3">#{{ prop.id.slice(0, 8) }}</span>
                 </div>
-                <h3 class="text-lg font-semibold text-zinc-900">{{prop.title}}</h3>
-                <p class="text-xs text-zinc-500">Prospect: {{getPartnerName(prop.partnerId)}}</p>
-                <div class="flex items-center gap-3 text-xs text-zinc-400">
+                <h3 class="modal-title">{{prop.title}}</h3>
+                <p class="text-xs text-ink-3">Prospect: {{getPartnerName(prop.partnerId)}}</p>
+                <div class="flex items-center gap-3 text-xs text-ink-3">
                   <app-created-by-badge [createdBy]="prop.createdBy" [createdAt]="prop.createdAt" [size]="22" />
                 </div>
 
                 <!-- Lines -->
-                <div class="bg-zinc-50 rounded-xl p-3 border border-zinc-100 space-y-2">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block">Lines & Pricing</span>
+                <div class="bg-subtle rounded-xl p-3 border border-line-soft space-y-2">
+                  <span class="eyebrow block">Lines & Pricing</span>
                   @for (line of prop.lines; track $index) {
-                    <div class="flex justify-between text-xs text-zinc-700">
+                    <div class="flex justify-between text-xs text-ink-2">
                       <span>{{line.qty}}x {{line.product}}</span>
-                      <span class="font-sans">{{formatCurrency(line.total)}}</span>
+                      <span class="">{{formatCurrency(line.total)}}</span>
                     </div>
                   }
-                  <div class="flex justify-between border-t border-zinc-200 pt-1.5 text-xs font-bold text-zinc-900 font-sans">
+                  <div class="flex justify-between border-t border-line pt-1.5 text-xs font-semibold text-ink">
                     <span>Total Proposal Amount</span>
                     <span>{{formatCurrency(prop.amount)}}</span>
                   </div>
                 </div>
 
                 <!-- Sales Intelligence / Funnel Metadata -->
-                <div class="border-t border-zinc-100 pt-3">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-2">Sales Intelligence</span>
-                  <div class="grid grid-cols-2 gap-3 bg-white border border-zinc-200 p-3 rounded-xl border border-zinc-150/60 text-xs">
+                <div class="border-t border-line-soft pt-3">
+                  <span class="eyebrow block mb-2">Sales Intelligence</span>
+                  <div class="card grid grid-cols-2 gap-3 p-3 text-xs">
                     <div>
-                      <span class="text-zinc-400 block text-meta font-medium">Opportunity Value</span>
-                      <span class="font-bold text-zinc-900 font-sans">{{ formatCurrency(prop.opportunityValue || 0) }}</span>
+                      <span class="text-ink-3 block text-meta font-medium">Opportunity Value</span>
+                      <span class="font-semibold text-ink">{{ formatCurrency(prop.opportunityValue || 0) }}</span>
                     </div>
                     <div>
-                      <span class="text-zinc-400 block text-meta font-medium">Probability</span>
+                      <span class="text-ink-3 block text-meta font-medium">Probability</span>
                       <div class="flex items-center gap-1.5 mt-0.5">
-                        <div class="w-full bg-zinc-200 rounded-full h-1.5 max-w-[60px]">
-                          <div class="bg-zinc-900 h-1.5 rounded-full" [style.width.%]="prop.closingProbability || 0"></div>
+                        <div class="w-full bg-muted-strong rounded-full h-1.5 max-w-[60px]">
+                          <div class="bg-primary h-1.5 rounded-full" [style.width.%]="prop.closingProbability || 0"></div>
                         </div>
-                        <span class="font-bold text-zinc-900 font-sans">{{ prop.closingProbability || 0 }}%</span>
+                        <span class="font-semibold text-ink">{{ prop.closingProbability || 0 }}%</span>
                       </div>
                     </div>
                     <div>
-                      <span class="text-zinc-400 block text-meta font-medium">Expected Close</span>
-                      <span class="font-semibold text-zinc-700 font-sans">{{ prop.expectedClosingDate || 'TBD' }}</span>
+                      <span class="text-ink-3 block text-meta font-medium">Expected Close</span>
+                      <span class="font-semibold text-ink-2">{{ prop.expectedClosingDate || 'TBD' }}</span>
                     </div>
                     <div>
-                      <span class="text-zinc-400 block text-meta font-medium">Sales Stage</span>
-                      <span class="inline-block px-2 py-0.5 text-meta font-bold rounded border uppercase mt-0.5" [class]="getStageBadgeClass(prop.stage)">
+                      <span class="text-ink-3 block text-meta font-medium">Sales Stage</span>
+                      <span class="badge mt-0.5" [class]="getStageBadgeClass(prop.stage)">
                         {{ prop.stage || 'New Lead' }}
                       </span>
                     </div>
                     <div class="col-span-2">
-                      <span class="text-zinc-400 block text-meta font-medium">Competitors</span>
+                      <span class="text-ink-3 block text-meta font-medium">Competitors</span>
                       @if (prop.competitors && prop.competitors.length > 0) {
                         <div class="flex flex-wrap gap-1 mt-1">
                           @for (comp of prop.competitors; track comp) {
-                            <span class="bg-zinc-100 text-zinc-600 border border-zinc-200 px-1.5 py-0.5 rounded text-meta font-medium">{{comp}}</span>
+                            <span class="badge badge-neutral">{{comp}}</span>
                           }
                         </div>
                       } @else {
-                        <span class="text-zinc-500 font-medium italic">No competitors logged.</span>
+                        <span class="text-ink-3 font-medium italic">No competitors logged.</span>
                       }
                     </div>
                   </div>
@@ -288,38 +290,38 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 
                 <!-- Confirmation Info (if confirmed) -->
                 @if (prop.status === 'Confirmed' && prop.confirmationMethod) {
-                  <div class="border-t border-zinc-100 pt-3 mt-3">
-                    <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Confirmation Proof</span>
-                    <div class="bg-zinc-100/40 border border-zinc-200 rounded-xl p-3 text-xs text-zinc-950 space-y-2">
-                      <div class="flex items-center gap-1.5 font-semibold text-zinc-950 text-meta">
+                  <div class="border-t border-line-soft pt-3 mt-3">
+                    <span class="eyebrow block mb-1.5">Confirmation Proof</span>
+                    <div class="bg-muted border border-line rounded-xl p-3 text-xs text-ink space-y-2">
+                      <div class="flex items-center gap-1.5 font-semibold text-ink text-meta">
                         @if (prop.confirmationMethod === 'Email') {
-                          <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">email</mat-icon>
+                          <mat-icon class="icon-sm">email</mat-icon>
                           <span>Email confirmation</span>
                         } @else if (prop.confirmationMethod === 'WhatsApp') {
-                          <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">chat</mat-icon>
+                          <mat-icon class="icon-sm">chat</mat-icon>
                           <span>WhatsApp screenshot</span>
                         } @else {
-                          <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">phone</mat-icon>
+                          <mat-icon class="icon-sm">phone</mat-icon>
                           <span>Call Summary</span>
                         }
                         @if (prop.confirmedAt) {
-                          <span class="text-meta text-zinc-900 font-normal ml-auto font-sans">{{ prop.confirmedAt }}</span>
+                          <span class="text-meta text-ink font-normal ml-auto">{{ prop.confirmedAt }}</span>
                         }
                       </div>
 
                       @if (prop.confirmationAttachmentName) {
-                        <div class="flex items-center gap-1.5 bg-white border border-zinc-300/60 p-2 rounded-lg text-zinc-950 font-sans text-meta truncate">
-                          <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-900">attach_file</mat-icon>
+                        <div class="flex items-center gap-1.5 bg-surface border border-line-strong p-2 rounded-lg text-ink text-meta truncate">
+                          <mat-icon class="text-ink icon-xs">attach_file</mat-icon>
                           <span class="truncate flex-1">{{ prop.confirmationAttachmentName }}</span>
                           @if (prop.confirmationAttachmentData) {
                             <a [href]="prop.confirmationAttachmentData" [download]="prop.confirmationAttachmentName"
-                               class="text-blue-700 hover:underline font-sans font-semibold ml-1 shrink-0">Download</a>
+                               class="text-accent-ink hover:underline font-semibold ml-1 shrink-0">Download</a>
                           }
                         </div>
                       }
 
                       @if (prop.confirmationNote) {
-                        <p class="text-meta text-zinc-650 leading-relaxed bg-white border border-emerald-150 p-2 rounded-lg italic">
+                        <p class="text-meta text-ink-2 leading-relaxed bg-surface border border-success-line p-2 rounded-lg italic">
                           "{{ prop.confirmationNote }}"
                         </p>
                       }
@@ -328,44 +330,45 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 }
               </div>
 
-              <div class="mt-5 pt-3 border-t border-zinc-100 flex justify-between gap-2">
-                <button (click)="openProposalDrawer(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-900 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="View Details">
-                  <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">visibility</mat-icon>
-                </button>
-                <button (click)="downloadProposalPdf(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-900 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Download Proposal PDF">
-                  <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">picture_as_pdf</mat-icon>
-                </button>
-                <button (click)="openEditProposalModal(prop)" class="bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-650 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Edit Proposal">
-                  <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">edit</mat-icon>
-                </button>
+              <div class="mt-5 pt-3 border-t border-line-soft flex justify-between gap-2">
+                <button (click)="openProposalDrawer(prop)" class="btn-icon btn-sm shrink-0" title="View Details">
+  <mat-icon class="icon-sm">visibility</mat-icon>
+</button>
+                <button (click)="downloadProposalPdf(prop)" class="btn-icon btn-sm shrink-0" title="Download Proposal PDF">
+  <mat-icon class="icon-sm">picture_as_pdf</mat-icon>
+</button>
+                <button (click)="openEditProposalModal(prop)" class="btn-icon btn-sm shrink-0" title="Edit Proposal">
+  <mat-icon class="icon-sm">edit</mat-icon>
+</button>
                 @if (canDeleteProposal()) {
-                  <button (click)="openProposalDeleteModal(prop)" class="bg-zinc-50 hover:bg-red-50 border border-zinc-200 text-zinc-700 hover:text-red-600 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Delete Proposal">
-                    <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">delete</mat-icon>
-                  </button>
+                  <button (click)="openProposalDeleteModal(prop)" class="btn-icon btn-sm btn-danger-hover shrink-0" title="Delete Proposal">
+  <mat-icon class="icon-sm">delete</mat-icon>
+</button>
                 }
 
                 @if (prop.status === 'Draft') {
-                  <button (click)="openAssignTaskModal('proposal', prop.id, prop.title)" class="bg-white border border-zinc-200 text-zinc-900 hover:bg-zinc-100 p-2 rounded-lg transition-colors flex items-center justify-center shrink-0" title="Assign Task">
-                    <mat-icon class="text-[18px] w-[18px] h-[18px] flex items-center justify-center">assignment</mat-icon>
-                  </button>
-                  <button (click)="openSendProposalModal(prop)" class="flex-1 bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold py-2 rounded-lg transition-colors shadow-lg shadow-zinc-300">
+                  <button (click)="openAssignTaskModal('proposal', prop.id, prop.title)" class="btn-icon btn-sm shrink-0" title="Assign Task">
+  <mat-icon class="icon-sm">assignment</mat-icon>
+</button>
+                  <button (click)="openSendProposalModal(prop)" class="btn-primary btn-sm">
                     Send to Prospect
                   </button>
                 } @else if (prop.status === 'Sent') {
-                  <button (click)="openConfirmProposalModal(prop)" class="flex-1 bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">task_alt</mat-icon> Confirm (Signs BC)
+                  <button (click)="openConfirmProposalModal(prop)" class="btn-primary btn-sm">
+                    <mat-icon class="icon-sm">task_alt</mat-icon> Confirm (Signs BC)
                   </button>
                 } @else {
-                  <button (click)="openConvertProposalModal(prop)"
-                    class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 group">
-                    <mat-icon class="text-[16px] w-4 h-4 transition-transform group-hover:scale-110">swap_horiz</mat-icon>
+                  <button (click)="openConvertProposalModal(prop)" class="btn-primary btn-sm flex-1">
+                    <mat-icon class="icon-sm">swap_horiz</mat-icon>
                     Convert to Deal &amp; Customer
                   </button>
                 }
               </div>
             </div>
           } @empty {
-            <div class="col-span-2 card rounded-2xl p-8 text-center text-zinc-500">No proposals found.</div>
+            <div class="col-span-full card">
+              <app-empty-state icon="description" title="No proposals yet" text="Draft a proposal, send it to a prospect and convert it to a deal once confirmed." />
+            </div>
           }
         </div>
         @if (proposalsService.allProposals().length > 0) {
@@ -380,69 +383,71 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
       <!-- Purchase Orders View -->
       @if (activeTab() === 'pos') {
-        <div class="card rounded-2xl overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-zinc-50">
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">PO Ref</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Vendor</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Deal</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Amount</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Delivery Date</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Status</th>
-                <th scope="col" class="px-6 py-3 text-left font-medium text-zinc-500 uppercase tracking-wider text-xs">Created By</th>
-                <th scope="col" class="px-6 py-3 text-right font-medium text-zinc-500 uppercase tracking-wider text-xs">Actions</th>
+                <th scope="col">PO Ref</th>
+                <th scope="col">Vendor</th>
+                <th scope="col">Deal</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Delivery Date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created By</th>
+                <th scope="col" class="text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-200">
+            <tbody>
               @for (po of paginatedPOs(); track po.id) {
-                <tr class="hover:bg-zinc-50 transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-zinc-900 font-sans text-left" [title]="'View PO #' + po.id">#{{po.id}}</button>
+                <tr>
+                  <td class="whitespace-nowrap">
+                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View PO #' + po.id">#{{ po.id.slice(0, 8) }}</button>
                     @if (po.sentVia) {
-                      <span class="text-meta text-zinc-400 font-medium">Sent: {{po.sentVia}}</span>
+                      <span class="text-meta text-ink-3 font-medium">Sent: {{po.sentVia}}</span>
                     }
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-950 font-medium">{{getPartnerName(po.vendorId)}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink font-medium">{{getPartnerName(po.vendorId)}}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-500">{{getDealTitle(po.dealId)}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink-3">{{getDealTitle(po.dealId)}}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-900 font-sans font-bold">{{formatCurrency(po.amount)}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink font-semibold">{{formatCurrency(po.amount)}}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-zinc-600 font-sans">{{po.deliveryDate || 'Pending Conf.'}}</div>
+                  <td class="whitespace-nowrap">
+                    <div class="text-sm text-ink-2">{{po.deliveryDate || 'Pending Conf.'}}</div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2.5 py-1 text-meta font-bold uppercase rounded-full"
-                      [class]="po.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700' : (po.status === 'Sent' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-800')">
+                  <td class="whitespace-nowrap">
+                    <span class="badge"
+                      [class]="po.status === 'Delivered' ? 'badge-success' : (po.status === 'Sent' ? 'badge-info' : 'bg-muted text-ink')">
                       {{po.status}}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td class="whitespace-nowrap">
                     <app-created-by-badge [createdBy]="po.createdBy" [createdAt]="po.createdAt" />
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-1.5">
-                    <button (click)="$event.stopPropagation(); openPODrawer(po)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100" title="View Details">
-                      <mat-icon class="text-[14px] w-3.5 h-3.5 flex items-center justify-center">visibility</mat-icon>
-                    </button>
-                    <button (click)="$event.stopPropagation(); downloadPOPdf(po)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100" title="Download PO PDF">
-                      <mat-icon class="text-[14px] w-3.5 h-3.5 flex items-center justify-center">picture_as_pdf</mat-icon>
-                    </button>
-                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="bg-white border border-zinc-200 text-zinc-900 px-2 py-1 rounded-lg hover:bg-zinc-100 flex items-center gap-1 ml-auto" title="Assign Task">
-                      <mat-icon class="text-[14px] w-3.5 h-3.5">assignment</mat-icon> Assign
+                  <td class="whitespace-nowrap text-right space-x-1.5">
+                    <button (click)="$event.stopPropagation(); openPODrawer(po)" class="btn-icon btn-sm" title="View Details">
+  <mat-icon class="icon-sm">visibility</mat-icon>
+</button>
+                    <button (click)="$event.stopPropagation(); downloadPOPdf(po)" class="btn-icon btn-sm" title="Download PO PDF">
+  <mat-icon class="icon-sm">picture_as_pdf</mat-icon>
+</button>
+                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="btn-secondary btn-sm ml-auto" title="Assign Task">
+                      <mat-icon class="icon-xs">assignment</mat-icon> Assign
                     </button>
                     @if (po.status === 'Sent' && canWritePO()) {
-                      <button (click)="$event.stopPropagation(); openSetDeliveryDatePOModal(po)" class="bg-white border border-zinc-200 text-zinc-700 px-2 py-1 rounded-lg hover:bg-zinc-50">Set Del. Date</button>
-                      <button (click)="$event.stopPropagation(); purchaseOrdersService.updateStatus(po.id, 'Delivered')" class="bg-zinc-900 text-white px-2 py-1 rounded-lg hover:bg-zinc-950 shadow-lg shadow-zinc-300">Receive Goods</button>
+                      <button (click)="$event.stopPropagation(); openSetDeliveryDatePOModal(po)" class="btn-secondary btn-sm">Set Del. Date</button>
+                      <button (click)="$event.stopPropagation(); purchaseOrdersService.updateStatus(po.id, 'Delivered')" class="btn-primary btn-sm">Receive Goods</button>
                     }
                   </td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="8" class="px-6 py-8 text-center text-zinc-500 text-sm">No Purchase Orders generated yet.</td>
+                  <td colspan="8" class="row-empty">
+                    <app-empty-state icon="shopping_cart" title="No purchase orders yet" text="Purchase orders are generated from confirmed deals." />
+                  </td>
                 </tr>
               }
             </tbody>
@@ -462,43 +467,43 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
     <!-- Modals -->
     <!-- Send Proposal Modal -->
     @if (sendingProposalId()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-md w-full p-6 space-y-5 animate-in zoom-in-95 duration-200">
+      <div class="modal-backdrop">
+        <div class="modal modal-md">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-zinc-950">Send Proposal</h3>
-            <button (click)="sendingProposalId.set(null)" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <mat-icon class="text-[20px] w-5 h-5">close</mat-icon>
+            <h3 class="modal-title">Send Proposal</h3>
+            <button (click)="sendingProposalId.set(null)" title="Close" class="btn-icon btn-sm">
+              <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
 
           <!-- Target Organization -->
-          <div class="bg-zinc-100 border border-zinc-200 rounded-xl p-3">
-            <span class="text-meta text-zinc-500 font-bold uppercase tracking-wider block mb-0.5">Target Organization</span>
-            <span class="text-sm font-bold text-zinc-950">{{ currentProposalPartnerName() }}</span>
+          <div class="bg-muted border border-line rounded-xl p-3">
+            <span class="eyebrow block mb-0.5">Target Organization</span>
+            <span class="text-sm font-semibold text-ink">{{ currentProposalPartnerName() }}</span>
           </div>
 
           <!-- Channel Selection (multi-select toggle) -->
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider">Sending Channel(s) — select one or both</label>
+            <label class="field-label">Sending Channel(s) — select one or both</label>
             <div class="grid grid-cols-2 gap-3">
               <button type="button" (click)="toggleChannel('email')"
                 [class]="isChannelSelected('email')
-                  ? 'flex flex-col items-center justify-center p-4 border-2 border-zinc-700 bg-zinc-100 text-zinc-950 rounded-xl gap-2 font-semibold transition-all shadow-sm'
-                  : 'flex flex-col items-center justify-center p-4 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:bg-zinc-50/50 hover:text-zinc-900 transition-all gap-2 text-zinc-600'">
-                <mat-icon class="text-3xl w-8 h-8 flex items-center justify-center">email</mat-icon>
+                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition-all shadow-sm'
+                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition-all gap-2 text-ink-2'">
+                <mat-icon class="icon-xl">email</mat-icon>
                 <span class="text-sm font-semibold">Email</span>
                 @if (isChannelSelected('email')) {
-                  <span class="text-meta bg-zinc-900 text-white px-2 py-0.5 rounded-full font-bold">Selected</span>
+                  <span class="badge badge-accent">Selected</span>
                 }
               </button>
               <button type="button" (click)="toggleChannel('whatsapp')"
                 [class]="isChannelSelected('whatsapp')
-                  ? 'flex flex-col items-center justify-center p-4 border-2 border-zinc-700 bg-zinc-100 text-zinc-950 rounded-xl gap-2 font-semibold transition-all shadow-sm'
-                  : 'flex flex-col items-center justify-center p-4 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:bg-zinc-50/50 hover:text-zinc-900 transition-all gap-2 text-zinc-600'">
-                <mat-icon class="text-3xl w-8 h-8 flex items-center justify-center">chat</mat-icon>
+                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition-all shadow-sm'
+                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition-all gap-2 text-ink-2'">
+                <mat-icon class="icon-xl">chat</mat-icon>
                 <span class="text-sm font-semibold">WhatsApp</span>
                 @if (isChannelSelected('whatsapp')) {
-                  <span class="text-meta bg-zinc-900 text-white px-2 py-0.5 rounded-full font-bold">Selected</span>
+                  <span class="badge badge-accent">Selected</span>
                 }
               </button>
             </div>
@@ -507,8 +512,8 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           <!-- Add other contacts from same org -->
           @if (proposalOrgContacts().length > 0) {
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Add other contacts from this organization:</label>
-              <select (change)="addContactToRecipients($event)" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+              <label class="field-label mb-1.5">Add other contacts from this organization:</label>
+              <select (change)="addContactToRecipients($event)" class="input-field w-full">
                 <option value="">— Select a contact —</option>
                 @for (contact of proposalOrgContacts(); track contact.id) {
                   <option [value]="contact.id">{{ contact.fullName }} · {{ contact.jobTitle }}</option>
@@ -519,51 +524,51 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
           <!-- Recipients list -->
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider">Recipients</label>
+            <label class="field-label">Recipients</label>
             @for (recipient of recipients(); track $index) {
-              <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-2">
+              <div class="bg-subtle border border-line rounded-xl p-3 space-y-2">
                 <div class="flex justify-between items-center">
-                  <span class="text-xs font-bold text-zinc-700 truncate max-w-[200px]">{{ recipient.name || 'New Contact' }}</span>
+                  <span class="text-xs font-semibold text-ink-2 truncate max-w-[200px]">{{ recipient.name || 'New Contact' }}</span>
                   @if ($index > 0) {
-                    <button type="button" (click)="removeRecipient($index)" title="Remove recipient" class="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 p-1 rounded transition-colors">
-                      <mat-icon class="text-base w-4 h-4">close</mat-icon>
+                    <button type="button" (click)="removeRecipient($index)" title="Remove recipient" class="btn-icon btn-sm">
+                      <mat-icon class="icon-sm">close</mat-icon>
                     </button>
                   }
                 </div>
                 @if (isChannelSelected('email')) {
                   <div class="flex items-center gap-2">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-500 shrink-0">email</mat-icon>
+                    <mat-icon class="text-ink-3 shrink-0 icon-xs">email</mat-icon>
                     <input [value]="recipient.email || ''" (input)="updateRecipientEmail($index, $event)"
                       type="email" placeholder="Email address"
-                      class="flex-1 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600 bg-white">
+                      class="input-field flex-1">
                   </div>
                 }
                 @if (isChannelSelected('whatsapp')) {
                   <div class="flex items-center gap-2">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-700 shrink-0">chat</mat-icon>
+                    <mat-icon class="text-ink-2 shrink-0 icon-xs">chat</mat-icon>
                     <input [value]="recipient.phone || ''" (input)="updateRecipientPhone($index, $event)"
                       type="tel" placeholder="Phone / WhatsApp number"
-                      class="flex-1 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600 bg-white">
+                      class="input-field flex-1">
                   </div>
                 }
               </div>
             } @empty {
-              <div class="text-center py-4 text-zinc-400 text-xs bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
+              <div class="text-center py-4 text-ink-3 text-xs bg-subtle rounded-xl border border-dashed border-line">
                 No recipients yet. The primary contact will be added automatically.
               </div>
             }
-            <button type="button" (click)="addManualRecipient()" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-1 transition-colors">
-              <mat-icon class="text-base w-4 h-4">add_circle</mat-icon> Add Recipient
+            <button type="button" (click)="addManualRecipient()" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-1 transition-colors">
+              <mat-icon class="icon-sm">add_circle</mat-icon> Add Recipient
             </button>
           </div>
 
           <!-- Footer actions -->
-          <div class="flex justify-between gap-2 pt-2 border-t border-zinc-100">
-            <button (click)="sendingProposalId.set(null)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50 transition-colors">Cancel</button>
+          <div class="flex justify-between gap-2 pt-2 border-t border-line-soft">
+            <button (click)="sendingProposalId.set(null)" class="btn-secondary">Cancel</button>
             <button (click)="submitSendProposal()"
               [disabled]="selectedChannels().size === 0 || recipients().length === 0"
-              class="px-5 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
-              <mat-icon class="text-[16px] w-4 h-4">send</mat-icon>
+              class="btn-primary">
+              <mat-icon class="icon-sm">send</mat-icon>
               Send Proposal
             </button>
           </div>
@@ -573,15 +578,15 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Create Proposal Modal -->
     @if (proposalModalOpen()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-          <h3 class="text-lg font-bold text-zinc-950 shrink-0">{{ editingProposalId() ? 'Edit Proposal' : 'Create Proposal' }}</h3>
+      <div class="modal-backdrop">
+        <div class="modal modal-lg">
+          <h3 class="modal-title shrink-0">{{ editingProposalId() ? 'Edit Proposal' : 'Create Proposal' }}</h3>
           
           <div class="space-y-4 overflow-y-auto pr-1 flex-1">
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Prospect / Client</label>
-                <select [(ngModel)]="newProposal.partnerId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <label class="field-label mb-1.5">Select Prospect / Client</label>
+                <select [(ngModel)]="newProposal.partnerId" class="input-field w-full">
                   @for (partner of salesEligiblePartners(); track partner.id) {
                     <option [value]="partner.id">{{ partner.name }} ({{ partner.type }})</option>
                   }
@@ -589,13 +594,13 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Proposal Title</label>
-                <input [(ngModel)]="newProposal.title" type="text" placeholder="e.g. Standard Enterprise Cloud Infrastructure" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label class="field-label mb-1.5">Proposal Title</label>
+                <input [(ngModel)]="newProposal.title" type="text" placeholder="e.g. Standard Enterprise Cloud Infrastructure" class="input-field w-full">
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Select Template</label>
-                <select [(ngModel)]="selectedTemplateId" (change)="applyTemplate()" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <label class="field-label mb-1.5">Select Template</label>
+                <select [(ngModel)]="selectedTemplateId" (change)="applyTemplate()" class="input-field w-full">
                   <option value="">-- Manual/No Template --</option>
                   @for (temp of proposalTemplates(); track temp.id) {
                     <option [value]="temp.id">{{temp.name}}</option>
@@ -604,26 +609,26 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               </div>
 
               <!-- Sales Funnel & Intelligence Section -->
-              <div class="border-t border-zinc-100 pt-3 space-y-3">
-                <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Sales Intelligence</span>
+              <div class="border-t border-line-soft pt-3 space-y-3">
+                <span class="eyebrow block">Sales Intelligence</span>
                 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Opportunity Value</label>
+                    <label class="field-label mb-1.5">Opportunity Value</label>
                     <div class="relative rounded-lg shadow-xs">
-                      <input [(ngModel)]="newProposal.opportunityValue" type="number" placeholder="0" class="w-full input-field rounded-lg p-2 pr-12 text-sm focus:outline-blue-600 font-sans">
+                      <input [(ngModel)]="newProposal.opportunityValue" type="number" placeholder="0" class="input-field w-full pr-12">
                       <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span class="text-zinc-400 text-xs font-semibold">MAD</span>
+                        <span class="text-ink-3 text-xs font-semibold">MAD</span>
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Probability of Closing</label>
+                    <label class="field-label mb-1.5">Probability of Closing</label>
                     <div class="relative rounded-lg shadow-xs">
-                      <input [(ngModel)]="newProposal.closingProbability" type="number" min="0" max="100" placeholder="50" class="w-full input-field rounded-lg p-2 pr-8 text-sm focus:outline-blue-600 font-sans">
+                      <input [(ngModel)]="newProposal.closingProbability" type="number" min="0" max="100" placeholder="50" class="input-field w-full pr-8">
                       <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span class="text-zinc-400 text-xs font-semibold">%</span>
+                        <span class="text-ink-3 text-xs font-semibold">%</span>
                       </div>
                     </div>
                   </div>
@@ -631,13 +636,13 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Expected Closing Date</label>
-                    <input [(ngModel)]="newProposal.expectedClosingDate" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                    <label class="field-label mb-1.5">Expected Closing Date</label>
+                    <input [(ngModel)]="newProposal.expectedClosingDate" type="date" class="input-field w-full">
                   </div>
                   
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Sales Stage</label>
-                    <select [(ngModel)]="newProposal.stage" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                    <label class="field-label mb-1.5">Sales Stage</label>
+                    <select [(ngModel)]="newProposal.stage" class="input-field w-full">
                       <option value="New Lead">New Lead</option>
                       <option value="Qualified">Qualified</option>
                       <option value="Meeting Scheduled">Meeting Scheduled</option>
@@ -649,41 +654,41 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 </div>
 
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 mb-1">Competitors (comma separated)</label>
-                  <input [(ngModel)]="newProposal.competitors" type="text" placeholder="e.g. AWS, Azure, Local Telecom" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Competitors (comma separated)</label>
+                  <input [(ngModel)]="newProposal.competitors" type="text" placeholder="e.g. AWS, Azure, Local Telecom" class="input-field w-full">
                 </div>
               </div>
 
               <!-- Line Items -->
-              <div class="space-y-2 border-t border-zinc-100 pt-2">
-                <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Line Items</span>
+              <div class="space-y-2 border-t border-line-soft pt-2">
+                <span class="eyebrow block">Line Items</span>
                 @for (line of newProposal.lines; track $index) {
                   <div class="grid grid-cols-12 gap-2 items-center">
-                    <input class="col-span-4 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600" [(ngModel)]="line.product" placeholder="Product">
-                    <input class="col-span-4 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600" [(ngModel)]="line.description" placeholder="Description">
-                    <input class="col-span-1 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600 text-center" type="number" [(ngModel)]="line.qty" (change)="recalcLine(line)">
-                    <input class="col-span-2 input-field rounded-lg p-1.5 text-xs focus:outline-blue-600 font-sans text-right" type="number" [(ngModel)]="line.unitPrice" (change)="recalcLine(line)">
-                    <button type="button" (click)="removeLine($index)" title="Remove line" class="col-span-1 text-zinc-700 hover:bg-zinc-100 p-1 rounded"><mat-icon class="text-[16px] w-4 h-4 leading-none">delete</mat-icon></button>
+                    <input class="input-field col-span-4" [(ngModel)]="line.product" placeholder="Product">
+                    <input class="input-field col-span-4" [(ngModel)]="line.description" placeholder="Description">
+                    <input class="input-field col-span-1 text-center" type="number" [(ngModel)]="line.qty" (change)="recalcLine(line)">
+                    <input class="input-field col-span-2 text-right" type="number" [(ngModel)]="line.unitPrice" (change)="recalcLine(line)">
+                    <button type="button" (click)="removeLine($index)" title="Remove line" class="btn-icon btn-sm"><mat-icon class="icon-sm">delete</mat-icon></button>
                   </div>
                 }
-                <button (click)="addLineItem()" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center mt-1">
-                  <mat-icon class="text-[16px] w-4 h-4 mr-0.5">add_circle</mat-icon> Add Line Item
+                <button (click)="addLineItem()" class="text-ink hover:text-ink text-xs font-semibold flex items-center mt-1">
+                  <mat-icon class="mr-0.5 icon-sm">add_circle</mat-icon> Add Line Item
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="flex justify-between items-center border-t border-zinc-100 pt-4 shrink-0">
+          <div class="flex justify-between items-center border-t border-line-soft pt-4 shrink-0">
             <div class="text-sm">
-              <span class="text-zinc-500">Total Amount:</span>
-              <strong class="ml-1 text-zinc-900 font-sans">{{formatCurrency(getNewProposalTotal())}}</strong>
+              <span class="text-ink-3">Total Amount:</span>
+              <strong class="ml-1 text-ink">{{formatCurrency(getNewProposalTotal())}}</strong>
             </div>
             <div class="flex gap-2">
-              <button (click)="proposalModalOpen.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
-              <button (click)="saveProposal(true)" class="px-4 py-2 border border-zinc-200 text-zinc-900 hover:bg-zinc-100 text-sm font-semibold rounded-lg flex items-center gap-1.5">
-                <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon> {{ editingProposalId() ? 'Save &amp; Assign Task' : 'Create &amp; Assign Task' }}
+              <button (click)="proposalModalOpen.set(false)" class="btn-secondary">Cancel</button>
+              <button (click)="saveProposal(true)" class="btn-secondary">
+                <mat-icon class="icon-sm">assignment</mat-icon> {{ editingProposalId() ? 'Save &amp; Assign Task' : 'Create &amp; Assign Task' }}
               </button>
-              <button (click)="saveProposal()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300">{{ editingProposalId() ? 'Save Changes' : 'Create Proposal' }}</button>
+              <button (click)="saveProposal()" class="btn-primary">{{ editingProposalId() ? 'Save Changes' : 'Create Proposal' }}</button>
             </div>
           </div>
         </div>
@@ -692,11 +697,11 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Create Deal Modal -->
     @if (dealModalOpen()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-7xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-          <div class="flex justify-between items-center border-b border-white/30 pb-3 shrink-0">
-            <h3 class="text-xl font-bold text-zinc-950">Create Deal</h3>
-            <span class="text-xs text-zinc-900 bg-zinc-100 px-2 py-1 rounded-full font-medium">Extended Fields Active</span>
+      <div class="modal-backdrop">
+        <div class="modal modal-md">
+          <div class="flex justify-between items-center border-b border-line-soft pb-3 shrink-0">
+            <h3 class="modal-title">Create Deal</h3>
+            <span class="badge badge-neutral">Extended Fields Active</span>
           </div>
           
           <!-- HEADER SECTION: All form fields in scrollable 2-column grid -->
@@ -706,24 +711,24 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <div class="space-y-6">
                 <!-- SECTION 1: Identification & Dates -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">tag</mat-icon> Identification & Dates
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">tag</mat-icon> Identification & Dates
                   </h4>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Select Client (Must be Customer)</label>
-                      <select [(ngModel)]="newDeal.partnerId" (change)="onPartnerChange()" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Select Client (Must be Customer)</label>
+                      <select [(ngModel)]="newDeal.partnerId" (change)="onPartnerChange()" class="input-field w-full">
                         @for (c of customers(); track c.id) {
                           <option [value]="c.id">{{c.name}}</option>
                         }
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Linked Proposal</label>
-                      <select [(ngModel)]="newDeal.proposalId" (change)="onProposalChange()" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Linked Proposal</label>
+                      <select [(ngModel)]="newDeal.proposalId" (change)="onProposalChange()" class="input-field w-full">
                         <option value="">None</option>
                         @for (p of proposalsService.allProposals(); track p.id) {
-                          <option [value]="p.id">#{{p.id}} - {{p.title}}</option>
+                          <option [value]="p.id">#{{ p.id.slice(0, 8) }} - {{p.title}}</option>
                         }
                       </select>
                     </div>
@@ -731,12 +736,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Deal Title</label>
-                      <input [(ngModel)]="newDeal.title" type="text" placeholder="e.g. Atlas Cloud Migration Project" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Deal Title</label>
+                      <input [(ngModel)]="newDeal.title" type="text" placeholder="e.g. Atlas Cloud Migration Project" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Order Status</label>
-                      <select [(ngModel)]="newDeal.orderStatus" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Order Status</label>
+                      <select [(ngModel)]="newDeal.orderStatus" class="input-field w-full">
                         <option value="Draft">Draft</option>
                         <option value="Confirmed">Confirmed</option>
                         <option value="Processing">Processing</option>
@@ -747,73 +752,73 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
                   <div class="grid grid-cols-4 gap-3">
                     <div class="col-span-2">
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Order Number</label>
-                      <input [(ngModel)]="newDeal.orderNumber" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Order Number</label>
+                      <input [(ngModel)]="newDeal.orderNumber" type="text" class="input-field w-full">
                     </div>
                     <div class="col-span-2">
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Deal Number</label>
-                      <input [(ngModel)]="newDeal.dealNumber" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Deal Number</label>
+                      <input [(ngModel)]="newDeal.dealNumber" type="text" class="input-field w-full">
                     </div>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Order Date</label>
-                      <input [(ngModel)]="newDeal.orderDate" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Order Date</label>
+                      <input [(ngModel)]="newDeal.orderDate" type="date" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Requested Delivery Date</label>
-                      <input [(ngModel)]="newDeal.requestedDeliveryDate" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Requested Delivery Date</label>
+                      <input [(ngModel)]="newDeal.requestedDeliveryDate" type="date" class="input-field w-full">
                     </div>
                   </div>
                 </div>
 
                 <!-- SECTION 2: Customer & Delivery -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">business</mat-icon> Customer & Delivery
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">business</mat-icon> Customer & Delivery
                   </h4>
                   <div class="grid grid-cols-3 gap-3">
                     <div class="col-span-1">
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Customer Account</label>
-                      <input [(ngModel)]="newDeal.customerAccount" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Customer Account</label>
+                      <input [(ngModel)]="newDeal.customerAccount" type="text" class="input-field w-full">
                     </div>
                     <div class="col-span-2">
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Contact Person</label>
-                      <input [(ngModel)]="newDeal.contactPerson" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Contact Person</label>
+                      <input [(ngModel)]="newDeal.contactPerson" type="text" class="input-field w-full">
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Contact Email</label>
-                      <input [(ngModel)]="newDeal.contactEmail" type="email" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Contact Email</label>
+                      <input [(ngModel)]="newDeal.contactEmail" type="email" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Contact Phone Number</label>
-                      <input [(ngModel)]="newDeal.contactPhone" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Contact Phone Number</label>
+                      <input [(ngModel)]="newDeal.contactPhone" type="text" class="input-field w-full">
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Billing Address</label>
-                      <textarea [(ngModel)]="newDeal.billingAddress" rows="2" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                      <label class="field-label mb-1.5">Billing Address</label>
+                      <textarea [(ngModel)]="newDeal.billingAddress" rows="2" class="input-field w-full"></textarea>
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Delivery Address</label>
-                      <textarea [(ngModel)]="newDeal.deliveryAddress" rows="2" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                      <label class="field-label mb-1.5">Delivery Address</label>
+                      <textarea [(ngModel)]="newDeal.deliveryAddress" rows="2" class="input-field w-full"></textarea>
                     </div>
                   </div>
                 </div>
 
                 <!-- SECTION 3: Sales & Ownership -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">person</mat-icon> Sales & Ownership
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">person</mat-icon> Sales & Ownership
                   </h4>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Sales Person</label>
-                      <select [(ngModel)]="newDeal.salesPersonUserId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Sales Person</label>
+                      <select [(ngModel)]="newDeal.salesPersonUserId" class="input-field w-full">
                         <option value="">-- Unassigned --</option>
                         @for (u of users(); track u.id) {
                           <option [value]="u.id">{{u.displayName}}</option>
@@ -821,37 +826,37 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Sales Organization / Region</label>
-                      <input [(ngModel)]="newDeal.salesRegion" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Sales Organization / Region</label>
+                      <input [(ngModel)]="newDeal.salesRegion" type="text" class="input-field w-full">
                     </div>
                   </div>
                 </div>
 
                 <!-- SECTION 4: Commercial Basics -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">monetization_on</mat-icon> Commercial Basics
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">monetization_on</mat-icon> Commercial Basics
                   </h4>
                   <div class="grid grid-cols-4 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Currency</label>
-                      <select [(ngModel)]="newDeal.currency" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Currency</label>
+                      <select [(ngModel)]="newDeal.currency" class="input-field w-full">
                         <option value="MAD">MAD</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
                       </select>
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Amount (Raw)</label>
-                      <input [(ngModel)]="newDeal.amount" type="number" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Amount (Raw)</label>
+                      <input [(ngModel)]="newDeal.amount" type="number" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Discount (%)</label>
-                      <input [(ngModel)]="newDeal.discount" type="number" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Discount (%)</label>
+                      <input [(ngModel)]="newDeal.discount" type="number" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Payment Terms</label>
-                      <input [(ngModel)]="newDeal.paymentTerms" type="text" placeholder="e.g. 30 Days Net" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Payment Terms</label>
+                      <input [(ngModel)]="newDeal.paymentTerms" type="text" placeholder="e.g. 30 Days Net" class="input-field w-full">
                     </div>
                   </div>
                 </div>
@@ -861,53 +866,53 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <div class="space-y-6">
                 <!-- SECTION 5: Vendor / Partner (Logistics) -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">local_shipping</mat-icon> Vendor / Partner (Logistics)
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">local_shipping</mat-icon> Vendor / Partner (Logistics)
                   </h4>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Vendor Account</label>
-                      <input [(ngModel)]="newDeal.vendorAccount" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Vendor Account</label>
+                      <input [(ngModel)]="newDeal.vendorAccount" type="text" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Purchase Order Reference</label>
-                      <input [(ngModel)]="newDeal.purchaseOrderRef" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Warehouse Address</label>
-                      <input [(ngModel)]="newDeal.warehouseAddress" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Transportation Service</label>
-                      <input [(ngModel)]="newDeal.transportationService" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                      <label class="field-label mb-1.5">Purchase Order Reference</label>
+                      <input [(ngModel)]="newDeal.purchaseOrderRef" type="text" class="input-field w-full">
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Expected Delivery Date (Vendor)</label>
-                      <input [(ngModel)]="newDeal.expectedDeliveryDateVendor" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Warehouse Address</label>
+                      <input [(ngModel)]="newDeal.warehouseAddress" type="text" class="input-field w-full">
                     </div>
                     <div>
-                      <label class="block text-xs font-semibold text-zinc-500 mb-1">Delivery Date (Customer)</label>
-                      <input [(ngModel)]="newDeal.deliveryDate" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                      <label class="field-label mb-1.5">Transportation Service</label>
+                      <input [(ngModel)]="newDeal.transportationService" type="text" class="input-field w-full">
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="field-label mb-1.5">Expected Delivery Date (Vendor)</label>
+                      <input [(ngModel)]="newDeal.expectedDeliveryDateVendor" type="date" class="input-field w-full">
+                    </div>
+                    <div>
+                      <label class="field-label mb-1.5">Delivery Date (Customer)</label>
+                      <input [(ngModel)]="newDeal.deliveryDate" type="date" class="input-field w-full">
                     </div>
                   </div>
                 </div>
 
                 <!-- SECTION 6: Logs & Comments -->
                 <div class="space-y-3">
-                  <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider border-b border-white/30 pb-1 flex items-center gap-1.5">
-                    <mat-icon class="text-[16px] w-4 h-4">notes</mat-icon> Logs & Comments
+                  <h4 class="eyebrow flex items-center gap-1.5">
+                    <mat-icon class="icon-sm">notes</mat-icon> Logs & Comments
                   </h4>
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Email Exchange logs & Confirmations</label>
-                    <textarea [(ngModel)]="newDeal.emailExchange" rows="3" placeholder="Paste copy of signed email confirmations..." class="w-full input-field rounded-lg p-2 text-meta font-sans focus:outline-blue-600"></textarea>
+                    <label class="field-label mb-1.5">Email Exchange logs & Confirmations</label>
+                    <textarea [(ngModel)]="newDeal.emailExchange" rows="3" placeholder="Paste copy of signed email confirmations..." class="input-field w-full"></textarea>
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-zinc-500 mb-1">Customer Comments</label>
-                    <textarea [(ngModel)]="newDeal.comments" rows="2" placeholder="Comments..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                    <label class="field-label mb-1.5">Customer Comments</label>
+                    <textarea [(ngModel)]="newDeal.comments" rows="2" placeholder="Comments..." class="input-field w-full"></textarea>
                   </div>
                 </div>
               </div>
@@ -915,49 +920,49 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           </div>
 
           <!-- Horizontal Divider -->
-          <hr class="border-zinc-200 shrink-0">
+          <hr class="border-line shrink-0">
 
           <!-- LINE ITEMS SECTION: Full-width data table -->
           <div class="space-y-3 min-h-0 flex flex-col overflow-hidden">
-            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-              <mat-icon class="text-[16px] w-4 h-4">list</mat-icon> Line Items
+            <h4 class="eyebrow flex items-center gap-1.5 shrink-0">
+              <mat-icon class="icon-sm">list</mat-icon> Line Items
             </h4>
-            <div class="overflow-x-auto border border-zinc-200 rounded-xl flex-1">
-              <table class="min-w-full divide-y divide-slate-200">
-                <thead class="bg-zinc-50">
+            <div class="overflow-x-auto border border-line rounded-xl flex-1">
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider w-12">#</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Item Description</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider w-28">Quantity</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider w-36">Unit Price</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider w-52">Vendor</th>
-                    <th class="px-4 py-3 text-center w-12"></th>
+                    <th class="w-12">#</th>
+                    <th>Item Description</th>
+                    <th class="text-right w-28">Quantity</th>
+                    <th class="text-right w-36">Unit Price</th>
+                    <th class="w-52">Vendor</th>
+                    <th class="text-center w-12"></th>
                   </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-slate-200">
+                <tbody>
                   @for (line of newDeal.lines; track $index) {
-                    <tr class="hover:bg-zinc-50/50">
-                      <td class="px-4 py-2 text-sm text-zinc-400 font-sans text-center">{{$index + 1}}</td>
-                      <td class="px-4 py-2">
-                        <input class="w-full input-field rounded-lg p-1.5 text-sm focus:outline-blue-600" [(ngModel)]="line.description" placeholder="Item description">
+                    <tr>
+                      <td class="text-ink-3 text-center">{{$index + 1}}</td>
+                      <td>
+                        <input class="input-field w-full" [(ngModel)]="line.description" placeholder="Item description">
                       </td>
-                      <td class="px-4 py-2">
-                        <input class="w-full input-field rounded-lg p-1.5 text-sm focus:outline-blue-600 text-right font-sans" type="number" [(ngModel)]="line.qty" (change)="recalcDealLine(line)">
+                      <td>
+                        <input class="input-field w-full text-right" type="number" [(ngModel)]="line.qty" (change)="recalcDealLine(line)">
                       </td>
-                      <td class="px-4 py-2">
-                        <input class="w-full input-field rounded-lg p-1.5 text-sm focus:outline-blue-600 text-right font-sans" type="number" [(ngModel)]="line.unitPrice" (change)="recalcDealLine(line)">
+                      <td>
+                        <input class="input-field w-full text-right" type="number" [(ngModel)]="line.unitPrice" (change)="recalcDealLine(line)">
                       </td>
-                      <td class="px-4 py-2">
-                        <select class="w-full input-field rounded-lg p-1.5 text-sm bg-white focus:outline-blue-600" [(ngModel)]="line.vendor">
+                      <td>
+                        <select class="input-field w-full" [(ngModel)]="line.vendor">
                           <option value="">-- Select Vendor --</option>
                           @for (v of vendors(); track v.id) {
                             <option [value]="v.name">{{v.name}}</option>
                           }
                         </select>
                       </td>
-                      <td class="px-4 py-2 text-center">
-                      <button type="button" (click)="removeDealLine($index)" title="Remove line" class="text-zinc-700 hover:bg-zinc-100 p-1 rounded">
-                        <mat-icon class="text-[16px] w-4 h-4 leading-none">delete</mat-icon>
+                      <td class="text-center">
+                      <button type="button" (click)="removeDealLine($index)" title="Remove line" class="btn-icon btn-sm">
+                        <mat-icon class="icon-sm">delete</mat-icon>
                       </button>
                       </td>
                     </tr>
@@ -965,25 +970,25 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 </tbody>
               </table>
             </div>
-            <button (click)="addDealLineItem()" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center shrink-0">
-              <mat-icon class="text-[16px] w-4 h-4 mr-0.5">add_circle</mat-icon> Add Line Item
+            <button (click)="addDealLineItem()" class="text-ink hover:text-ink text-xs font-semibold flex items-center shrink-0">
+              <mat-icon class="mr-0.5 icon-sm">add_circle</mat-icon> Add Line Item
             </button>
           </div>
 
           <!-- Footer -->
-          <div class="flex justify-between items-center border-t border-zinc-100 pt-4 shrink-0">
+          <div class="flex justify-between items-center border-t border-line-soft pt-4 shrink-0">
             <div class="text-sm">
-              <span class="text-zinc-500">Calculated Total:</span>
-              <strong class="ml-1 text-zinc-900 font-sans">
+              <span class="text-ink-3">Calculated Total:</span>
+              <strong class="ml-1 text-ink">
                 {{ formatCurrency(newDeal.amount - (newDeal.amount * (newDeal.discount / 100))) }}
               </strong>
             </div>
             <div class="flex gap-2">
-              <button (click)="dealModalOpen.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
-              <button (click)="saveDeal(true)" class="px-4 py-2 border border-zinc-200 text-zinc-900 hover:bg-zinc-100 text-sm font-semibold rounded-lg flex items-center gap-1.5">
-                <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon> Save &amp; Assign Task
+              <button (click)="dealModalOpen.set(false)" class="btn-secondary">Cancel</button>
+              <button (click)="saveDeal(true)" class="btn-secondary">
+                <mat-icon class="icon-sm">assignment</mat-icon> Save &amp; Assign Task
               </button>
-              <button (click)="saveDeal()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300">Save Deal</button>
+              <button (click)="saveDeal()" class="btn-primary">Save Deal</button>
             </div>
           </div>
         </div>
@@ -992,33 +997,33 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Create PO Modal (Operations) -->
     @if (poModalOpen()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-3xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-          <h3 class="text-lg font-bold text-zinc-950 shrink-0">Create Purchase Order</h3>
-          <p class="text-xs text-zinc-500 shrink-0">Creating Purchase Order linked to: <strong>{{selectedDealForPO()?.title}}</strong></p>
+      <div class="modal-backdrop">
+        <div class="modal modal-xl">
+          <h3 class="modal-title shrink-0">Create Purchase Order</h3>
+          <p class="text-xs text-ink-3 shrink-0">Creating Purchase Order linked to: <strong>{{selectedDealForPO()?.title}}</strong></p>
           
           <div class="space-y-4 overflow-y-auto pr-1 flex-1">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="block text-xs font-semibold text-zinc-500 uppercase">Vendor</label>
-                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-zinc-900 hover:text-zinc-950 text-meta font-bold uppercase">
+                <label class="field-label">Vendor</label>
+                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-ink hover:text-ink text-meta font-semibold uppercase">
                   {{ showNewVendorForm() ? 'Select Existing' : '+ Create New Vendor Inline' }}
                 </button>
               </div>
               
               @if (showNewVendorForm()) {
-                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-2.5 animate-in slide-in-from-top-2 duration-200">
-                  <input [(ngModel)]="newVendorData.name" placeholder="Vendor Company Name" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600">
-                  <input [(ngModel)]="newVendorData.email" placeholder="Vendor Email" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600 font-sans">
-                  <input [(ngModel)]="newVendorData.phone" placeholder="Vendor Phone" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600 font-sans">
-                  <select [(ngModel)]="newVendorData.city" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600">
+                <div class="bg-subtle border border-line rounded-xl p-3 space-y-2.5 duration-200">
+                  <input [(ngModel)]="newVendorData.name" placeholder="Vendor Company Name" class="input-field w-full">
+                  <input [(ngModel)]="newVendorData.email" placeholder="Vendor Email" class="input-field w-full">
+                  <input [(ngModel)]="newVendorData.phone" placeholder="Vendor Phone" class="input-field w-full">
+                  <select [(ngModel)]="newVendorData.city" class="input-field w-full">
                     <option value="Casablanca">Casablanca</option>
                     <option value="Rabat">Rabat</option>
                     <option value="Marrakech">Marrakech</option>
                   </select>
                 </div>
               } @else {
-                <select [ngModel]="selectedVendorId()" (ngModelChange)="selectedVendorId.set($event)" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <select [ngModel]="selectedVendorId()" (ngModelChange)="selectedVendorId.set($event)" class="input-field w-full">
                   @for (vendor of vendors(); track vendor.id) {
                     <option [value]="vendor.id">{{vendor.name}}</option>
                   }
@@ -1027,18 +1032,18 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </div>
 
             <!-- Order Lines Section -->
-            <div class="space-y-2 border-t border-zinc-100 pt-3">
-              <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Order Line Items</span>
+            <div class="space-y-2 border-t border-line-soft pt-3">
+              <span class="eyebrow block">Order Line Items</span>
               
               <div class="space-y-3">
                 @for (line of poLines(); track $index; let i = $index) {
-                  <div class="bg-white border border-zinc-200 hover:bg-zinc-50 border border-zinc-150 rounded-xl p-3.5 space-y-2.5 relative transition-all">
+                  <div class="card hover:bg-subtle p-3.5 space-y-2.5 relative transition-all">
                     <!-- Line Header -->
                     <div class="flex justify-between items-center">
-                      <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider">Line #{{ i + 1 }}</span>
+                      <span class="eyebrow">Line #{{ i + 1 }}</span>
                       @if (poLines().length > 1) {
-                        <button type="button" (click)="removePoLine(i)" class="text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 p-1.5 rounded-lg transition-colors flex items-center justify-center" title="Remove Line">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">delete</mat-icon>
+                        <button type="button" (click)="removePoLine(i)" class="text-ink-2 hover:text-ink hover:bg-muted p-1.5 rounded-lg transition-colors flex items-center justify-center" title="Remove Line">
+                          <mat-icon class="icon-sm">delete</mat-icon>
                         </button>
                       }
                     </div>
@@ -1047,34 +1052,34 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
                       <!-- Item Name -->
                       <div class="md:col-span-4">
-                        <label class="block text-meta font-semibold text-zinc-400 mb-1">Item Name</label>
-                        <input [(ngModel)]="line.item" type="text" placeholder="e.g. Dell PowerEdge Server" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600">
+                        <label class="field-label mb-1.5">Item Name</label>
+                        <input [(ngModel)]="line.item" type="text" placeholder="e.g. Dell PowerEdge Server" class="input-field w-full">
                       </div>
 
                       <!-- Description -->
                       <div class="md:col-span-8">
-                        <label class="block text-meta font-semibold text-zinc-400 mb-1">Description (Optional)</label>
-                        <input [(ngModel)]="line.description" type="text" placeholder="e.g. Core i7, 32GB RAM" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600">
+                        <label class="field-label mb-1.5">Description (Optional)</label>
+                        <input [(ngModel)]="line.description" type="text" placeholder="e.g. Core i7, 32GB RAM" class="input-field w-full">
                       </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
                       <!-- Quantity -->
                       <div class="md:col-span-3">
-                        <label class="block text-meta font-semibold text-zinc-400 mb-1">Quantity</label>
-                        <input [(ngModel)]="line.qty" type="number" min="1" class="w-full input-field rounded-lg p-1.5 text-xs bg-white text-center font-semibold focus:outline-blue-600 font-sans">
+                        <label class="field-label mb-1.5">Quantity</label>
+                        <input [(ngModel)]="line.qty" type="number" min="1" class="input-field w-full text-center font-semibold">
                       </div>
 
                       <!-- Unit Price -->
                       <div class="md:col-span-5">
-                        <label class="block text-meta font-semibold text-zinc-400 mb-1">Unit Price (MAD)</label>
-                        <input [(ngModel)]="line.unitPrice" type="number" class="w-full input-field rounded-lg p-1.5 text-xs bg-white font-sans text-right focus:outline-blue-600">
+                        <label class="field-label mb-1.5">Unit Price (MAD)</label>
+                        <input [(ngModel)]="line.unitPrice" type="number" class="input-field w-full text-right">
                       </div>
 
                       <!-- Item Type -->
                       <div class="md:col-span-4">
-                        <label class="block text-meta font-semibold text-zinc-400 mb-1">Item Type</label>
-                        <select [(ngModel)]="line.type" class="w-full input-field rounded-lg p-1.5 text-xs bg-white focus:outline-blue-600">
+                        <label class="field-label mb-1.5">Item Type</label>
+                        <select [(ngModel)]="line.type" class="input-field w-full">
                           <option value="software">Software</option>
                           <option value="hardware">Hardware</option>
                           <option value="service">Service</option>
@@ -1085,26 +1090,26 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 }
               </div>
 
-              <button type="button" (click)="addPoLineItem()" class="w-full py-2 border border-dashed border-zinc-300 hover:border-zinc-500 bg-zinc-100/20 hover:bg-zinc-100/40 text-zinc-900 hover:text-zinc-950 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 mt-2">
-                <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add_circle</mat-icon>
+              <button type="button" (click)="addPoLineItem()" class="btn-secondary btn-sm w-full mt-2">
+                <mat-icon class="icon-sm">add_circle</mat-icon>
                 + Add Item Line
               </button>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Expected Vendor Delivery Date</label>
-              <input [(ngModel)]="newPoDeliveryDate" type="date" class="w-full input-field rounded-lg p-2 text-sm font-sans focus:outline-blue-600">
+              <label class="field-label mb-1.5">Expected Vendor Delivery Date</label>
+              <input [(ngModel)]="newPoDeliveryDate" type="date" class="input-field w-full">
             </div>
           </div>
 
-          <div class="flex justify-between items-center border-t border-zinc-100 pt-4 shrink-0">
-            <div class="text-sm font-semibold text-zinc-700">
-              PO Total: <span class="font-sans text-zinc-900 font-bold ml-1">{{ formatCurrency(getPoTotal()) }}</span>
+          <div class="flex justify-between items-center border-t border-line-soft pt-4 shrink-0">
+            <div class="text-sm font-semibold text-ink-2">
+              PO Total: <span class="text-ink font-semibold ml-1">{{ formatCurrency(getPoTotal()) }}</span>
             </div>
             <div class="flex gap-2">
-              <button (click)="poModalOpen.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
-              <button (click)="saveDraftPO()" class="px-4 py-2 border border-zinc-200 text-zinc-900 hover:bg-zinc-100 text-sm font-semibold rounded-lg shadow-sm">Create Draft</button>
-              <button (click)="savePurchaseOrder()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300">Send PO via Email</button>
+              <button (click)="poModalOpen.set(false)" class="btn-secondary">Cancel</button>
+              <button (click)="saveDraftPO()" class="btn-secondary">Create Draft</button>
+              <button (click)="savePurchaseOrder()" class="btn-primary">Send PO via Email</button>
             </div>
           </div>
         </div>
@@ -1113,16 +1118,16 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Set Delivery Date PO Modal -->
     @if (setDeliveryDateModalOpen()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-          <h3 class="text-lg font-bold text-zinc-950">Log Vendor Expected Delivery Date</h3>
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
+          <h3 class="modal-title">Log Vendor Expected Delivery Date</h3>
           <div>
-            <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Expected Delivery Date</label>
-            <input [(ngModel)]="loggedDeliveryDate" type="date" class="w-full input-field rounded-lg p-2 text-sm font-sans focus:outline-blue-600">
+            <label class="field-label mb-1.5">Expected Delivery Date</label>
+            <input [(ngModel)]="loggedDeliveryDate" type="date" class="input-field w-full">
           </div>
           <div class="flex justify-end gap-2 pt-2">
-            <button (click)="setDeliveryDateModalOpen.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
-            <button (click)="saveDeliveryDate()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300">Save</button>
+            <button (click)="setDeliveryDateModalOpen.set(false)" class="btn-secondary">Cancel</button>
+            <button (click)="saveDeliveryDate()" class="btn-primary">Save</button>
           </div>
         </div>
       </div>
@@ -1130,30 +1135,30 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Quick Add Activity Modal -->
     @if (addActivityModalOpen()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-          <h3 class="text-lg font-bold text-zinc-950 capitalize">Log New {{ addActivityModalOpen()?.type === 'followups' ? 'Follow-up' : addActivityModalOpen()?.type }}</h3>
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
+          <h3 class="modal-title capitalize">Log New {{ addActivityModalOpen()?.type === 'followups' ? 'Follow-up' : addActivityModalOpen()?.type }}</h3>
           
           <!-- Calls Fields -->
           @if (addActivityModalOpen()?.type === 'calls') {
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Date</label>
-                <input [(ngModel)]="newActivityInput.calls.date" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                <label class="field-label mb-1.5">Date</label>
+                <input [(ngModel)]="newActivityInput.calls.date" type="date" class="input-field w-full">
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Duration (mins)</label>
-                  <input [(ngModel)]="newActivityInput.calls.duration" type="number" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">Duration (mins)</label>
+                  <input [(ngModel)]="newActivityInput.calls.duration" type="number" class="input-field w-full">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Caller Name</label>
-                  <input [(ngModel)]="newActivityInput.calls.callerName" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Caller Name</label>
+                  <input [(ngModel)]="newActivityInput.calls.callerName" type="text" class="input-field w-full">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Outcome</label>
-                <select [(ngModel)]="newActivityInput.calls.outcome" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <label class="field-label mb-1.5">Outcome</label>
+                <select [(ngModel)]="newActivityInput.calls.outcome" class="input-field w-full">
                   <option value="Interested">Interested</option>
                   <option value="Follow-up">Follow-up</option>
                   <option value="No Answer">No Answer</option>
@@ -1161,8 +1166,8 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Summary / Log</label>
-                <textarea [(ngModel)]="newActivityInput.calls.summary" rows="3" placeholder="Describe the discussion..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label class="field-label mb-1.5">Summary / Log</label>
+                <textarea [(ngModel)]="newActivityInput.calls.summary" rows="3" placeholder="Describe the discussion..." class="input-field w-full"></textarea>
               </div>
             </div>
           }
@@ -1172,12 +1177,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.emails.date" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">Date</label>
+                  <input [(ngModel)]="newActivityInput.emails.date" type="date" class="input-field w-full">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Direction</label>
-                  <select [(ngModel)]="newActivityInput.emails.direction" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Direction</label>
+                  <select [(ngModel)]="newActivityInput.emails.direction" class="input-field w-full">
                     <option value="sent">Sent to Client</option>
                     <option value="received">Received from Client</option>
                   </select>
@@ -1185,21 +1190,21 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">From</label>
-                  <input [(ngModel)]="newActivityInput.emails.from" type="email" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">From</label>
+                  <input [(ngModel)]="newActivityInput.emails.from" type="email" class="input-field w-full">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">To</label>
-                  <input [(ngModel)]="newActivityInput.emails.to" type="email" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">To</label>
+                  <input [(ngModel)]="newActivityInput.emails.to" type="email" class="input-field w-full">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Subject</label>
-                <input [(ngModel)]="newActivityInput.emails.subject" type="text" placeholder="Subject..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-semibold font-sans">
+                <label class="field-label mb-1.5">Subject</label>
+                <input [(ngModel)]="newActivityInput.emails.subject" type="text" placeholder="Subject..." class="input-field w-full font-semibold">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Email Body</label>
-                <textarea [(ngModel)]="newActivityInput.emails.body" rows="4" placeholder="Body copy..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans text-xs"></textarea>
+                <label class="field-label mb-1.5">Email Body</label>
+                <textarea [(ngModel)]="newActivityInput.emails.body" rows="4" placeholder="Body copy..." class="input-field w-full"></textarea>
               </div>
             </div>
           }
@@ -1208,40 +1213,40 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           @if (addActivityModalOpen()?.type === 'meetings') {
             <div class="space-y-3 overflow-y-auto max-h-[50vh]">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Meeting Title</label>
-                <input [(ngModel)]="newActivityInput.meetings.title" type="text" placeholder="e.g. Technical Kickoff" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-semibold">
+                <label class="field-label mb-1.5">Meeting Title</label>
+                <input [(ngModel)]="newActivityInput.meetings.title" type="text" placeholder="e.g. Technical Kickoff" class="input-field w-full font-semibold">
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div class="col-span-2">
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.meetings.date" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">Date</label>
+                  <input [(ngModel)]="newActivityInput.meetings.date" type="date" class="input-field w-full">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Time</label>
-                  <input [(ngModel)]="newActivityInput.meetings.time" type="text" placeholder="10:00" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">Time</label>
+                  <input [(ngModel)]="newActivityInput.meetings.time" type="text" placeholder="10:00" class="input-field w-full">
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Type</label>
-                  <select [(ngModel)]="newActivityInput.meetings.type" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Type</label>
+                  <select [(ngModel)]="newActivityInput.meetings.type" class="input-field w-full">
                     <option value="teams">Teams Meeting</option>
                     <option value="demo">Product Demo</option>
                     <option value="in-person">In-person Meeting</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Location</label>
-                  <input [(ngModel)]="newActivityInput.meetings.location" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Location</label>
+                  <input [(ngModel)]="newActivityInput.meetings.location" type="text" class="input-field w-full">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Attendees (Comma Separated)</label>
-                <input [(ngModel)]="newActivityInput.meetings.attendees" type="text" placeholder="Youssef, Karim Atlas" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-medium">
+                <label class="field-label mb-1.5">Attendees (Comma Separated)</label>
+                <input [(ngModel)]="newActivityInput.meetings.attendees" type="text" placeholder="Youssef, Karim Atlas" class="input-field w-full">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Minutes / Summary</label>
-                <textarea [(ngModel)]="newActivityInput.meetings.summary" rows="3" placeholder="Key outcomes..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label class="field-label mb-1.5">Minutes / Summary</label>
+                <textarea [(ngModel)]="newActivityInput.meetings.summary" rows="3" placeholder="Key outcomes..." class="input-field w-full"></textarea>
               </div>
             </div>
           }
@@ -1250,24 +1255,24 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           @if (addActivityModalOpen()?.type === 'recordings') {
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Date</label>
-                <input [(ngModel)]="newActivityInput.recordings.date" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                <label class="field-label mb-1.5">Date</label>
+                <input [(ngModel)]="newActivityInput.recordings.date" type="date" class="input-field w-full">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Title</label>
-                <input [(ngModel)]="newActivityInput.recordings.title" type="text" placeholder="e.g. Scoping Call Recording" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-semibold font-sans">
+                <label class="field-label mb-1.5">Title</label>
+                <input [(ngModel)]="newActivityInput.recordings.title" type="text" placeholder="e.g. Scoping Call Recording" class="input-field w-full font-semibold">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Duration (e.g. '45 mins')</label>
-                <input [(ngModel)]="newActivityInput.recordings.duration" type="text" placeholder="45 mins" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                <label class="field-label mb-1.5">Duration (e.g. '45 mins')</label>
+                <input [(ngModel)]="newActivityInput.recordings.duration" type="text" placeholder="45 mins" class="input-field w-full">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Teams Meeting Link</label>
-                <input [(ngModel)]="newActivityInput.recordings.meetingLink" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans text-xs">
+                <label class="field-label mb-1.5">Teams Meeting Link</label>
+                <input [(ngModel)]="newActivityInput.recordings.meetingLink" type="text" class="input-field w-full">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Recording Share Link</label>
-                <input [(ngModel)]="newActivityInput.recordings.recordingLink" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans text-xs">
+                <label class="field-label mb-1.5">Recording Share Link</label>
+                <input [(ngModel)]="newActivityInput.recordings.recordingLink" type="text" class="input-field w-full">
               </div>
             </div>
           }
@@ -1277,17 +1282,17 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Date</label>
-                  <input [(ngModel)]="newActivityInput.notes.date" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                  <label class="field-label mb-1.5">Date</label>
+                  <input [(ngModel)]="newActivityInput.notes.date" type="date" class="input-field w-full">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Author</label>
-                  <input [(ngModel)]="newActivityInput.notes.author" type="text" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+                  <label class="field-label mb-1.5">Author</label>
+                  <input [(ngModel)]="newActivityInput.notes.author" type="text" class="input-field w-full">
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Note Content</label>
-                <textarea [(ngModel)]="newActivityInput.notes.content" rows="4" placeholder="Write internal notes..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+                <label class="field-label mb-1.5">Note Content</label>
+                <textarea [(ngModel)]="newActivityInput.notes.content" rows="4" placeholder="Write internal notes..." class="input-field w-full"></textarea>
               </div>
             </div>
           }
@@ -1296,16 +1301,16 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           @if (addActivityModalOpen()?.type === 'followups') {
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Due Date</label>
-                <input [(ngModel)]="newActivityInput.followups.dueDate" type="date" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+                <label class="field-label mb-1.5">Due Date</label>
+                <input [(ngModel)]="newActivityInput.followups.dueDate" type="date" class="input-field w-full">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Reminder Title</label>
-                <input [(ngModel)]="newActivityInput.followups.title" type="text" placeholder="e.g. Call client for feedback" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-semibold font-sans">
+                <label class="field-label mb-1.5">Reminder Title</label>
+                <input [(ngModel)]="newActivityInput.followups.title" type="text" placeholder="e.g. Call client for feedback" class="input-field w-full font-semibold">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Owner</label>
-                <select [(ngModel)]="newActivityInput.followups.assignedTo" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+                <label class="field-label mb-1.5">Assigned Owner</label>
+                <select [(ngModel)]="newActivityInput.followups.assignedTo" class="input-field w-full">
                   @for (user of users(); track user.name) {
                     <option [value]="user.name">{{ user.name }} ({{ user.team }})</option>
                   }
@@ -1314,9 +1319,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </div>
           }
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100 shrink-0">
-            <button type="button" (click)="addActivityModalOpen.set(null)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50 font-sans">Cancel</button>
-            <button type="button" (click)="saveActivityEntry()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300 font-sans">Save Entry</button>
+          <div class="flex justify-end gap-2 pt-4 border-t border-line-soft shrink-0">
+            <button type="button" (click)="addActivityModalOpen.set(null)" class="btn-secondary">Cancel</button>
+            <button type="button" (click)="saveActivityEntry()" class="btn-primary">Save Entry</button>
           </div>
         </div>
       </div>
@@ -1324,39 +1329,39 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Confirm Proposal Modal -->
     @if (showConfirmProposalModal()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-md w-full p-6 space-y-6 animate-in zoom-in-95 duration-200">
-          <div class="flex justify-between items-center pb-2 border-b border-white/30">
-            <h3 class="text-lg font-bold text-zinc-950">Confirm Proposal #{{ proposalToConfirm()?.id }}</h3>
-            <button (click)="showConfirmProposalModal.set(false)" title="Close" class="text-zinc-400 hover:text-zinc-600 transition-colors">
+      <div class="modal-backdrop">
+        <div class="modal modal-md">
+          <div class="flex justify-between items-center pb-2 border-b border-line-soft">
+            <h3 class="modal-title">Confirm Proposal #{{ (proposalToConfirm()?.id ?? '').slice(0, 8) }}</h3>
+            <button (click)="showConfirmProposalModal.set(false)" title="Close" class="btn-icon btn-sm">
               <mat-icon>close</mat-icon>
             </button>
           </div>
 
-          <div class="space-y-4 font-sans">
+          <div class="space-y-4">
             <!-- Method Selector -->
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Confirmation Channel</label>
+              <label class="field-label mb-1.5">Confirmation Channel</label>
               <div class="grid grid-cols-3 gap-2">
                 <button type="button" (click)="confirmMethod.set('Email')"
                   [class]="confirmMethod() === 'Email' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-zinc-700 bg-blue-50/40 text-zinc-950 rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:bg-zinc-50 hover:text-blue-700 transition-all gap-1 text-zinc-500 text-xs'">
-                  <mat-icon class="text-xl w-5 h-5 flex items-center justify-center">email</mat-icon>
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-accent-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-accent-ink transition-all gap-1 text-ink-3 text-xs'">
+                  <mat-icon class="icon-md">email</mat-icon>
                   <span>Email</span>
                 </button>
                 <button type="button" (click)="confirmMethod.set('WhatsApp')"
                   [class]="confirmMethod() === 'WhatsApp' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-zinc-700 bg-emerald-55/40 text-zinc-950 rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:bg-zinc-50 hover:text-emerald-650 transition-all gap-1 text-zinc-500 text-xs'">
-                  <mat-icon class="text-xl w-5 h-5 flex items-center justify-center">chat</mat-icon>
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-success-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-success-ink transition-all gap-1 text-ink-3 text-xs'">
+                  <mat-icon class="icon-md">chat</mat-icon>
                   <span>WhatsApp</span>
                 </button>
                 <button type="button" (click)="confirmMethod.set('Call')"
                   [class]="confirmMethod() === 'Call' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-zinc-700 bg-amber-55/40 text-zinc-950 rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:bg-zinc-50 hover:text-amber-650 transition-all gap-1 text-zinc-500 text-xs'">
-                  <mat-icon class="text-xl w-5 h-5 flex items-center justify-center">phone</mat-icon>
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-warning-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-warning-ink transition-all gap-1 text-ink-3 text-xs'">
+                  <mat-icon class="icon-md">phone</mat-icon>
                   <span>Call Log</span>
                 </button>
               </div>
@@ -1365,53 +1370,53 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <!-- Upload fields or Notes -->
             @if (confirmMethod() === 'Email' || confirmMethod() === 'WhatsApp') {
               <div class="space-y-3">
-                <label class="block text-xs font-semibold text-zinc-650 uppercase">
+                <label class="field-label">
                   Attach {{ confirmMethod() }} Confirmation Screenshot / PDF
                 </label>
                 
-                <div class="border-2 border-dashed border-zinc-200 rounded-xl p-4 flex flex-col items-center justify-center bg-white border border-zinc-200 hover:bg-zinc-50 transition-all relative">
+                <div class="card p-4 flex flex-col items-center justify-center hover:bg-subtle transition-all relative">
                   <input type="file" (change)="onConfirmFileSelected($event)" accept="image/*,application/pdf"
                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                  <mat-icon class="text-zinc-400 text-3xl w-8 h-8 mb-1">cloud_upload</mat-icon>
-                  <span class="text-xs text-zinc-500 font-semibold">Click or drag image screenshot / document here</span>
-                  <span class="text-meta text-zinc-400 mt-0.5">Supports PNG, JPG, PDF</span>
+                  <mat-icon class="text-ink-4 mb-1 icon-xl">cloud_upload</mat-icon>
+                  <span class="text-xs text-ink-3 font-semibold">Click or drag image screenshot / document here</span>
+                  <span class="text-meta text-ink-3 mt-0.5">Supports PNG, JPG, PDF</span>
                 </div>
 
                 @if (confirmAttachmentName()) {
-                  <div class="flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-xl p-2.5 text-xs text-zinc-950">
-                    <mat-icon class="text-zinc-900 text-sm w-4 h-4">task_alt</mat-icon>
+                  <div class="flex items-center gap-2 bg-muted border border-line rounded-xl p-2.5 text-xs text-ink">
+                    <mat-icon class="text-ink icon-sm">task_alt</mat-icon>
                     <span class="font-semibold truncate flex-1">{{ confirmAttachmentName() }}</span>
                     <button type="button" (click)="confirmAttachmentName.set(''); confirmAttachmentData.set('');" 
-                      class="text-zinc-950 hover:text-zinc-900 p-0.5 rounded-full transition-colors">
-                      <mat-icon class="text-sm w-4 h-4">close</mat-icon>
+                      class="text-ink hover:text-ink p-0.5 rounded-full transition-colors">
+                      <mat-icon class="icon-sm">close</mat-icon>
                     </button>
                   </div>
                 }
 
                 <div class="space-y-2">
-                  <label class="block text-xs font-semibold text-zinc-650 uppercase">Note</label>
+                  <label class="field-label">Note</label>
                   <textarea [(ngModel)]="confirmNote" name="confirmNote" rows="3"
                     placeholder="Add a note about this confirmation..."
-                    class="w-full border border-zinc-200 rounded-xl p-3 text-xs focus:outline-blue-700 bg-white placeholder-slate-400 shadow-sm"></textarea>
+                    class="input-field w-full"></textarea>
                 </div>
               </div>
             } @else {
               <div class="space-y-2">
-                <label class="block text-xs font-semibold text-zinc-650 uppercase">
+                <label class="field-label">
                   Call Summary &amp; Notes
                 </label>
                 <textarea [(ngModel)]="confirmNote" name="confirmNote" rows="4" 
                   placeholder="Summary of conversation, agreed pricing details, customer approval details..."
-                  class="w-full border border-zinc-200 rounded-xl p-3 text-xs focus:outline-blue-700 bg-white placeholder-slate-400 shadow-sm"></textarea>
+                  class="input-field w-full"></textarea>
               </div>
             }
 
-            <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100">
-              <button type="button" (click)="showConfirmProposalModal.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
+            <div class="flex justify-end gap-2 pt-4 border-t border-line-soft">
+              <button type="button" (click)="showConfirmProposalModal.set(false)" class="btn-secondary">Cancel</button>
               <button type="button" (click)="submitConfirmProposal()"
                 [disabled]="(confirmMethod() !== 'Call' && !confirmAttachmentName()) || (confirmMethod() === 'Call' && !confirmNote().trim())"
-                class="px-5 py-2 bg-zinc-900 hover:bg-zinc-950 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg shadow-md transition-all flex items-center gap-1.5">
-                <mat-icon class="text-[18px] w-[18.5px] h-[18.5px]">task_alt</mat-icon>
+                class="btn-primary">
+                <mat-icon class="w-[18.5px] h-[18.5px] icon-md">task_alt</mat-icon>
                 Confirm Proposal
               </button>
             </div>
@@ -1422,34 +1427,34 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Convert Proposal to Deal & Customer Modal -->
     @if (showConvertProposalModal()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-md w-full p-6 space-y-6">
-          <div class="flex justify-between items-center pb-2 border-b border-white/30">
-            <h3 class="text-lg font-semibold text-zinc-950">Convert Prospect to Customer</h3>
-            <button (click)="showConvertProposalModal.set(false)" class="text-zinc-400 hover:text-zinc-600">
+      <div class="modal-backdrop">
+        <div class="modal modal-md">
+          <div class="flex justify-between items-center pb-2 border-b border-line-soft">
+            <h3 class="modal-title">Convert Prospect to Customer</h3>
+            <button (click)="showConvertProposalModal.set(false)" class="btn-icon btn-sm">
               <mat-icon>close</mat-icon>
             </button>
           </div>
           
-          <form (ngSubmit)="submitConvertProposal()" class="space-y-4 font-sans">
+          <form (ngSubmit)="submitConvertProposal()" class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Company / Contact Name</label>
-              <input [(ngModel)]="newPartner.name" name="name" type="text" placeholder="e.g. Casablanca Technologies" required class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label class="field-label mb-1.5">Company / Contact Name</label>
+              <input [(ngModel)]="newPartner.name" name="name" type="text" placeholder="e.g. Casablanca Technologies" required class="input-field w-full">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Email</label>
-              <input [(ngModel)]="newPartner.email" name="email" type="email" placeholder="e.g. contact@domain.ma" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label class="field-label mb-1.5">Email</label>
+              <input [(ngModel)]="newPartner.email" name="email" type="email" placeholder="e.g. contact@domain.ma" class="input-field w-full">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Phone</label>
-              <input [(ngModel)]="newPartner.phone" name="phone" type="text" placeholder="e.g. +212-522-XXXXXX" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label class="field-label mb-1.5">Phone</label>
+              <input [(ngModel)]="newPartner.phone" name="phone" type="text" placeholder="e.g. +212-522-XXXXXX" class="input-field w-full">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">City</label>
-              <select [(ngModel)]="newPartner.city" name="city" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 bg-white">
+              <label class="field-label mb-1.5">City</label>
+              <select [(ngModel)]="newPartner.city" name="city" class="input-field w-full">
                 <option value="Casablanca">Casablanca</option>
                 <option value="Rabat">Rabat</option>
                 <option value="Marrakech">Marrakech</option>
@@ -1459,26 +1464,26 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">ICE (15 digits) *</label>
-              <input [(ngModel)]="newPartner.ICE" name="ICE" type="text" maxlength="15" placeholder="e.g. 123456789012345" required class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+              <label class="field-label mb-1.5">ICE (15 digits) *</label>
+              <input [(ngModel)]="newPartner.ICE" name="ICE" type="text" maxlength="15" placeholder="e.g. 123456789012345" required class="input-field w-full">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Identifiant Fiscal (IF) *</label>
-              <input [(ngModel)]="newPartner.IF" name="IF" type="text" placeholder="e.g. 123456" required class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+              <label class="field-label mb-1.5">Identifiant Fiscal (IF) *</label>
+              <input [(ngModel)]="newPartner.IF" name="IF" type="text" placeholder="e.g. 123456" required class="input-field w-full">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Registre de Commerce (RC) *</label>
-              <input [(ngModel)]="newPartner.RC" name="RC" type="text" placeholder="e.g. 123456" required class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600 font-sans">
+              <label class="field-label mb-1.5">Registre de Commerce (RC) *</label>
+              <input [(ngModel)]="newPartner.RC" name="RC" type="text" placeholder="e.g. 123456" required class="input-field w-full">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-600 uppercase mb-1">Comments / Notes</label>
-              <textarea [(ngModel)]="newPartner.comments" name="comments" rows="3" placeholder="Additional details..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+              <label class="field-label mb-1.5">Comments / Notes</label>
+              <textarea [(ngModel)]="newPartner.comments" name="comments" rows="3" placeholder="Additional details..." class="input-field w-full"></textarea>
             </div>
 
-            <div class="flex justify-end gap-2 pt-4 border-t border-zinc-100">
-              <button type="button" (click)="showConvertProposalModal.set(false)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">Cancel</button>
-              <button type="submit" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300">Convert to Customer &amp; Deal</button>
+            <div class="flex justify-end gap-2 pt-4 border-t border-line-soft">
+              <button type="button" (click)="showConvertProposalModal.set(false)" class="btn-secondary">Cancel</button>
+              <button type="submit" class="btn-primary">Convert to Customer &amp; Deal</button>
             </div>
           </form>
         </div>
@@ -1487,34 +1492,34 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Assign Task Modal -->
     @if (assignTaskModalOpen(); as ctx) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-md w-full p-6 space-y-5 animate-in zoom-in-95 duration-200">
+      <div class="modal-backdrop">
+        <div class="modal modal-md">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-zinc-950">Assign Task</h3>
-            <button (click)="assignTaskModalOpen.set(null)" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <mat-icon class="text-[20px] w-5 h-5">close</mat-icon>
+            <h3 class="modal-title">Assign Task</h3>
+            <button (click)="assignTaskModalOpen.set(null)" class="btn-icon btn-sm">
+              <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
 
-          <div class="bg-zinc-100 border border-zinc-200 rounded-xl p-3">
-            <span class="text-meta text-zinc-500 font-bold uppercase tracking-wider block mb-0.5">Related to</span>
-            <span class="text-sm font-bold text-zinc-950">{{ ctx.entityTitle }}</span>
+          <div class="bg-muted border border-line rounded-xl p-3">
+            <span class="eyebrow block mb-0.5">Related to</span>
+            <span class="text-sm font-semibold text-ink">{{ ctx.entityTitle }}</span>
           </div>
 
           <div class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Task Title</label>
-              <input [(ngModel)]="assignTaskData.title" type="text" placeholder="e.g. Follow up with client" class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600">
+              <label class="field-label mb-1.5">Task Title</label>
+              <input [(ngModel)]="assignTaskData.title" type="text" placeholder="e.g. Follow up with client" class="input-field w-full">
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Description (optional)</label>
-              <textarea [(ngModel)]="assignTaskData.description" rows="3" placeholder="Describe the task..." class="w-full input-field rounded-lg p-2 text-sm focus:outline-blue-600"></textarea>
+              <label class="field-label mb-1.5">Description (optional)</label>
+              <textarea [(ngModel)]="assignTaskData.description" rows="3" placeholder="Describe the task..." class="input-field w-full"></textarea>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Team</label>
-              <select [(ngModel)]="assignTaskData.assignedTeamId" class="w-full input-field rounded-lg p-2 text-sm bg-white focus:outline-blue-600">
+              <label class="field-label mb-1.5">Assigned Team</label>
+              <select [(ngModel)]="assignTaskData.assignedTeamId" class="input-field w-full">
                 <option value="">Unassigned</option>
                 @for (team of state.teams(); track team.id) {
                   <option [value]="team.id">{{ team.name }}</option>
@@ -1523,17 +1528,17 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </div>
 
             <div>
-              <span class="block text-xs font-semibold text-zinc-500 uppercase mb-1">Assigned Person</span>
+              <span class="eyebrow block mb-1">Assigned Person</span>
               <app-user-picker [(value)]="assignTaskData.assignedToUserId" placeholder="-- Select --" />
             </div>
           </div>
 
-          <div class="flex justify-between gap-2 pt-2 border-t border-zinc-100">
-            <button (click)="assignTaskModalOpen.set(null)" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50 transition-colors">Cancel</button>
+          <div class="flex justify-between gap-2 pt-2 border-t border-line-soft">
+            <button (click)="assignTaskModalOpen.set(null)" class="btn-secondary">Cancel</button>
             <button (click)="saveAssignTask()"
               [disabled]="!assignTaskData.title.trim() || !assignTaskData.assignedToUserId"
-              class="px-5 py-2 bg-zinc-900 hover:bg-zinc-950 text-white text-sm font-semibold rounded-lg shadow-lg shadow-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
-              <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon>
+              class="btn-primary">
+              <mat-icon class="icon-sm">assignment</mat-icon>
               Create &amp; Assign Task
             </button>
           </div>
@@ -1546,70 +1551,70 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="proposal-drawer-title" role="dialog" aria-modal="true">
         <div (click)="closeProposalDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
-          <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
-            <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
+          <div class="w-screen max-w-2xl bg-surface shadow-2xl flex flex-col h-full duration-300">
+            <div class="px-6 py-5 bg-subtle border-b border-line flex justify-between items-center shrink-0">
               <div>
-                <h2 class="text-lg font-bold text-zinc-900" id="proposal-drawer-title">{{prop.title}}</h2>
-                <p class="text-xs text-zinc-500 mt-0.5">Prospect: {{getPartnerName(prop.partnerId)}} · #{{prop.id}}</p>
+                <h2 class="section-title" id="proposal-drawer-title">{{prop.title}}</h2>
+                <p class="text-xs text-ink-3 mt-0.5">Prospect: {{getPartnerName(prop.partnerId)}} · #{{ prop.id.slice(0, 8) }}</p>
               </div>
               <div class="flex items-center gap-3">
-                <span class="px-3 py-1 text-xs font-semibold rounded-full uppercase"
-                  [class]="prop.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700' : (prop.status === 'Sent' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-800')">
+                <span class="badge"
+                  [class]="prop.status === 'Confirmed' ? 'badge-success' : (prop.status === 'Sent' ? 'badge-info' : 'bg-muted text-ink')">
                   {{prop.status}}
                 </span>
-                <button (click)="closeProposalDrawer()" class="text-zinc-400 hover:text-zinc-600 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors">
+                <button (click)="closeProposalDrawer()" class="btn-icon btn-sm">
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-              <div class="bg-zinc-50 rounded-xl p-4 border border-zinc-100 space-y-3">
-                <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block">Lines & Pricing</span>
+              <div class="bg-subtle rounded-xl p-4 border border-line-soft space-y-3">
+                <span class="eyebrow block">Lines & Pricing</span>
                 @for (line of prop.lines; track $index) {
-                  <div class="flex justify-between text-xs text-zinc-700">
+                  <div class="flex justify-between text-xs text-ink-2">
                     <span>{{line.qty}}x {{line.product}}</span>
-                    <span class="font-sans">{{formatCurrency(line.total)}}</span>
+                    <span class="">{{formatCurrency(line.total)}}</span>
                   </div>
                 }
-                <div class="flex justify-between border-t border-zinc-200 pt-1.5 text-xs font-bold text-zinc-900 font-sans">
+                <div class="flex justify-between border-t border-line pt-1.5 text-xs font-semibold text-ink">
                   <span>Total Amount</span>
                   <span>{{formatCurrency(prop.amount)}}</span>
                 </div>
               </div>
 
-              <div class="border-t border-zinc-100 pt-3">
-                <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-2">Sales Intelligence</span>
-                <div class="grid grid-cols-2 gap-3 bg-white border border-zinc-200 p-3 rounded-xl border border-zinc-150/60 text-xs">
+              <div class="border-t border-line-soft pt-3">
+                <span class="eyebrow block mb-2">Sales Intelligence</span>
+                <div class="card grid grid-cols-2 gap-3 p-3 text-xs">
                   <div>
-                    <span class="text-zinc-400 block text-meta font-medium">Opportunity Value</span>
-                    <span class="font-bold text-zinc-900 font-sans">{{ formatCurrency(prop.opportunityValue || 0) }}</span>
+                    <span class="text-ink-3 block text-meta font-medium">Opportunity Value</span>
+                    <span class="font-semibold text-ink">{{ formatCurrency(prop.opportunityValue || 0) }}</span>
                   </div>
                   <div>
-                    <span class="text-zinc-400 block text-meta font-medium">Probability</span>
+                    <span class="text-ink-3 block text-meta font-medium">Probability</span>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                      <div class="w-full bg-zinc-200 rounded-full h-1.5 max-w-[60px]">
-                        <div class="bg-zinc-900 h-1.5 rounded-full" [style.width.%]="prop.closingProbability || 0"></div>
+                      <div class="w-full bg-muted-strong rounded-full h-1.5 max-w-[60px]">
+                        <div class="bg-primary h-1.5 rounded-full" [style.width.%]="prop.closingProbability || 0"></div>
                       </div>
-                      <span class="font-bold text-zinc-900 font-sans">{{ prop.closingProbability || 0 }}%</span>
+                      <span class="font-semibold text-ink">{{ prop.closingProbability || 0 }}%</span>
                     </div>
                   </div>
                   <div>
-                    <span class="text-zinc-400 block text-meta font-medium">Expected Close</span>
-                    <span class="font-semibold text-zinc-700 font-sans">{{ prop.expectedClosingDate || 'TBD' }}</span>
+                    <span class="text-ink-3 block text-meta font-medium">Expected Close</span>
+                    <span class="font-semibold text-ink-2">{{ prop.expectedClosingDate || 'TBD' }}</span>
                   </div>
                   <div>
-                    <span class="text-zinc-400 block text-meta font-medium">Stage</span>
-                    <span class="inline-block px-2 py-0.5 text-meta font-bold rounded border uppercase mt-0.5" [class]="getStageBadgeClass(prop.stage)">
+                    <span class="text-ink-3 block text-meta font-medium">Stage</span>
+                    <span class="badge mt-0.5" [class]="getStageBadgeClass(prop.stage)">
                       {{ prop.stage || 'New Lead' }}
                     </span>
                   </div>
                   @if (prop.competitors && prop.competitors.length > 0) {
                     <div class="col-span-2">
-                      <span class="text-zinc-400 block text-meta font-medium">Competitors</span>
+                      <span class="text-ink-3 block text-meta font-medium">Competitors</span>
                       <div class="flex flex-wrap gap-1 mt-1">
                         @for (comp of prop.competitors; track comp) {
-                          <span class="bg-zinc-100 text-zinc-600 border border-zinc-200 px-1.5 py-0.5 rounded text-meta font-medium">{{comp}}</span>
+                          <span class="badge badge-neutral">{{comp}}</span>
                         }
                       </div>
                     </div>
@@ -1618,36 +1623,36 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               </div>
 
               @if (prop.status === 'Confirmed' && prop.confirmationMethod) {
-                <div class="border-t border-zinc-100 pt-3">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Confirmation Proof</span>
-                  <div class="bg-zinc-100/40 border border-zinc-200 rounded-xl p-3 text-xs text-zinc-950 space-y-2">
-                    <div class="flex items-center gap-1.5 font-semibold text-zinc-950 text-meta">
+                <div class="border-t border-line-soft pt-3">
+                  <span class="eyebrow block mb-1.5">Confirmation Proof</span>
+                  <div class="bg-muted border border-line rounded-xl p-3 text-xs text-ink space-y-2">
+                    <div class="flex items-center gap-1.5 font-semibold text-ink text-meta">
                       @if (prop.confirmationMethod === 'Email') {
-                        <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">email</mat-icon>
+                        <mat-icon class="icon-sm">email</mat-icon>
                         <span>Email confirmation</span>
                       } @else if (prop.confirmationMethod === 'WhatsApp') {
-                        <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">chat</mat-icon>
+                        <mat-icon class="icon-sm">chat</mat-icon>
                         <span>WhatsApp screenshot</span>
                       } @else {
-                        <mat-icon class="text-sm w-4 h-4 flex items-center justify-center">phone</mat-icon>
+                        <mat-icon class="icon-sm">phone</mat-icon>
                         <span>Call Summary</span>
                       }
                       @if (prop.confirmedAt) {
-                        <span class="text-meta text-zinc-900 font-normal ml-auto font-sans">{{ prop.confirmedAt }}</span>
+                        <span class="text-meta text-ink font-normal ml-auto">{{ prop.confirmedAt }}</span>
                       }
                     </div>
                     @if (prop.confirmationAttachmentName) {
-                      <div class="flex items-center gap-1.5 bg-white border border-zinc-300/60 p-2 rounded-lg text-zinc-950 font-sans text-meta truncate">
-                        <mat-icon class="text-[14px] w-3.5 h-3.5 text-zinc-900">attach_file</mat-icon>
+                      <div class="flex items-center gap-1.5 bg-surface border border-line-strong p-2 rounded-lg text-ink text-meta truncate">
+                        <mat-icon class="text-ink icon-xs">attach_file</mat-icon>
                         <span class="truncate flex-1">{{ prop.confirmationAttachmentName }}</span>
                         @if (prop.confirmationAttachmentData) {
                           <a [href]="prop.confirmationAttachmentData" [download]="prop.confirmationAttachmentName"
-                             class="text-blue-700 hover:underline font-sans font-semibold ml-1 shrink-0">Download</a>
+                             class="text-accent-ink hover:underline font-semibold ml-1 shrink-0">Download</a>
                         }
                       </div>
                     }
                     @if (prop.confirmationNote) {
-                      <p class="text-meta text-zinc-650 leading-relaxed bg-white border border-emerald-150 p-2 rounded-lg italic">
+                      <p class="text-meta text-ink-2 leading-relaxed bg-surface border border-success-line p-2 rounded-lg italic">
                         "{{ prop.confirmationNote }}"
                       </p>
                     }
@@ -1655,40 +1660,40 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 </div>
               }
 
-              <div class="border-t border-zinc-100 pt-3">
+              <div class="border-t border-line-soft pt-3">
                 <app-attachments ownerEntityType="PROPOSAL" [ownerEntityId]="prop.id" [canWrite]="canWriteProposal()" />
               </div>
 
-              <div class="border-t border-zinc-100 pt-3 text-xs text-zinc-500 space-y-1">
+              <div class="border-t border-line-soft pt-3 text-xs text-ink-3 space-y-1">
                 <app-created-by-badge [createdBy]="prop.createdBy" [createdAt]="prop.createdAt" />
               </div>
             </div>
 
-            <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex justify-between items-center shrink-0">
-              <span class="text-xs text-zinc-500">{{ prop.lines.length }} line item(s)</span>
+            <div class="px-6 py-4 bg-subtle border-t border-line flex justify-between items-center shrink-0">
+              <span class="text-xs text-ink-3">{{ prop.lines.length }} line item(s)</span>
               <div class="flex gap-2">
-                <button (click)="openEditProposalModal(prop); closeProposalDrawer()" class="bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-100 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                  <mat-icon class="text-[16px] w-4 h-4">edit</mat-icon> Edit
+                <button (click)="openEditProposalModal(prop); closeProposalDrawer()" class="btn-secondary btn-sm">
+                  <mat-icon class="icon-sm">edit</mat-icon> Edit
                 </button>
                 @if (canDeleteProposal()) {
-                  <button (click)="openProposalDeleteModal(prop)" class="bg-white border border-zinc-300 text-zinc-700 hover:bg-red-50 hover:text-red-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">delete</mat-icon> Delete
+                  <button (click)="openProposalDeleteModal(prop)" class="btn-secondary btn-sm">
+                    <mat-icon class="icon-sm">delete</mat-icon> Delete
                   </button>
                 }
                 @if (prop.status === 'Draft') {
-                  <button (click)="openSendProposalModal(prop); closeProposalDrawer()" class="bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                  <button (click)="openSendProposalModal(prop); closeProposalDrawer()" class="btn-primary btn-sm">
                     Send to Prospect
                   </button>
                 } @else if (prop.status === 'Sent') {
-                  <button (click)="openConfirmProposalModal(prop); closeProposalDrawer()" class="bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">task_alt</mat-icon> Confirm
+                  <button (click)="openConfirmProposalModal(prop); closeProposalDrawer()" class="btn-primary btn-sm">
+                    <mat-icon class="icon-sm">task_alt</mat-icon> Confirm
                   </button>
                 } @else {
-                  <button (click)="openConvertProposalModal(prop); closeProposalDrawer()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">swap_horiz</mat-icon> Convert to Deal
+                  <button (click)="openConvertProposalModal(prop); closeProposalDrawer()" class="btn-primary btn-sm">
+                    <mat-icon class="icon-sm">swap_horiz</mat-icon> Convert to Deal
                   </button>
                 }
-                <button (click)="closeProposalDrawer()" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-1.5 rounded-lg text-xs font-semibold">Close</button>
+                <button (click)="closeProposalDrawer()" class="btn-secondary btn-sm">Close</button>
               </div>
             </div>
           </div>
@@ -1701,62 +1706,62 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       <div class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="po-drawer-title" role="dialog" aria-modal="true">
         <div (click)="closePODrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
-          <div class="w-screen max-w-2xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
-            <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
+          <div class="w-screen max-w-2xl bg-surface shadow-2xl flex flex-col h-full duration-300">
+            <div class="px-6 py-5 bg-subtle border-b border-line flex justify-between items-center shrink-0">
               <div>
-                <h2 class="text-lg font-bold text-zinc-900" id="po-drawer-title">PO #{{po.id}}</h2>
-                <p class="text-xs text-zinc-500 mt-0.5">Vendor: {{getPartnerName(po.vendorId)}} · Deal: {{getDealTitle(po.dealId)}}</p>
+                <h2 class="section-title" id="po-drawer-title">PO #{{ po.id.slice(0, 8) }}</h2>
+                <p class="text-xs text-ink-3 mt-0.5">Vendor: {{getPartnerName(po.vendorId)}} · Deal: {{getDealTitle(po.dealId)}}</p>
               </div>
               <div class="flex items-center gap-3">
-                <span class="px-3 py-1 text-xs font-bold uppercase rounded-full"
-                  [class]="po.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700' : (po.status === 'Sent' ? 'bg-sky-50 text-sky-700' : 'bg-zinc-100 text-zinc-800')">
+                <span class="badge"
+                  [class]="po.status === 'Delivered' ? 'badge-success' : (po.status === 'Sent' ? 'badge-info' : 'bg-muted text-ink')">
                   {{po.status}}
                 </span>
-                <button (click)="closePODrawer()" class="text-zinc-400 hover:text-zinc-600 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors">
+                <button (click)="closePODrawer()" class="btn-icon btn-sm">
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100 text-xs">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-subtle p-4 rounded-xl border border-line-soft text-xs">
                 <div>
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1">PO Reference</span>
-                  <span class="font-sans text-zinc-900 font-bold text-sm">#{{po.id}}</span>
+                  <span class="eyebrow block mb-1">PO Reference</span>
+                  <span class="text-ink font-semibold text-sm">#{{ po.id.slice(0, 8) }}</span>
                 </div>
                 <div>
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1">Delivery Date</span>
-                  <span class="text-zinc-900 font-sans">{{po.deliveryDate || 'Pending Conf.'}}</span>
+                  <span class="eyebrow block mb-1">Delivery Date</span>
+                  <span class="text-ink">{{po.deliveryDate || 'Pending Conf.'}}</span>
                 </div>
                 <div>
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1">Sent Via</span>
-                  <span class="text-zinc-900">{{po.sentVia || 'N/A'}}</span>
+                  <span class="eyebrow block mb-1">Sent Via</span>
+                  <span class="text-ink">{{po.sentVia || 'N/A'}}</span>
                 </div>
                 <div>
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-1">Total Amount</span>
-                  <span class="font-sans text-zinc-900 font-bold">{{formatCurrency(po.amount)}}</span>
+                  <span class="eyebrow block mb-1">Total Amount</span>
+                  <span class="text-ink font-semibold">{{formatCurrency(po.amount)}}</span>
                 </div>
               </div>
 
               <div>
-                <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block mb-2">Order Lines</span>
-                <div class="border border-zinc-200 rounded-xl overflow-x-auto">
-                  <table class="min-w-full divide-y divide-slate-200">
-                    <thead class="bg-zinc-50">
+                <span class="eyebrow block mb-2">Order Lines</span>
+                <div class="border border-line rounded-xl overflow-x-auto">
+                  <table class="data-table">
+                    <thead>
                       <tr>
-                        <th class="px-3 py-2 text-left text-meta font-semibold text-zinc-500 uppercase">Item</th>
-                        <th class="px-3 py-2 text-right text-meta font-semibold text-zinc-500 uppercase">Qty</th>
-                        <th class="px-3 py-2 text-right text-meta font-semibold text-zinc-500 uppercase">Unit Cost</th>
-                        <th class="px-3 py-2 text-right text-meta font-semibold text-zinc-500 uppercase">Total</th>
+                        <th>Item</th>
+                        <th class="text-right">Qty</th>
+                        <th class="text-right">Unit Cost</th>
+                        <th class="text-right">Total</th>
                       </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-slate-100">
+                    <tbody>
                       @for (line of po.lines; track $index) {
-                        <tr class="hover:bg-zinc-50/50">
-                          <td class="px-3 py-2 text-xs text-zinc-900 font-medium">{{line.product}}{{line.description ? ' - ' + line.description : ''}}</td>
-                          <td class="px-3 py-2 text-xs text-zinc-700 font-sans text-right">{{line.qty}}</td>
-                          <td class="px-3 py-2 text-xs text-zinc-700 font-sans text-right">{{formatCurrency(line.cost)}}</td>
-                          <td class="px-3 py-2 text-xs text-zinc-900 font-sans font-bold text-right">{{formatCurrency(line.qty * line.cost)}}</td>
+                        <tr>
+                          <td class="text-ink">{{line.product}}{{line.description ? ' - ' + line.description : ''}}</td>
+                          <td class="text-ink-2 text-right">{{line.qty}}</td>
+                          <td class="text-ink-2 text-right">{{formatCurrency(line.cost)}}</td>
+                          <td class="text-ink text-right">{{formatCurrency(line.qty * line.cost)}}</td>
                         </tr>
                       }
                     </tbody>
@@ -1764,29 +1769,29 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 </div>
               </div>
 
-              <div class="border-t border-zinc-100 pt-3 text-xs text-zinc-500 space-y-1">
+              <div class="border-t border-line-soft pt-3 text-xs text-ink-3 space-y-1">
                 <app-created-by-badge [createdBy]="po.createdBy" [createdAt]="po.createdAt" />
               </div>
             </div>
 
-            <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex justify-between items-center shrink-0">
-              <span class="text-xs text-zinc-500">{{ po.lines.length }} item(s)</span>
+            <div class="px-6 py-4 bg-subtle border-t border-line flex justify-between items-center shrink-0">
+              <span class="text-xs text-ink-3">{{ po.lines.length }} item(s)</span>
               <div class="flex gap-2">
                 @if (canCreateTask()) {
-                  <button (click)="openAssignTaskModal('po', po.id, 'PO #' + po.id); closePODrawer()" class="bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-100 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon> Assign Task
+                  <button (click)="openAssignTaskModal('po', po.id, 'PO #' + po.id); closePODrawer()" class="btn-secondary btn-sm">
+                    <mat-icon class="icon-sm">assignment</mat-icon> Assign Task
                   </button>
                 }
                 @if (po.status === 'Sent' && canWritePO()) {
-                  <button (click)="openSetDeliveryDatePOModal(po); closePODrawer()" class="bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-lg hover:bg-zinc-50 text-xs font-semibold">Set Del. Date</button>
-                  <button (click)="purchaseOrdersService.updateStatus(po.id, 'Delivered'); closePODrawer()" class="bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg shadow-zinc-300">Receive Goods</button>
+                  <button (click)="openSetDeliveryDatePOModal(po); closePODrawer()" class="btn-secondary btn-sm">Set Del. Date</button>
+                  <button (click)="purchaseOrdersService.updateStatus(po.id, 'Delivered'); closePODrawer()" class="btn-primary btn-sm">Receive Goods</button>
                 }
                 @if (currentUserPermissions().canDeleteRecords) {
-                  <button (click)="deletePurchaseOrder(po)" title="Delete purchase order" class="bg-zinc-50 hover:bg-red-50 hover:text-red-600 border border-zinc-200 hover:border-red-200 text-zinc-500 px-2 py-1.5 rounded-lg transition-colors">
-                    <mat-icon class="text-[16px] w-4 h-4">delete</mat-icon>
-                  </button>
+                  <button (click)="deletePurchaseOrder(po)" title="Delete purchase order" class="btn-icon btn-sm btn-danger-hover">
+  <mat-icon class="icon-sm">delete</mat-icon>
+</button>
                 }
-                <button (click)="closePODrawer()" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-1.5 rounded-lg text-xs font-semibold">Close</button>
+                <button (click)="closePODrawer()" class="btn-secondary btn-sm">Close</button>
               </div>
             </div>
           </div>
@@ -1801,21 +1806,21 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
         <div (click)="closeDealDrawer()" role="presentation" class="absolute inset-0 overflow-hidden bg-transparent"></div>
         
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
-          <div class="w-screen max-w-3xl bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right-12 duration-300">
+          <div class="w-screen max-w-3xl bg-surface shadow-2xl flex flex-col h-full duration-300">
             <!-- Header -->
-            <div class="px-6 py-5 bg-zinc-50 border-b border-zinc-200 flex justify-between items-center shrink-0">
+            <div class="px-6 py-5 bg-subtle border-b border-line flex justify-between items-center shrink-0">
               <div>
-                <h2 class="text-lg font-bold text-zinc-900" id="deal-drawer-title">{{deal.title}}</h2>
-                <p class="text-xs text-zinc-500 mt-0.5">Client: {{getPartnerName(deal.partnerId)}}</p>
+                <h2 class="section-title" id="deal-drawer-title">{{deal.title}}</h2>
+                <p class="text-xs text-ink-3 mt-0.5">Client: {{getPartnerName(deal.partnerId)}}</p>
               </div>
               <div class="flex items-center gap-3">
-                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-zinc-100 text-zinc-950 border border-zinc-200">
+                <span class="badge badge-neutral">
                   {{deal.stage}}
                 </span>
-                <a [routerLink]="['/sales/deals', deal.id]" (click)="closeDealDrawer()" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-1 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors">
-                  <mat-icon class="text-sm w-4 h-4">open_in_new</mat-icon> Open page
+                <a [routerLink]="['/sales/deals', deal.id]" (click)="closeDealDrawer()" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-1 p-1.5 rounded-lg hover:bg-muted transition-colors">
+                  <mat-icon class="icon-sm">open_in_new</mat-icon> Open page
                 </a>
-                <button (click)="closeDealDrawer()" class="text-zinc-400 hover:text-zinc-600 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors">
+                <button (click)="closeDealDrawer()" class="btn-icon btn-sm">
                   <mat-icon>close</mat-icon>
                 </button>
               </div>
@@ -1824,42 +1829,42 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <!-- Content -->
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
               <!-- General Info & Amounts -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-4 border-b border-white/30">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-4 border-b border-line-soft">
                 <div>
-                  <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount Details</span>
+                  <span class="eyebrow">Amount Details</span>
                   <div class="mt-1">
-                    <span class="text-xl font-bold text-zinc-900 font-sans">{{formatCurrency(deal.amount)}}</span>
+                    <span class="text-xl font-semibold text-ink">{{formatCurrency(deal.amount)}}</span>
                     @if (deal.discount) {
-                      <span class="text-xs text-zinc-900 font-semibold ml-2">({{deal.discount}}% Discount applied)</span>
+                      <span class="text-xs text-ink font-semibold ml-2">({{deal.discount}}% Discount applied)</span>
                     }
                   </div>
                 </div>
 
                 <div>
-                  <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-sans">Comments / Notes</span>
-                  <p class="text-xs text-zinc-600 mt-1">{{deal.comments || 'No comments.'}}</p>
+                  <span class="eyebrow">Comments / Notes</span>
+                  <p class="text-xs text-ink-2 mt-1">{{deal.comments || 'No comments.'}}</p>
                 </div>
 
                 <div>
-                  <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-sans">Attached Proposal</span>
-                  <div class="text-xs text-zinc-600 mt-1">
+                  <span class="eyebrow">Attached Proposal</span>
+                  <div class="text-xs text-ink-2 mt-1">
                     #{{deal.proposalId || 'N/A'}} - {{ getProposalTitle(deal.proposalId) }}
                   </div>
                 </div>
               </div>
 
               <!-- Identification & Dates -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-50 p-4 rounded-xl border border-zinc-100 text-xs">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-subtle p-4 rounded-xl border border-line-soft text-xs">
                 <div class="space-y-2">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block border-b border-zinc-200/60 pb-1">1. Identification & Dates</span>
-                  <div class="grid grid-cols-2 gap-y-1.5 text-zinc-600 font-sans">
-                    <span class="font-medium">Order Number:</span> <span class="font-sans text-zinc-900 font-semibold">{{ deal.orderNumber || 'N/A' }}</span>
-                    <span class="font-medium">Deal Number:</span> <span class="font-sans text-zinc-900 font-semibold">{{ deal.dealNumber || 'N/A' }}</span>
-                    <span class="font-medium">Order Date:</span> <span class="text-zinc-900 font-sans">{{ deal.orderDate || 'N/A' }}</span>
-                    <span class="font-medium">Req. Delivery:</span> <span class="text-zinc-900 font-sans">{{ deal.requestedDeliveryDate || 'N/A' }}</span>
+                  <span class="eyebrow block border-b border-line pb-1.5">1. Identification & Dates</span>
+                  <div class="grid grid-cols-2 gap-y-1.5 text-ink-2">
+                    <span class="font-medium">Order Number:</span> <span class="text-ink font-semibold">{{ deal.orderNumber || 'N/A' }}</span>
+                    <span class="font-medium">Deal Number:</span> <span class="text-ink font-semibold">{{ deal.dealNumber || 'N/A' }}</span>
+                    <span class="font-medium">Order Date:</span> <span class="text-ink">{{ deal.orderDate || 'N/A' }}</span>
+                    <span class="font-medium">Req. Delivery:</span> <span class="text-ink">{{ deal.requestedDeliveryDate || 'N/A' }}</span>
                     <span class="font-medium">Order Status:</span> 
                     <span>
-                      <span class="px-1.5 py-0.5 rounded text-meta font-semibold bg-zinc-100 text-zinc-950 border border-zinc-200">
+                      <span class="badge badge-neutral">
                         {{ deal.orderStatus || 'N/A' }}
                       </span>
                     </span>
@@ -1868,143 +1873,143 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
                 <!-- Customer & Delivery -->
                 <div class="space-y-2">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block border-b border-zinc-200/60 pb-1">2. Customer & Delivery</span>
-                  <div class="grid grid-cols-3 gap-y-1.5 text-zinc-600 font-sans">
-                    <span class="font-medium col-span-1">Account:</span> <span class="col-span-2 text-zinc-900 font-sans">{{ deal.customerAccount || 'N/A' }}</span>
-                    <span class="font-medium col-span-1">Contact:</span> <span class="col-span-2 text-zinc-900 font-medium">{{ deal.contactPerson || 'N/A' }}</span>
-                    <span class="font-medium col-span-1">Email:</span> <span class="col-span-2 text-zinc-900 font-sans truncate" [title]="deal.contactEmail">{{ deal.contactEmail || 'N/A' }}</span>
-                    <span class="font-medium col-span-1">Phone:</span> <span class="col-span-2 text-zinc-900 font-sans">{{ deal.contactPhone || 'N/A' }}</span>
+                  <span class="eyebrow block border-b border-line pb-1.5">2. Customer & Delivery</span>
+                  <div class="grid grid-cols-3 gap-y-1.5 text-ink-2">
+                    <span class="font-medium col-span-1">Account:</span> <span class="col-span-2 text-ink">{{ deal.customerAccount || 'N/A' }}</span>
+                    <span class="font-medium col-span-1">Contact:</span> <span class="col-span-2 text-ink font-medium">{{ deal.contactPerson || 'N/A' }}</span>
+                    <span class="font-medium col-span-1">Email:</span> <span class="col-span-2 text-ink truncate" [title]="deal.contactEmail">{{ deal.contactEmail || 'N/A' }}</span>
+                    <span class="font-medium col-span-1">Phone:</span> <span class="col-span-2 text-ink">{{ deal.contactPhone || 'N/A' }}</span>
                   </div>
-                  <div class="mt-1.5 pt-1.5 border-t border-zinc-200/60 text-meta text-zinc-600 space-y-1">
-                    <div><strong class="text-zinc-700">Billing:</strong> {{ deal.billingAddress || 'N/A' }}</div>
-                    <div><strong class="text-zinc-700">Delivery:</strong> {{ deal.deliveryAddress || 'N/A' }}</div>
+                  <div class="mt-1.5 pt-1.5 border-t border-line text-meta text-ink-2 space-y-1">
+                    <div><strong class="text-ink-2">Billing:</strong> {{ deal.billingAddress || 'N/A' }}</div>
+                    <div><strong class="text-ink-2">Delivery:</strong> {{ deal.deliveryAddress || 'N/A' }}</div>
                   </div>
                 </div>
 
                 <!-- Sales & Commercial -->
                 <div class="space-y-2">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block border-b border-zinc-200/60 pb-1">3. Sales & Commercial</span>
-                  <div class="grid grid-cols-2 gap-y-1.5 text-zinc-600 font-sans">
-                    <span class="font-medium">Sales Person:</span> <span class="text-zinc-900 font-medium">{{ deal.salesPerson || 'N/A' }}</span>
-                    <span class="font-medium">Region:</span> <span class="text-zinc-900">{{ deal.salesRegion || 'N/A' }}</span>
-                    <span class="font-medium">Currency:</span> <span class="text-zinc-900 font-bold font-sans">{{ deal.currency || 'MAD' }}</span>
-                    <span class="font-medium">Payment Terms:</span> <span class="text-zinc-900">{{ deal.paymentTerms || 'N/A' }}</span>
-                    <span class="font-medium">Total Amount:</span> <span class="text-zinc-900 font-sans font-bold">{{ formatCurrency(deal.orderTotalAmount || deal.amount) }}</span>
+                  <span class="eyebrow block border-b border-line pb-1.5">3. Sales & Commercial</span>
+                  <div class="grid grid-cols-2 gap-y-1.5 text-ink-2">
+                    <span class="font-medium">Sales Person:</span> <span class="text-ink font-medium">{{ deal.salesPerson || 'N/A' }}</span>
+                    <span class="font-medium">Region:</span> <span class="text-ink">{{ deal.salesRegion || 'N/A' }}</span>
+                    <span class="font-medium">Currency:</span> <span class="text-ink font-semibold">{{ deal.currency || 'MAD' }}</span>
+                    <span class="font-medium">Payment Terms:</span> <span class="text-ink">{{ deal.paymentTerms || 'N/A' }}</span>
+                    <span class="font-medium">Total Amount:</span> <span class="text-ink font-semibold">{{ formatCurrency(deal.orderTotalAmount || deal.amount) }}</span>
                   </div>
                 </div>
 
                 <!-- Vendor & Logistics -->
                 <div class="space-y-2">
-                  <span class="text-meta font-bold text-zinc-400 uppercase tracking-wider block border-b border-zinc-200/60 pb-1">4. Vendor & Logistics</span>
-                  <div class="grid grid-cols-2 gap-y-1.5 text-zinc-600 font-sans">
-                    <span class="font-medium">Vendor Account:</span> <span class="font-sans text-zinc-900 font-semibold">{{ deal.vendorAccount || 'N/A' }}</span>
-                    <span class="font-medium">PO Reference:</span> <span class="font-sans text-zinc-900 font-semibold">{{ deal.purchaseOrderRef || 'N/A' }}</span>
-                    <span class="font-medium">Warehouse:</span> <span class="text-zinc-900">{{ deal.warehouseAddress || 'N/A' }}</span>
-                    <span class="font-medium">Transport:</span> <span class="text-zinc-900">{{ deal.transportationService || 'N/A' }}</span>
+                  <span class="eyebrow block border-b border-line pb-1.5">4. Vendor & Logistics</span>
+                  <div class="grid grid-cols-2 gap-y-1.5 text-ink-2">
+                    <span class="font-medium">Vendor Account:</span> <span class="text-ink font-semibold">{{ deal.vendorAccount || 'N/A' }}</span>
+                    <span class="font-medium">PO Reference:</span> <span class="text-ink font-semibold">{{ deal.purchaseOrderRef || 'N/A' }}</span>
+                    <span class="font-medium">Warehouse:</span> <span class="text-ink">{{ deal.warehouseAddress || 'N/A' }}</span>
+                    <span class="font-medium">Transport:</span> <span class="text-ink">{{ deal.transportationService || 'N/A' }}</span>
                   </div>
                 </div>
               </div>
 
               <!-- Email Exchange Log -->
               @if (deal.emailExchange) {
-                <div class="bg-zinc-50 rounded-xl p-4 border border-zinc-100 text-xs font-sans space-y-1.5">
-                  <div class="text-zinc-400 font-sans font-bold flex items-center gap-1 mb-1">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">email</mat-icon> Email Exchange & Confirmation Logs
+                <div class="bg-subtle rounded-xl p-4 border border-line-soft text-xs space-y-1.5">
+                  <div class="text-ink-3 font-semibold flex items-center gap-1 mb-1">
+                    <mat-icon class="icon-xs">email</mat-icon> Email Exchange & Confirmation Logs
                   </div>
-                  <pre class="whitespace-pre-wrap text-meta text-zinc-700 leading-relaxed font-sans">{{deal.emailExchange}}</pre>
+                  <pre class="whitespace-pre-wrap text-meta text-ink-2 leading-relaxed">{{deal.emailExchange}}</pre>
                 </div>
               }
 
               <!-- Activity Hub -->
-              <div class="border-t border-zinc-200 pt-4">
-                <h5 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5 font-sans">
-                  <mat-icon class="text-[16px] w-4 h-4 text-zinc-900 flex items-center justify-center">forum</mat-icon> Deal Activity Hub
+              <div class="border-t border-line pt-4">
+                <h5 class="text-xs font-semibold text-ink-3 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <mat-icon class="text-ink icon-sm">forum</mat-icon> Deal Activity Hub
                 </h5>
                 
                 <!-- Tabs Header -->
-                <div class="flex flex-wrap gap-1 border-b border-zinc-200 mb-4 bg-white border border-zinc-200 p-1 rounded-lg">
+                <div class="flex flex-wrap gap-1 border-b border-line mb-4 bg-surface border border-line p-1 rounded-lg">
                   <button type="button" (click)="setDealTab(deal.id, 'calls')"
-                    [class]="getDealTab(deal.id) === 'calls' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'calls' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">call</mat-icon>
+                    <mat-icon class="icon-xs">call</mat-icon>
                     Calls
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.calls?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.calls?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'emails')"
-                    [class]="getDealTab(deal.id) === 'emails' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'emails' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">email</mat-icon>
+                    <mat-icon class="icon-xs">email</mat-icon>
                     Emails
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.emails?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.emails?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'meetings')"
-                    [class]="getDealTab(deal.id) === 'meetings' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'meetings' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">groups</mat-icon>
+                    <mat-icon class="icon-xs">groups</mat-icon>
                     Meetings
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.meetings?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.meetings?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'recordings')"
-                    [class]="getDealTab(deal.id) === 'recordings' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'recordings' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">videocam</mat-icon>
+                    <mat-icon class="icon-xs">videocam</mat-icon>
                     Recordings
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.recordings?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.recordings?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'notes')"
-                    [class]="getDealTab(deal.id) === 'notes' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'notes' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">note_alt</mat-icon>
+                    <mat-icon class="icon-xs">note_alt</mat-icon>
                     Notes
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.notes?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.notes?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'followups')"
-                    [class]="getDealTab(deal.id) === 'followups' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'followups' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">notification_important</mat-icon>
+                    <mat-icon class="icon-xs">notification_important</mat-icon>
                     Follow-ups
-                    <span class="bg-zinc-100 text-zinc-900 px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.followUps?.length || 0 }}</span>
+                    <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.followUps?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'calendar')"
-                    [class]="getDealTab(deal.id) === 'calendar' ? 'bg-white text-zinc-900 shadow-xs border-zinc-200' : 'text-zinc-600 border-transparent hover:text-zinc-900 hover:bg-zinc-100'"
+                    [class]="getDealTab(deal.id) === 'calendar' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
                     class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
-                    <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none flex items-center justify-center">calendar_month</mat-icon>
+                    <mat-icon class="icon-xs">calendar_month</mat-icon>
                     Calendar
                   </button>
                 </div>
 
                 <!-- Active Tab Panel -->
-                <div class="bg-white border border-zinc-200 border border-zinc-200/60 rounded-xl p-4 min-h-[180px]">
+                <div class="card p-4 min-h-[180px]">
                   
                   <!-- CALLS TAB -->
                   @if (getDealTab(deal.id) === 'calls') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider">Phone Calls History</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'calls')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Log Call
+                        <span class="eyebrow">Phone Calls History</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'calls')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Log Call
                         </button>
                       </div>
                       
                       <div class="space-y-3">
                         @for (call of deal.activityLog?.calls; track call.id) {
-                          <div class="bg-white border border-zinc-150 rounded-lg p-3 shadow-xs space-y-1.5">
+                          <div class="bg-surface border border-line-soft rounded-lg p-3 shadow-xs space-y-1.5">
                             <div class="flex justify-between items-start">
                               <div class="flex items-center gap-2">
-                                <span class="font-bold text-zinc-800">{{ call.callerName }}</span>
-                                <span class="text-zinc-400 font-sans text-meta">{{ call.date }} ({{ call.duration }} min)</span>
+                                <span class="font-semibold text-ink">{{ call.callerName }}</span>
+                                <span class="text-ink-3 text-meta">{{ call.date }} ({{ call.duration }} min)</span>
                               </div>
-                              <span [class]="call.outcome === 'Interested' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                             call.outcome === 'Follow-up' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                             'bg-zinc-100 text-zinc-600 border-zinc-200'"
-                                    class="px-2 py-0.5 rounded text-meta font-semibold border">
+                              <span [class]="call.outcome === 'Interested' ? 'badge-success' :
+                                             call.outcome === 'Follow-up' ? 'badge-warning' :
+                                             'bg-muted text-ink-2 border-line'"
+                                    class="badge">
                                 {{ call.outcome }}
                               </span>
                             </div>
-                            <p class="text-meta text-zinc-600 font-sans leading-relaxed">{{ call.summary }}</p>
+                            <p class="text-meta text-ink-2 leading-relaxed">{{ call.summary }}</p>
                           </div>
                         } @empty {
-                          <div class="text-center py-6 text-zinc-400 text-xs">No calls logged yet.</div>
+                          <div class="text-center py-6 text-ink-3 text-xs">No calls logged yet.</div>
                         }
                       </div>
                     </div>
@@ -2014,41 +2019,41 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   @if (getDealTab(deal.id) === 'emails') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider">Email Correspondence Thread</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'emails')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Log Email
+                        <span class="eyebrow">Email Correspondence Thread</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'emails')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Log Email
                         </button>
                       </div>
 
                       <div class="space-y-3">
                         @for (email of deal.activityLog?.emails; track email.id) {
-                          <div [class]="email.direction === 'sent' ? 'bg-zinc-100/40 border-zinc-200 ml-6' : 'bg-white border-zinc-150 mr-6'"
+                          <div [class]="email.direction === 'sent' ? 'bg-muted border-line ml-6' : 'bg-surface border-line-soft mr-6'"
                                class="border rounded-lg p-3 shadow-xs space-y-1.5 transition-all">
                             <div class="flex justify-between items-start">
                               <div>
-                                <span class="font-bold text-zinc-800 text-xs">{{ email.subject }}</span>
-                                <div class="text-meta text-zinc-400 font-sans mt-0.5">
+                                <span class="font-semibold text-ink text-xs">{{ email.subject }}</span>
+                                <div class="text-meta text-ink-3 mt-0.5">
                                   From: {{ email.from }} | To: {{ email.to }}
                                 </div>
                               </div>
-                              <span class="text-meta font-sans text-zinc-400">{{ email.date }}</span>
+                              <span class="text-meta text-ink-3">{{ email.date }}</span>
                             </div>
-                            <p class="text-meta text-zinc-600 leading-relaxed font-sans whitespace-pre-wrap">{{ email.body }}</p>
+                            <p class="text-meta text-ink-2 leading-relaxed whitespace-pre-wrap">{{ email.body }}</p>
                           </div>
                         }
                         
                         <!-- Legacy emails text snippet fallback -->
                         @if (deal.emailExchange && (!deal.activityLog || deal.activityLog.emails.length === 0)) {
-                          <div class="bg-white border border-zinc-150 rounded-lg p-3 shadow-xs font-sans text-meta text-zinc-700 leading-relaxed">
-                            <div class="text-zinc-400 font-sans font-bold flex items-center gap-1 mb-2">
-                              <mat-icon class="text-[14px] w-3.5 h-3.5 leading-none">history</mat-icon> Imported Exchange Logs
+                          <div class="bg-surface border border-line-soft rounded-lg p-3 shadow-xs text-meta text-ink-2 leading-relaxed">
+                            <div class="text-ink-3 font-semibold flex items-center gap-1 mb-2">
+                              <mat-icon class="icon-xs">history</mat-icon> Imported Exchange Logs
                             </div>
-                            <pre class="whitespace-pre-wrap text-meta font-sans leading-relaxed">{{ deal.emailExchange }}</pre>
+                            <pre class="whitespace-pre-wrap text-meta leading-relaxed">{{ deal.emailExchange }}</pre>
                           </div>
                         }
                         
                         @if (!deal.emailExchange && (!deal.activityLog || deal.activityLog.emails.length === 0)) {
-                          <div class="text-center py-6 text-zinc-400 text-xs">No email exchanges logged yet.</div>
+                          <div class="text-center py-6 text-ink-3 text-xs">No email exchanges logged yet.</div>
                         }
                       </div>
                     </div>
@@ -2058,39 +2063,39 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   @if (getDealTab(deal.id) === 'meetings') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider">Meetings & Technical Demos</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'meetings')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Log Meeting
+                        <span class="eyebrow">Meetings & Technical Demos</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'meetings')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Log Meeting
                         </button>
                       </div>
 
                       <div class="space-y-3">
                         @for (meeting of deal.activityLog?.meetings; track meeting.id) {
-                          <div class="bg-white border border-zinc-150 rounded-lg p-3 shadow-xs space-y-2">
+                          <div class="bg-surface border border-line-soft rounded-lg p-3 shadow-xs space-y-2">
                             <div class="flex justify-between items-start">
                               <div class="flex items-center gap-2">
-                                <span class="font-bold text-zinc-800 text-xs">{{ meeting.title }}</span>
-                                <span [class]="meeting.type === 'teams' ? 'bg-zinc-100 text-zinc-950 border-zinc-200' : 
-                                               meeting.type === 'demo' ? 'bg-zinc-100 text-zinc-950 border-zinc-200' : 
-                                               'bg-zinc-50 text-zinc-700 border-zinc-200'"
-                                      class="px-1.5 py-0.2 rounded text-meta font-semibold border uppercase">
+                                <span class="font-semibold text-ink text-xs">{{ meeting.title }}</span>
+                                <span [class]="meeting.type === 'teams' ? 'bg-muted text-ink border-line' : 
+                                               meeting.type === 'demo' ? 'bg-muted text-ink border-line' : 
+                                               'bg-subtle text-ink-2 border-line'"
+                                      class="px-1.5 py-0.2 rounded-sm text-meta font-semibold border uppercase">
                                   {{ meeting.type }}
                                 </span>
                               </div>
-                              <span class="text-meta text-zinc-400 font-sans">{{ meeting.date }} à {{ meeting.time }}</span>
+                              <span class="text-meta text-ink-3">{{ meeting.date }} à {{ meeting.time }}</span>
                             </div>
                             
-                            <div class="text-meta text-zinc-500">
+                            <div class="text-meta text-ink-3">
                               <strong>Location:</strong> {{ meeting.location }} | 
                               <strong>Attendees:</strong> 
                               @for (att of meeting.attendees; track $index) {
-                                <span class="inline-block bg-zinc-100 text-zinc-600 px-1.5 py-0.2 rounded-full mx-0.5">{{ att }}</span>
+                                <span class="inline-block bg-muted text-ink-2 px-1.5 py-0.2 rounded-full mx-0.5">{{ att }}</span>
                               }
                             </div>
-                            <p class="text-meta text-zinc-600 font-sans leading-relaxed border-t border-zinc-50 pt-1.5">{{ meeting.summary }}</p>
+                            <p class="text-meta text-ink-2 leading-relaxed border-t border-line-soft pt-1.5">{{ meeting.summary }}</p>
                           </div>
                         } @empty {
-                          <div class="text-center py-6 text-zinc-400 text-xs">No meetings logged yet.</div>
+                          <div class="text-center py-6 text-ink-3 text-xs">No meetings logged yet.</div>
                         }
                       </div>
                     </div>
@@ -2100,36 +2105,36 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   @if (getDealTab(deal.id) === 'recordings') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider">Teams Meeting Records</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'recordings')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Add Link
+                        <span class="eyebrow">Teams Meeting Records</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'recordings')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Add Link
                         </button>
                       </div>
 
                       <div class="space-y-2">
                         @for (rec of deal.activityLog?.recordings; track rec.id) {
-                          <div class="bg-white border border-zinc-150 rounded-lg p-3 shadow-xs flex items-center justify-between gap-4">
+                          <div class="bg-surface border border-line-soft rounded-lg p-3 shadow-xs flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
-                              <div class="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-900 flex items-center justify-center shrink-0 border border-zinc-200">
-                                <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">videocam</mat-icon>
+                              <div class="w-8 h-8 rounded-lg bg-muted text-ink flex items-center justify-center shrink-0 border border-line">
+                                <mat-icon class="icon-md">videocam</mat-icon>
                               </div>
                               <div>
-                                <span class="font-bold text-zinc-800 text-xs block">{{ rec.title }}</span>
-                                <span class="text-meta text-zinc-400 font-sans">{{ rec.date }} | Duration: {{ rec.duration }}</span>
+                                <span class="font-semibold text-ink text-xs block">{{ rec.title }}</span>
+                                <span class="text-meta text-ink-3">{{ rec.date }} | Duration: {{ rec.duration }}</span>
                               </div>
                             </div>
                             
                             <div class="flex gap-2">
-                              <a [href]="rec.meetingLink" target="_blank" class="px-2.5 py-1 text-meta font-semibold rounded bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200 flex items-center gap-0.5">
-                                <mat-icon class="text-[12px] w-3 h-3">link</mat-icon> Teams
+                              <a [href]="rec.meetingLink" target="_blank" class="btn-secondary btn-sm">
+                                <mat-icon class="icon-xs">link</mat-icon> Teams
                               </a>
-                              <a [href]="rec.recordingLink" target="_blank" class="px-2.5 py-1 text-meta font-semibold rounded bg-zinc-100 text-zinc-950 border border-zinc-300 hover:bg-zinc-200 flex items-center gap-0.5">
-                                <mat-icon class="text-[12px] w-3 h-3 flex items-center justify-center">play_arrow</mat-icon> Record
+                              <a [href]="rec.recordingLink" target="_blank" class="btn-secondary btn-sm">
+                                <mat-icon class="icon-xs">play_arrow</mat-icon> Record
                               </a>
                             </div>
                           </div>
                         } @empty {
-                          <div class="text-center py-6 text-zinc-400 text-xs">No recording links added yet.</div>
+                          <div class="text-center py-6 text-ink-3 text-xs">No recording links added yet.</div>
                         }
                       </div>
                     </div>
@@ -2139,24 +2144,24 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   @if (getDealTab(deal.id) === 'notes') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider">Sales Notes & Comments</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'notes')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Add Note
+                        <span class="eyebrow">Sales Notes & Comments</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'notes')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Add Note
                         </button>
                       </div>
 
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @for (note of deal.activityLog?.notes; track note.id) {
-                          <div class="bg-zinc-100/50 border border-zinc-200 rounded-lg p-3 shadow-xs space-y-1.5 relative overflow-hidden font-sans">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-zinc-500"></div>
-                            <div class="flex justify-between items-center text-meta text-zinc-400 font-sans">
+                          <div class="bg-muted border border-line rounded-lg p-3 shadow-xs space-y-1.5 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-ink-3"></div>
+                            <div class="flex justify-between items-center text-meta text-ink-3">
                               <span>By: {{ note.author }}</span>
                               <span>{{ note.date }}</span>
                             </div>
-                            <p class="text-meta text-zinc-700 leading-relaxed font-sans">{{ note.content }}</p>
+                            <p class="text-meta text-ink-2 leading-relaxed">{{ note.content }}</p>
                           </div>
                         } @empty {
-                          <div class="col-span-2 text-center py-6 text-zinc-400 text-xs">No notes added yet.</div>
+                          <div class="col-span-2 text-center py-6 text-ink-3 text-xs">No notes added yet.</div>
                         }
                       </div>
                     </div>
@@ -2166,31 +2171,31 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   @if (getDealTab(deal.id) === 'followups') {
                     <div class="space-y-4">
                       <div class="flex justify-between items-center">
-                        <span class="text-meta font-semibold text-zinc-500 uppercase tracking-wider font-sans">Upcoming Alerts & Action Reminders</span>
-                        <button type="button" (click)="openAddActivityModal(deal.id, 'followups')" class="text-zinc-900 hover:text-zinc-950 text-xs font-semibold flex items-center gap-0.5">
-                          <mat-icon class="text-[16px] w-4 h-4 flex items-center justify-center">add</mat-icon> Add Follow-up
+                        <span class="eyebrow">Upcoming Alerts & Action Reminders</span>
+                        <button type="button" (click)="openAddActivityModal(deal.id, 'followups')" class="text-ink hover:text-ink text-xs font-semibold flex items-center gap-0.5">
+                          <mat-icon class="icon-sm">add</mat-icon> Add Follow-up
                         </button>
                       </div>
 
                       <div class="space-y-2">
                         @for (f of deal.activityLog?.followUps; track f.id) {
-                          <div class="bg-white border border-zinc-150 rounded-lg p-3 shadow-xs flex items-center justify-between gap-4">
+                          <div class="bg-surface border border-line-soft rounded-lg p-3 shadow-xs flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
-                              <button type="button" (click)="toggleFollowUpStatus(deal.id, f.id, f.status)" class="text-zinc-400 hover:text-zinc-900">
-                                <mat-icon class="text-base w-4.5 h-4.5 flex items-center justify-center">{{ f.status === 'done' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                              <button type="button" (click)="toggleFollowUpStatus(deal.id, f.id, f.status)" class="btn-icon btn-sm">
+                                <mat-icon class="icon-sm">{{ f.status === 'done' ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
                               </button>
                               <div>
-                                <span [class.line-through]="f.status === 'done'" [class.text-zinc-400]="f.status === 'done'" class="font-bold text-zinc-800 text-xs block font-sans">{{ f.title }}</span>
-                                <span class="text-meta text-zinc-400 font-sans">Due date: {{ f.dueDate }} | Owner: {{ f.assignedTo }}</span>
+                                <span [class.line-through]="f.status === 'done'" [class.text-ink-3]="f.status === 'done'" class="font-semibold text-ink text-xs block">{{ f.title }}</span>
+                                <span class="text-meta text-ink-3">Due date: {{ f.dueDate }} | Owner: {{ f.assignedTo }}</span>
                               </div>
                             </div>
                             
-                            <span [class]="f.status === 'done' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'" class="px-2 py-0.5 border text-meta font-bold uppercase rounded font-sans">
+                            <span [class]="f.status === 'done' ? 'badge-success' : 'badge-warning'" class="badge">
                               {{ f.status === 'done' ? 'Completed' : 'Pending' }}
                             </span>
                           </div>
                         } @empty {
-                          <div class="text-center py-6 text-zinc-400 text-xs">No follow-ups scheduled yet.</div>
+                          <div class="text-center py-6 text-ink-3 text-xs">No follow-ups scheduled yet.</div>
                         }
                       </div>
                     </div>
@@ -2201,15 +2206,15 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <div class="flex justify-between items-center mb-2 px-1">
-                          <span class="text-meta font-bold text-zinc-700 uppercase">Juin 2026</span>
-                          <span class="text-meta text-zinc-400 flex items-center gap-0.5 font-semibold">
-                            <span class="w-1.5 h-1.5 bg-zinc-900 rounded-full inline-block"></span> Outlook Sync TBD
+                          <span class="eyebrow">Juin 2026</span>
+                          <span class="text-meta text-ink-3 flex items-center gap-0.5 font-semibold">
+                            <span class="w-1.5 h-1.5 bg-primary rounded-full inline-block"></span> Outlook Sync TBD
                           </span>
                         </div>
 
                         <!-- Calendar Grid -->
-                        <div class="bg-white border border-zinc-200 rounded-xl p-2.5 shadow-xs">
-                          <div class="grid grid-cols-7 gap-1 text-center font-bold text-meta text-zinc-400 mb-1 border-b border-zinc-50 pb-1">
+                        <div class="card p-2.5">
+                          <div class="grid grid-cols-7 gap-1 text-center font-semibold text-meta text-ink-3 mb-1 border-b border-line-soft pb-1">
                             @for (h of calendarHeaders; track h) {
                               <div>{{ h }}</div>
                             }
@@ -2217,13 +2222,13 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                           <div class="grid grid-cols-7 gap-1.5">
                             @for (day of calendarDays; track day) {
                               <button type="button" (click)="selectCalendarDay(deal.id, day)"
-                                      [class]="isSelectedCalendarDay(deal.id, day) ? 'bg-zinc-900 text-white font-bold' : 
-                                               hasEventsOnDay(deal, day) ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-300' : 
-                                               'bg-zinc-50 text-zinc-700 hover:bg-zinc-100 border-zinc-105 border-zinc-100'"
+                                      [class]="isSelectedCalendarDay(deal.id, day) ? 'bg-primary text-on-primary font-semibold' : 
+                                               hasEventsOnDay(deal, day) ? 'bg-muted text-ink font-semibold border-line-strong' : 
+                                               'bg-subtle text-ink-2 hover:bg-muted border-line-soft border-line-soft'"
                                       class="w-full aspect-square rounded-lg text-meta font-semibold border flex flex-col items-center justify-center relative transition-all">
                                 {{ day }}
                                 @if (hasEventsOnDay(deal, day) && !isSelectedCalendarDay(deal.id, day)) {
-                                  <span class="absolute bottom-1 w-1.5 h-1.5 bg-zinc-900 rounded-full"></span>
+                                  <span class="absolute bottom-1 w-1.5 h-1.5 bg-primary rounded-full"></span>
                                 }
                               </button>
                             }
@@ -2234,31 +2239,31 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                       <!-- Selected Day Details -->
                       <div class="flex flex-col justify-between">
                         <div class="space-y-2">
-                          <span class="text-meta font-bold text-zinc-700 block mb-2 uppercase">
+                          <span class="eyebrow block mb-2">
                             Events: {{ getSelectedCalendarDay(deal.id) ? 'Day ' + getSelectedCalendarDay(deal.id) + ' June' : 'Select a day' }}
                           </span>
 
                           <div class="space-y-2">
                             @for (m of getEventsOnDay(deal, getSelectedCalendarDay(deal.id) || 15); track m.id) {
-                              <div class="bg-white border border-zinc-200 rounded-lg p-2.5 shadow-xs">
+                              <div class="bg-surface border border-line rounded-lg p-2.5 shadow-xs">
                                 <div class="flex justify-between items-center mb-1">
-                                  <span class="font-bold text-zinc-900 text-xs">{{ m.title }}</span>
-                                  <span class="text-meta text-zinc-400 font-sans">{{ m.time }}</span>
+                                  <span class="font-semibold text-ink text-xs">{{ m.title }}</span>
+                                  <span class="text-meta text-ink-3">{{ m.time }}</span>
                                 </div>
-                                <div class="text-meta text-zinc-500 uppercase tracking-wider mb-1 font-sans">
+                                <div class="text-meta text-ink-3 uppercase tracking-wider mb-1">
                                   Type: {{ m.type }} | Location: {{ m.location }}
                                 </div>
-                                <p class="text-meta text-zinc-600 line-clamp-2 leading-relaxed font-sans">{{ m.summary }}</p>
+                                <p class="text-meta text-ink-2 line-clamp-2 leading-relaxed">{{ m.summary }}</p>
                               </div>
                             } @empty {
-                              <div class="text-center py-8 text-zinc-400 text-meta bg-white border border-zinc-150 rounded-xl font-sans">
+                              <div class="text-center py-8 text-ink-3 text-meta bg-surface border border-line-soft rounded-xl">
                                 No meetings scheduled on this day.
                               </div>
                             }
                           </div>
                         </div>
 
-                        <div class="text-meta badge text-zinc-500 rounded-lg p-2.5 border border-zinc-150 mt-4 leading-relaxed font-sans">
+                        <div class="badge badge-neutral p-2.5 mt-4 leading-relaxed">
                           💡 <strong>Tip:</strong> Meetings logged in the <strong>Meetings</strong> tab automatically populate this calendar view.
                         </div>
                       </div>
@@ -2270,28 +2275,28 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             </div>
 
             <!-- Footer Actions -->
-            <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-200 flex justify-between items-center shrink-0 font-sans">
+            <div class="px-6 py-4 bg-subtle border-t border-line flex justify-between items-center shrink-0">
               <div class="flex items-center gap-2">
-                <span class="text-xs text-zinc-500">Lines: {{ deal.orderLines?.length || 0 }} items</span>
+                <span class="text-xs text-ink-3">Lines: {{ deal.orderLines?.length || 0 }} items</span>
               </div>
               <div class="flex gap-2">
                 <!-- Create PO trigger if none exists for this deal -->
                 @if (!hasPOForDeal(deal.id) && canCreatePO()) {
-                  <button (click)="openCreatePOModal(deal)" class="bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-zinc-950 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center">
-                    <mat-icon class="mr-1 text-[16px] w-4 h-4">add_shopping_cart</mat-icon> Create PO (Operations)
+                  <button (click)="openCreatePOModal(deal)" class="btn-secondary btn-sm">
+                    <mat-icon class="mr-1 icon-sm">add_shopping_cart</mat-icon> Create PO (Operations)
                   </button>
                 }
                 @if (canCreateTask()) {
-                  <button (click)="openAssignTaskModal('deal', deal.id, deal.title)" class="bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-100 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                    <mat-icon class="text-[16px] w-4 h-4">assignment</mat-icon> Assign Task
+                  <button (click)="openAssignTaskModal('deal', deal.id, deal.title)" class="btn-secondary btn-sm">
+                    <mat-icon class="icon-sm">assignment</mat-icon> Assign Task
                   </button>
                 }
                 @if (deal.stage === 'New' && canWriteDeal()) {
-                  <button (click)="dealsService.updateDealStage(deal.id, 'Confirmed')" class="bg-zinc-900 hover:bg-zinc-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center">
-                    <mat-icon class="mr-1 text-[16px] w-4 h-4">check</mat-icon> Confirm Deal
+                  <button (click)="dealsService.updateDealStage(deal.id, 'Confirmed')" class="btn-primary btn-sm">
+                    <mat-icon class="mr-1 icon-sm">check</mat-icon> Confirm Deal
                   </button>
                 }
-                <button (click)="closeDealDrawer()" class="bg-white border border-zinc-300 text-zinc-700 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all">Close</button>
+                <button (click)="closeDealDrawer()" class="btn-secondary btn-sm">Close</button>
               </div>
             </div>
           </div>
@@ -2301,29 +2306,29 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
     <!-- Delete Proposal Confirmation Modal -->
     @if (proposalDeleteModalOpen() && proposalToDelete()) {
-      <div class="fixed inset-0 z-50 bg-zinc-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white shadow-xl rounded-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
           <div class="flex justify-between items-center">
-            <h3 class="text-lg font-bold text-zinc-950">Delete Proposal</h3>
-            <button (click)="cancelProposalDelete()" class="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <mat-icon class="w-5 h-5 text-[20px]! leading-none!">close</mat-icon>
+            <h3 class="modal-title">Delete Proposal</h3>
+            <button (click)="cancelProposalDelete()" class="btn-icon btn-sm">
+              <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
-          <p class="text-sm text-zinc-600 leading-relaxed">
+          <p class="text-sm text-ink-2 leading-relaxed">
             Are you sure you want to delete this proposal?
           </p>
-          <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3">
-            <div class="text-sm font-semibold text-zinc-900">{{ proposalToDelete()?.title }}</div>
+          <div class="bg-subtle border border-line rounded-xl px-4 py-3">
+            <div class="text-sm font-semibold text-ink">{{ proposalToDelete()?.title }}</div>
             @if (proposalToDelete()?.id) {
-              <div class="text-meta text-zinc-400 font-mono mt-0.5">#{{ proposalToDelete()?.id }}</div>
+              <div class="text-meta text-ink-3 font-mono mt-0.5">#{{ (proposalToDelete()?.id ?? '').slice(0, 8) }}</div>
             }
           </div>
-          <div class="flex justify-end gap-2 pt-2 border-t border-white/30">
-            <button (click)="cancelProposalDelete()" class="px-4 py-2 border border-zinc-200 text-zinc-600 text-sm font-semibold rounded-lg hover:bg-zinc-50">
+          <div class="flex justify-end gap-2 pt-2 border-t border-line-soft">
+            <button (click)="cancelProposalDelete()" class="btn-secondary">
               Cancel
             </button>
-            <button (click)="confirmProposalDelete()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5">
-              <mat-icon class="w-4 h-4 text-[16px]! leading-none!">delete</mat-icon>
+            <button (click)="confirmProposalDelete()" class="btn-danger">
+              <mat-icon class="icon-sm">delete</mat-icon>
               Delete
             </button>
           </div>
@@ -2333,6 +2338,8 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
   `
 })
 export class SalesComponent {
+  private notify = inject(ToastService);
+  private confirmDialog = inject(ConfirmService);
   dealsService = inject(DealsService);
   proposalsService = inject(ProposalsService);
   purchaseOrdersService = inject(PurchaseOrdersService);
@@ -2404,6 +2411,23 @@ export class SalesComponent {
   navigateTab = signal<string | null>(null);
   activeTab = signal<'deals' | 'proposals' | 'pos'>('deals');
   dealsView = signal<'table' | 'board'>('table');
+
+  // ── Deal summary (the stat cards describe exactly what the table lists) ──
+  private isClosedStage = (stage: string) => stage === 'Closed Won' || stage === 'Closed Lost';
+  private openDealsList = computed(() => this.dealsService.allDeals().filter(d => !this.isClosedStage(d.stage)));
+  private wonDeals = computed(() => this.dealsService.allDeals().filter(d => d.stage === 'Closed Won'));
+  private lostDeals = computed(() => this.dealsService.allDeals().filter(d => d.stage === 'Closed Lost'));
+  private sumAmount = (list: { amount: number }[]) => list.reduce((total, d) => total + (d.amount || 0), 0);
+  openDealCount = computed(() => this.openDealsList().length);
+  openDealValue = computed(() => this.sumAmount(this.openDealsList()));
+  wonCount = computed(() => this.wonDeals().length);
+  wonValue = computed(() => this.sumAmount(this.wonDeals()));
+  lostCount = computed(() => this.lostDeals().length);
+  lostValue = computed(() => this.sumAmount(this.lostDeals()));
+  averageDeal = computed(() => {
+    const all = this.dealsService.allDeals();
+    return all.length ? this.sumAmount(all) / all.length : 0;
+  });
 
   // Expose state properties for template and non-domain operations
   users = computed(() => this.state.users());
@@ -2740,8 +2764,8 @@ export class SalesComponent {
     this.selectedPOForDrawer.set(null);
   }
 
-  deletePurchaseOrder(po: PurchaseOrder) {
-    if (confirm(`Delete purchase order "#${po.id}"? This cannot be undone.`)) {
+  async deletePurchaseOrder(po: PurchaseOrder) {
+    if (await this.confirmDialog.ask({ title: 'Delete purchase order?', message: `PO #${po.id.slice(0, 8)} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete PO', danger: true })) {
       this.purchaseOrdersService.deletePurchaseOrder(po.id);
       this.closePODrawer();
     }
@@ -2794,34 +2818,53 @@ export class SalesComponent {
     return this.dealsService.allDeals().find(d => d.id === id)?.title || 'N/A';
   }
 
+  /** Whole-number money for KPI cards, where decimals are noise. */
+  money0(value: number) {
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(value);
+  }
+
+  /** Deal stage → badge colour: attention stages warm, outcomes semantic. */
+  getDealStageBadge(stage: string): string {
+    switch (stage) {
+      case 'Closed Won': return 'badge-success';
+      case 'Closed Lost': return 'badge-danger';
+      case 'Overdue': return 'badge-danger';
+      case 'Paid': return 'badge-success';
+      case 'Invoiced': return 'badge-info';
+      case 'Awaiting Invoicing': case 'Awaiting Delivery': return 'badge-warning';
+      case 'PO Sent': return 'badge-violet';
+      default: return 'badge-neutral';
+    }
+  }
+
   formatCurrency(value: number) {
     return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(value);
   }
 
   getStatusColor(status: string) {
     switch (status) {
-      case 'Completed': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      case 'In Progress': return 'bg-sky-50 text-sky-700 border border-sky-200';
-      default: return 'bg-zinc-100 text-zinc-800 border border-zinc-200';
+      case 'Completed': return 'badge-success';
+      case 'In Progress': return 'badge-info';
+      default: return 'bg-muted text-ink border border-line';
     }
   }
 
   getStageBadgeClass(stage?: string) {
     switch (stage) {
       case 'New Lead':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-muted text-ink-2 border-line';
       case 'Qualified':
-        return 'bg-sky-50 text-sky-700 border-sky-200';
+        return 'badge-info';
       case 'Meeting Scheduled':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'badge-violet';
       case 'Proposal Sent':
-        return 'bg-violet-50 text-violet-700 border-violet-200';
+        return 'badge-violet';
       case 'Negotiation':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'badge-warning';
       case 'Won / Lost':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'badge-success';
       default:
-        return 'bg-zinc-50 text-zinc-600 border-zinc-100';
+        return 'bg-subtle text-ink-2 border-line-soft';
     }
   }
 
@@ -3287,7 +3330,7 @@ export class SalesComponent {
           onResolved(id);
         });
       } else {
-        alert('Please specify a vendor name');
+        this.notify.show('Please specify a vendor name.', { type: 'warning' });
         onResolved(null);
       }
       return;
@@ -3542,15 +3585,15 @@ export class SalesComponent {
 
     if (this.newPartner.name.trim()) {
       if (!this.newPartner.ICE || this.newPartner.ICE.length !== 15) {
-        alert('ICE must be exactly 15 digits.');
+        this.notify.show('ICE must be exactly 15 digits.', { type: 'warning' });
         return;
       }
       if (!this.newPartner.IF || !this.newPartner.IF.trim()) {
-        alert('IF is required.');
+        this.notify.show('IF is required.', { type: 'warning' });
         return;
       }
       if (!this.newPartner.RC || !this.newPartner.RC.trim()) {
-        alert('RC is required.');
+        this.notify.show('RC is required.', { type: 'warning' });
         return;
       }
 

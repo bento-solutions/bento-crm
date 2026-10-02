@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
+import { identityColor } from './ui/identity-color';
 
 interface CalendarDay {
   day: number;
@@ -52,9 +53,7 @@ interface CalendarDay {
               @if (cell.teamMembers.length) {
                 <div class="cal__people">
                   @for (member of cell.teamMembers.slice(0, 3); track member) {
-                    <span class="cal__avatar" [style.background-color]="getUserColor(member)" [title]="member">
-                      {{ getInitials(member) }}
-                    </span>
+                    <span class="cal__avatar" [style.background-color]="getUserColor(member)" [title]="member" [attr.aria-label]="member"></span>
                   }
                   @if (cell.teamMembers.length > 3) {
                     <span class="cal__avatar cal__avatar--more">+{{ cell.teamMembers.length - 3 }}</span>
@@ -74,24 +73,24 @@ interface CalendarDay {
     .cal { display: flex; flex-direction: column; height: 100%; min-height: 0; }
     .cal--card {
       background: var(--color-surface); border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg); padding: 14px;
+      border-radius: var(--r-card); padding: var(--tile-padding);
     }
     .cal__heading {
-      font-size: 11px; font-weight: 700; letter-spacing: 0.045em; text-transform: uppercase;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       color: var(--color-text-secondary); margin-bottom: 8px;
     }
     .cal__nav { display: flex; align-items: center; gap: 2px; margin-bottom: 6px; }
     .cal__nav-btn {
-      width: 22px; height: 22px; border-radius: 6px; border: none; cursor: pointer;
+      width: 24px; height: 24px; border-radius: var(--r-sm); border: none; cursor: pointer;
       background: transparent; color: var(--color-text-tertiary);
       display: inline-flex; align-items: center; justify-content: center;
       transition: all var(--transition-fast);
     }
     .cal__nav-btn:hover { background: var(--color-surface-active); color: var(--color-text-primary); }
     .cal__nav-btn .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
-    .cal__month { font-size: 11.5px; font-weight: 700; color: var(--color-text-primary); user-select: none; }
+    .cal__month { font-size: 12px; font-weight: 600; color: var(--color-text-primary); user-select: none; }
     .cal__today {
-      margin-left: auto; font-size: 10px; font-weight: 700; padding: 3px 8px;
+      margin-inline-start: auto; font-size: 11px; font-weight: 500; padding: 4px 10px;
       border-radius: 999px; cursor: pointer;
       border: 1px solid var(--color-border); background: var(--color-surface);
       color: var(--color-text-secondary); transition: all var(--transition-fast);
@@ -100,8 +99,8 @@ interface CalendarDay {
 
     .cal__dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-bottom: 3px; }
     .cal__dow span {
-      text-align: center; font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
-      text-transform: uppercase; color: var(--color-text-placeholder);
+      text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+      text-transform: uppercase; color: var(--color-text-tertiary);
     }
 
     /* 1fr rows make the weeks divide whatever height the tile gives us — no dead strip. */
@@ -112,7 +111,7 @@ interface CalendarDay {
     }
     .cal__cell {
       position: relative; min-height: 0; min-width: 0; overflow: hidden;
-      border-radius: var(--radius-sm); padding: 3px;
+      border-radius: var(--r-sm); padding: 4px;
       display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
       border: 1px solid var(--color-border-light); background: var(--color-surface);
     }
@@ -124,16 +123,12 @@ interface CalendarDay {
       border-color: var(--tile, var(--color-accent));
       box-shadow: inset 0 0 0 1px var(--tile, var(--color-accent));
     }
-    .cal__day { font-size: 10px; font-weight: 600; color: var(--color-text-tertiary); line-height: 1.1; }
-    .cal__cell.is-today .cal__day { color: var(--tile, var(--color-accent)); font-weight: 800; }
+    .cal__day { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); line-height: 1.1; }
+    .cal__cell.is-today .cal__day { color: var(--tile, var(--color-accent-text)); font-weight: 600; }
     .cal__cell.has-people .cal__day { color: var(--color-text-primary); }
-    .cal__people { display: flex; flex-wrap: wrap; gap: 1px; }
-    .cal__avatar {
-      width: 14px; height: 14px; border-radius: 999px; flex-shrink: 0;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 7px; font-weight: 700; color: #fff; line-height: 1;
-    }
-    .cal__avatar--more { background: var(--color-surface-active); color: var(--color-text-secondary); }
+    .cal__people { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+    .cal__avatar { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+    .cal__avatar--more { width: auto; height: auto; background: none; font-size: 11px; font-weight: 600; line-height: 1; color: var(--color-text-secondary); }
   `]
 })
 export class PartnerScheduleCalendarComponent {
@@ -230,19 +225,7 @@ export class PartnerScheduleCalendarComponent {
     this.currentYear.set(now.getFullYear());
   }
 
-  getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0][0]?.toUpperCase() || '?';
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-
   getUserColor(name: string): string {
-    const colors = [
-      '#6366f1', '#10b981', '#f59e0b', '#ef4444',
-      '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
-      '#3b82f6', '#84cc16'
-    ];
-    const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+    return identityColor(name);
   }
 }

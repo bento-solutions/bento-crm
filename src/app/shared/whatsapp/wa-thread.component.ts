@@ -66,21 +66,21 @@ interface ThreadItem {
               [class.wa-failed]="m.status === 'FAILED'"
             >
               @if (m.status === 'DRAFT') {
-                <div class="text-meta font-bold uppercase tracking-wide mb-1 flex items-center gap-1" style="color: var(--color-warning)">
-                  <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">edit_note</mat-icon>
+                <div class="eyebrow mb-1 flex items-center gap-1" style="color: var(--color-warning)">
+                  <mat-icon class="!text-base !w-[14px] !h-[14px]">edit_note</mat-icon>
                   {{ (m.source === 'AGENT' ? 'inbox.draft.agentLabel' : 'inbox.draft.label') | translate }}
                 </div>
               } @else if (chip(m); as c) {
                 <div class="mb-1">
-                  <span class="wa-chip text-meta font-semibold px-1.5 py-0.5 rounded inline-flex items-center gap-1">
-                    <mat-icon class="!text-[12px] !w-[12px] !h-[12px]">{{ c.icon }}</mat-icon>{{ c.label | translate }}
+                  <span class="wa-chip text-meta font-semibold px-1.5 py-0.5 rounded-sm inline-flex items-center gap-1">
+                    <mat-icon class="!text-xs !w-[12px] !h-[12px]">{{ c.icon }}</mat-icon>{{ c.label | translate }}
                   </span>
                 </div>
               }
 
               @if (editingId() === m.id) {
                 <textarea
-                  class="wa-edit w-full rounded-lg p-2 text-sm"
+                  class="input-field w-full"
                   rows="3"
                   dir="auto"
                   [ngModel]="editText()"
@@ -95,7 +95,7 @@ interface ThreadItem {
 
               @if (m.status === 'FAILED') {
                 <p class="text-meta mt-1 flex items-center gap-1" style="color: var(--color-danger)">
-                  <mat-icon class="!text-[14px] !w-[14px] !h-[14px]">error_outline</mat-icon>
+                  <mat-icon class="!text-base !w-[14px] !h-[14px]">error_outline</mat-icon>
                   {{ 'inbox.failed' | translate }}{{ m.errorTitle ? ': ' + m.errorTitle : '' }}
                 </p>
               }
@@ -104,7 +104,7 @@ interface ThreadItem {
                 <span>{{ time(m.occurredAt) }}</span>
                 @if (m.direction === 'OUT' && m.status !== 'DRAFT') {
                   <mat-icon
-                    class="!text-[14px] !w-[14px] !h-[14px]"
+                    class="!text-base !w-[14px] !h-[14px]"
                     [class.wa-read]="m.status === 'READ'"
                     [attr.aria-label]="('inbox.status.' + m.status) | translate"
                     [title]="('inbox.status.' + m.status) | translate"

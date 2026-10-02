@@ -8,86 +8,62 @@ import { ToastService, Toast } from '../services/toast.service';
   standalone: true,
   imports: [MatIconModule, CommonModule],
   template: `
-    <div class="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse gap-3 pointer-events-none">
+    <div class="toast-stack" aria-live="polite">
       @for (toast of toasts(); track toast.id) {
         <div
           (mouseenter)="service.pauseDismiss(toast.id)"
           (mouseleave)="service.resumeDismiss(toast.id)"
-          class="pointer-events-auto flex items-start gap-3 px-4 py-3.5 rounded-xl shadow-xl border backdrop-blur-sm 
-                 min-w-[340px] max-w-[420px] animate-slide-in-right"
-          [class]="getTypeClasses(toast.type)"
+          class="toast animate-slide-in-right"
+          [attr.data-type]="toast.type"
+          [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
         >
-          <mat-icon class="text-[20px] w-5 h-5 mt-0.5 shrink-0">{{ getTypeIcon(toast.type) }}</mat-icon>
+          <mat-icon class="toast__icon">{{ getTypeIcon(toast.type) }}</mat-icon>
 
-          <p class="flex-1 text-sm font-medium leading-snug min-w-0 [&_strong]:font-semibold" [innerHTML]="toast.message"></p>
+          <p class="toast__message" [innerHTML]="toast.message"></p>
 
           @if (toast.undo) {
-            <button
-              (click)="handleUndo(toast)"
-              class="text-xs font-semibold uppercase tracking-wider shrink-0 px-2 py-1 rounded-lg transition-colors"
-              [class]="getUndoClasses(toast.type)"
-            >
-              Undo
-            </button>
+            <button (click)="handleUndo(toast)" class="btn-ghost btn-sm">Undo</button>
           }
 
           @if (toast.action) {
-            <button
-              (click)="handleAction(toast)"
-              class="text-xs font-semibold shrink-0 px-2 py-1 rounded-lg transition-colors"
-              [class]="getActionClasses(toast.type)"
-            >
-              {{ toast.action.label }}
-            </button>
+            <button (click)="handleAction(toast)" class="btn-ghost btn-sm">{{ toast.action.label }}</button>
           }
 
-          <button
-            (click)="service.dismiss(toast.id)"
-            class="shrink-0 p-0.5 rounded-md transition-colors flex items-center justify-center"
-            [class]="getCloseClasses(toast.type)"
-          >
-            <mat-icon class="text-[16px] w-4 h-4">close</mat-icon>
+          <button (click)="service.dismiss(toast.id)" class="btn-icon btn-sm" aria-label="Dismiss notification">
+            <mat-icon class="icon-sm">close</mat-icon>
           </button>
         </div>
       }
     </div>
   `,
   styles: [`
+    .toast-stack {
+      position: fixed; bottom: 24px; inset-inline-end: 24px; z-index: var(--z-toast);
+      display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto; display: flex; align-items: flex-start; gap: 10px;
+      min-width: 320px; max-width: 420px; padding: 12px 12px 12px 14px;
+      background: var(--color-surface); color: var(--color-text-primary);
+      border: 1px solid var(--color-border); border-radius: var(--r-card); box-shadow: var(--shadow-lg);
+    }
+    .toast__icon { flex-shrink: 0; margin-top: 1px; font-size: 20px; width: 20px; height: 20px; line-height: 20px; color: var(--color-text-tertiary); }
+    .toast[data-type='success'] .toast__icon { color: var(--color-success); }
+    .toast[data-type='error'] .toast__icon { color: var(--color-danger); }
+    .toast[data-type='warning'] .toast__icon { color: var(--color-warning); }
+    .toast[data-type='info'] .toast__icon { color: var(--color-info); }
+    .toast__message { flex: 1; min-width: 0; margin: 0; padding-top: 2px; font-size: 13px; line-height: 1.45; font-weight: 500; }
+    .toast__message :is(strong, b) { font-weight: 600; }
     @keyframes slide-in-right {
-      from {
-        opacity: 0;
-        transform: translateX(100%) scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0) scale(1);
-      }
+      from { opacity: 0; transform: translateX(24px) scale(0.98); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
     }
-    @keyframes fade-out {
-      from { opacity: 1; transform: translateX(0); }
-      to { opacity: 0; transform: translateX(100%); }
-    }
-    .animate-slide-in-right {
-      animation: slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .animate-fade-out {
-      animation: fade-out 0.2s ease-in forwards;
-    }
+    .animate-slide-in-right { animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
   `]
 })
 export class ToastContainerComponent {
   service = inject(ToastService);
   toasts = this.service.toasts;
-
-  getTypeClasses(type: string): string {
-    switch (type) {
-      case 'success': return 'bg-emerald-50 border-emerald-200 text-emerald-900';
-      case 'error':   return 'bg-red-50 border-red-200 text-red-900';
-      case 'warning': return 'bg-amber-50 border-amber-200 text-amber-900';
-      case 'info':    return 'bg-sky-50 border-sky-200 text-sky-900';
-      default:        return 'bg-white border-zinc-200 text-zinc-900';
-    }
-  }
 
   getTypeIcon(type: string): string {
     switch (type) {
@@ -96,36 +72,6 @@ export class ToastContainerComponent {
       case 'warning': return 'warning';
       case 'info':    return 'info';
       default:        return 'check_circle';
-    }
-  }
-
-  getUndoClasses(type: string): string {
-    switch (type) {
-      case 'success': return 'text-emerald-700 hover:bg-emerald-100';
-      case 'error':   return 'text-red-700 hover:bg-red-100';
-      case 'warning': return 'text-amber-700 hover:bg-amber-100';
-      case 'info':    return 'text-sky-700 hover:bg-sky-100';
-      default:        return 'text-zinc-700 hover:bg-zinc-100';
-    }
-  }
-
-  getActionClasses(type: string): string {
-    switch (type) {
-      case 'success': return 'text-emerald-700 bg-emerald-100 hover:bg-emerald-200';
-      case 'error':   return 'text-red-700 bg-red-100 hover:bg-red-200';
-      case 'warning': return 'text-amber-700 bg-amber-100 hover:bg-amber-200';
-      case 'info':    return 'text-sky-700 bg-sky-100 hover:bg-sky-200';
-      default:        return 'text-zinc-700 bg-zinc-100 hover:bg-zinc-200';
-    }
-  }
-
-  getCloseClasses(type: string): string {
-    switch (type) {
-      case 'success': return 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100';
-      case 'error':   return 'text-red-400 hover:text-red-700 hover:bg-red-100';
-      case 'warning': return 'text-amber-400 hover:text-amber-700 hover:bg-amber-100';
-      case 'info':    return 'text-sky-400 hover:text-sky-700 hover:bg-sky-100';
-      default:        return 'text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100';
     }
   }
 
