@@ -19,6 +19,7 @@ import { EntityLink } from '../shared/related-entity.model';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
+import { TASK_ASSIGNEE_FILTER_KEY } from '../shared/assignee-filter-keys';
 import { CategoryPillComponent } from '../shared/ui/category-pill.component';
 import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
 
@@ -891,16 +892,15 @@ export class TasksComponent {
   categoryFilter = signal<string>('');
 
   /** Narrow the board to tasks assigned to one user ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
-  private static readonly ASSIGNEE_FILTER_KEY = 'bento_task_assignee_filter';
   assigneeFilter = signal<string>(
-    typeof localStorage !== 'undefined' ? localStorage.getItem(TasksComponent.ASSIGNEE_FILTER_KEY) || '' : ''
+    typeof localStorage !== 'undefined' ? localStorage.getItem(TASK_ASSIGNEE_FILTER_KEY) || '' : ''
   );
 
   setAssigneeFilter(value: string) {
     this.assigneeFilter.set(value);
     this.resetPages();
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TasksComponent.ASSIGNEE_FILTER_KEY, value);
+      localStorage.setItem(TASK_ASSIGNEE_FILTER_KEY, value);
     }
   }
 

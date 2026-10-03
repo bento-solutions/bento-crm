@@ -11,6 +11,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { TICKET_ASSIGNEE_FILTER_KEY } from '../shared/assignee-filter-keys';
 import { CategoryPillComponent } from '../shared/ui/category-pill.component';
 import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
 
@@ -374,16 +375,15 @@ export class TicketsComponent {
   categoryFilter = signal<string>('');
 
   /** Narrow the list to tickets assigned to one user ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
-  private static readonly ASSIGNEE_FILTER_KEY = 'bento_ticket_assignee_filter';
   assigneeFilter = signal<string>(
-    typeof localStorage !== 'undefined' ? localStorage.getItem(TicketsComponent.ASSIGNEE_FILTER_KEY) || '' : ''
+    typeof localStorage !== 'undefined' ? localStorage.getItem(TICKET_ASSIGNEE_FILTER_KEY) || '' : ''
   );
 
   setAssigneeFilter(value: string) {
     this.assigneeFilter.set(value);
     this.ticketsPage.set(1);
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TicketsComponent.ASSIGNEE_FILTER_KEY, value);
+      localStorage.setItem(TICKET_ASSIGNEE_FILTER_KEY, value);
     }
   }
 

@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CrmStateService, Task, Ticket, TaskStatus } from '../services/crm-state.service';
 import { PartnerScheduleCalendarComponent } from '../shared/partner-schedule-calendar.component';
 import { BentoGrid, BentoTile } from '../shared/bento-grid';
 import { CountUpDirective } from '../shared/count-up.directive';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { TASK_ASSIGNEE_FILTER_KEY, TICKET_ASSIGNEE_FILTER_KEY } from '../shared/assignee-filter-keys';
 import { ENTITY_TONE } from '../shared/ui/tones';
 
 type Tone = 'slate' | 'blue' | 'sky' | 'violet' | 'emerald' | 'amber' | 'rose';
@@ -122,10 +123,27 @@ const CATALOG: TileDef[] = [
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, MatTooltipModule, PartnerScheduleCalendarComponent, BentoGrid, BentoTile, CountUpDirective, PageHeaderComponent],
+  imports: [MatIconModule, MatTooltipModule, PartnerScheduleCalendarComponent, BentoGrid, BentoTile, CountUpDirective, PageHeaderComponent, RouterLink],
   template: `
     <div class="page dash">
-      <app-page-header [title]="greeting()" [subtitle]="subtitle()">
+      <app-page-header [title]="greeting()">
+        <p subtitle class="page-header__subtitle">
+          {{ today() }} ·
+          @if (mine().tickets || mine().tasks) {
+            @if (mine().tickets) {
+              <a routerLink="/tickets" (click)="showMine(ticketsKey)" class="font-semibold text-accent-ink hover:underline underline-offset-2"
+                 title="Open your tickets">{{ mine().tickets }} ticket{{ mine().tickets === 1 ? '' : 's' }}</a>
+            }
+            @if (mine().tickets && mine().tasks) { and }
+            @if (mine().tasks) {
+              <a routerLink="/tasks" (click)="showMine(tasksKey)" class="font-semibold text-accent-ink hover:underline underline-offset-2"
+                 title="Open your tasks">{{ mine().tasks }} task{{ mine().tasks === 1 ? '' : 's' }}</a>
+            }
+            {{ mine().tickets + mine().tasks === 1 ? 'is' : 'are' }} for your attention
+          } @else {
+            You are all caught up
+          }
+        </p>
         <button
           actions
           class="btn-secondary"
@@ -613,11 +631,25 @@ export class DashboardComponent {
     return this.firstName() ? `${part}, ${this.firstName()}` : part;
   });
 
-  subtitle = computed(() => {
-    const day = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    const n = this.attentionCount();
-    return `${day} · ${n ? `${n} item${n === 1 ? '' : 's'} need${n === 1 ? 's' : ''} your attention` : 'You are all caught up'}`;
+  today = computed(() => new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
+
+  /** The signed-in user's own open tickets and tasks — what "for your attention" counts. */
+  mine = computed(() => {
+    const me = this.state.currentUserId();
+    if (!me) return { tickets: 0, tasks: 0 };
+    return {
+      tickets: this.state.tickets().filter(t => t.assignedToUserId === me && (t.status === 'OPEN' || t.status === 'IN_PROGRESS')).length,
+      tasks: this.state.tasks().filter(t => t.assignedToUserId === me && t.status !== 'Completed').length
+    };
   });
+
+  readonly ticketsKey = TICKET_ASSIGNEE_FILTER_KEY;
+  readonly tasksKey = TASK_ASSIGNEE_FILTER_KEY;
+
+  /** Opens Tickets / Tasks already narrowed to the user, so the list matches the number they clicked. */
+  showMine(filterKey: string) {
+    try { localStorage.setItem(filterKey, this.state.currentUserId()); } catch { /* storage unavailable */ }
+  }
 
   // ────────────────────────────────────────────────────────
   // Layout
@@ -714,8 +746,6 @@ export class DashboardComponent {
 
     return [overdueTasks, staleDeals, unassignedTickets];
   });
-
-  attentionCount = computed(() => this.focusLists().reduce((sum, list) => sum + list.length, 0));
 
   todayItems = computed((): TodayItem[] => {
     const [overdueTasks, staleDeals, unassignedTickets] = this.focusLists();
