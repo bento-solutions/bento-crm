@@ -3,6 +3,7 @@ import { ApiService } from '../api.service';
 import { ToastService } from '../toast.service';
 import { Ticket } from '../crm-state.service';
 import { Observable, tap } from 'rxjs';
+import { TasksService } from './tasks.service';
 import { EntityLink, isLinked } from '../../shared/related-entity.model';
 
 export type { Ticket };
@@ -13,6 +14,7 @@ export type { Ticket };
 export class TicketsService {
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private tasks = inject(TasksService);
 
   tickets = signal<Ticket[]>([]);
   isLoaded = signal<boolean>(false);
@@ -84,6 +86,7 @@ export class TicketsService {
       title: merged.title,
       description: merged.description,
       type: merged.type,
+      categoryId: merged.categoryId || undefined,
       status: merged.status,
       priority: merged.priority,
       assignedToUserId: merged.assignedToUserId || undefined,
@@ -97,9 +100,12 @@ export class TicketsService {
   updateTicket(id: string, ticket: Partial<Ticket>): void {
     this.api.updateTicket(id, ticket).subscribe({
       next: (updated) => {
+        const categoryChanged = this.tickets().find(t => t.id === id)?.categoryId !== updated.categoryId;
         this.tickets.update(tickets =>
           tickets.map(t => t.id === id ? updated : t)
         );
+        // The server re-categorises the ticket's tasks; pull them so every list agrees.
+        if (categoryChanged) this.tasks.refresh();
         this.toast.show(`Ticket updated`);
       },
       error: () => this.toast.show('Failed to update ticket', { type: 'error' })

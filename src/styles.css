@@ -897,6 +897,24 @@ mat-icon.mat-icon { color: revert-layer; }
   :is(.tone, .bento-tile, .tone-card)[data-tone='emerald'] { --tile: var(--color-success-text);   --tile-soft: var(--color-success-light); }
   :is(.tone, .bento-tile, .tone-card)[data-tone='amber']   { --tile: var(--color-warning-text);   --tile-soft: var(--color-warning-light); }
   :is(.tone, .bento-tile, .tone-card)[data-tone='rose']    { --tile: var(--color-danger-text);    --tile-soft: var(--color-danger-light); }
+  /* Category pill: a one-word coloured label, tinted from the entity tones above. Tiny on purpose —
+     every ticket and task row carries one. */
+  .category-pill {
+    display: inline-flex; align-items: center; gap: 5px; max-width: 104px; height: 20px; padding-inline: 8px;
+    border-radius: 9999px; font-family: inherit; font-size: 11px; line-height: 1; font-weight: 600; white-space: nowrap;
+    background: var(--tile-soft); color: var(--tile);
+    border: 1px solid color-mix(in srgb, var(--tile) 22%, transparent);
+  }
+  .category-pill__dot { width: 6px; height: 6px; border-radius: 9999px; background: currentColor; flex-shrink: 0; }
+  .category-pill__name { overflow: hidden; text-overflow: ellipsis; }
+  .category-pill .mat-icon { width: 12px; height: 12px; font-size: 12px; }
+  /* In a form the pills are buttons: a ring marks the chosen one. */
+  .category-pill--choice { max-width: none; height: 26px; padding-inline: 10px; cursor: pointer; transition: box-shadow var(--transition-fast); }
+  .category-pill--choice:hover:not(:disabled) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tile) 25%, transparent); }
+  .category-pill--choice.is-selected { box-shadow: 0 0 0 2px var(--tile); }
+  .category-pill--choice:disabled { cursor: not-allowed; opacity: 0.55; }
+  .category-pill--choice:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
   .tone-icon, .icon-chip {
     display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
     width: 28px; height: 28px; border-radius: var(--r-control);

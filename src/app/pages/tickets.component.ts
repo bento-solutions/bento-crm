@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Ticket, TicketStatus, TicketPriority } from '../services/crm-state.service';
-import { TasksService, TicketsService } from '../services/domains';
+import { CategoriesService, TasksService, TicketsService } from '../services/domains';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
@@ -11,10 +11,12 @@ import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { CategoryPillComponent } from '../shared/ui/category-pill.component';
+import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
 
 @Component({
   selector: 'app-tickets',
-  imports: [MatIconModule, CommonModule, FormsModule, CreatedByBadgeComponent, RouterModule, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, PageHeaderComponent, EmptyStateComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, CreatedByBadgeComponent, RouterModule, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, PageHeaderComponent, EmptyStateComponent, CategoryPillComponent, CategoryPickerComponent],
   template: `
     <div class="page">
       <app-page-header title="Tickets" subtitle="Track and resolve customer requests and support issues">
@@ -52,6 +54,13 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
             <option [value]="t">{{ t }}</option>
           }
         </select>
+        <select [ngModel]="categoryFilter()" (ngModelChange)="categoryFilter.set($event); ticketsPage.set(1)" class="input-field" aria-label="Filter tickets by category">
+          <option value="">All Categories</option>
+          <option value="NONE">No category</option>
+          @for (c of categories.categories(); track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
         <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field" aria-label="Filter tickets by assignee">
           <option value="">All Assignees</option>
           <option value="NONE">Unassigned</option>
@@ -69,7 +78,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
       </div>
 
       @if (ticketsService.isLoading$()) {
-        <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="10" [rows]="8" />
+        <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="11" [rows]="8" />
       } @else {
       <div class="table-card">
         <table class="data-table">
@@ -80,6 +89,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               </th>
               <th scope="col">Priority</th>
               <th scope="col">Subject / Title</th>
+              <th scope="col">Category</th>
               <th scope="col">Type</th>
               <th scope="col">Related Partner</th>
               <th scope="col">Tasks</th>
@@ -106,6 +116,9 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
                   @if (ticket.description) {
                     <div class="text-meta text-ink-3 font-medium mt-0.5 truncate max-w-xs" [title]="ticket.description">{{ticket.description}}</div>
                   }
+                </td>
+                <td class="whitespace-nowrap">
+                  <app-category-pill [categoryId]="ticket.categoryId" [showEmpty]="true" />
                 </td>
                 <td class="whitespace-nowrap text-ink-2">
                   <span class="badge badge-neutral">
@@ -162,7 +175,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               </tr>
             } @empty {
               <tr>
-                <td colspan="10" class="row-empty">
+                <td colspan="11" class="row-empty">
                   <app-empty-state icon="support_agent" [title]="hasActiveFilters() ? 'No tickets match your filters' : 'No tickets yet'" [text]="hasActiveFilters() ? 'Try a different search or clear the filters.' : 'Create a ticket to start tracking a customer request.'" />
                 </td>
               </tr>
@@ -254,6 +267,11 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               </select>
             </div>
 
+            <div>
+              <span class="field-label mb-1.5 block">Category <span class="text-ink-3 normal-case font-medium">(optional)</span></span>
+              <app-category-picker [(value)]="newTicket.categoryId" hint="Its tasks take the same category." />
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label for="priority" class="field-label mb-1.5">Priority</label>
@@ -340,6 +358,7 @@ export class TicketsComponent {
   state = inject(CrmStateService);
   ticketsService = inject(TicketsService);
   tasksService = inject(TasksService);
+  categories = inject(CategoriesService);
 
   canCreate(): boolean { return this.state.hasAuthority('TICKETS_CREATE'); }
   canWrite(): boolean { return this.state.hasAuthority('TICKETS_WRITE'); }
@@ -351,6 +370,8 @@ export class TicketsComponent {
   priorityFilter = signal<TicketPriority | null>(null);
   statusFilter = signal<TicketStatus | null>(null);
   typeFilter = signal<string | null>(null);
+  /** '' = every category, 'NONE' = tickets without one, otherwise a category id. */
+  categoryFilter = signal<string>('');
 
   /** Narrow the list to tickets assigned to one user ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
   private static readonly ASSIGNEE_FILTER_KEY = 'bento_ticket_assignee_filter';
@@ -377,6 +398,7 @@ export class TicketsComponent {
     const priority = this.priorityFilter();
     const status = this.statusFilter();
     const type = this.typeFilter();
+    const category = this.categoryFilter();
     const assignee = this.assigneeFilter();
     const q = this.searchTerm().trim().toLowerCase();
     return this.ticketsService.allTickets().filter(t =>
@@ -385,11 +407,12 @@ export class TicketsComponent {
       (!priority || t.priority === priority) &&
       (!status || t.status === status) &&
       (!type || t.type === type) &&
+      (!category || (category === 'NONE' ? !t.categoryId : t.categoryId === category)) &&
       (!assignee || (assignee === 'NONE' ? !t.assignedToUserId : t.assignedToUserId === assignee))
     );
   });
 
-  hasActiveFilters = computed(() => !!this.searchTerm() || !!this.priorityFilter() || !!this.statusFilter() || !!this.typeFilter() || !!this.assigneeFilter());
+  hasActiveFilters = computed(() => !!this.searchTerm() || !!this.priorityFilter() || !!this.statusFilter() || !!this.typeFilter() || !!this.categoryFilter() || !!this.assigneeFilter());
 
   ticketStatusOptions = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   selectedTicketIds = signal<Set<string>>(new Set());
@@ -454,10 +477,11 @@ export class TicketsComponent {
   bulkExportTickets() {
     const ids = this.selectedTicketIds();
     const tickets = this.ticketsService.allTickets().filter(t => ids.has(t.id));
-    const header = ['Title', 'Type', 'Priority', 'Status', 'Assignee'];
+    const header = ['Title', 'Category', 'Type', 'Priority', 'Status', 'Assignee'];
     const escapeCsv = (val: string) => `"${(val ?? '').replace(/"/g, '""')}"`;
     const rows = tickets.map(t => [
       escapeCsv(t.title),
+      escapeCsv(this.categories.get(t.categoryId)?.name || ''),
       escapeCsv(t.type || ''),
       escapeCsv(t.priority),
       escapeCsv(t.status),
@@ -488,6 +512,7 @@ export class TicketsComponent {
     this.priorityFilter.set(null);
     this.statusFilter.set(null);
     this.typeFilter.set(null);
+    this.categoryFilter.set('');
     this.setAssigneeFilter('');
   }
 
@@ -513,6 +538,7 @@ export class TicketsComponent {
     this.ticketsService.load();
     this.tasksService.load();
     this.state.loadPartners();
+    this.categories.load();
     const filter = this.state.ticketFilter();
     if (filter?.priority && ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].includes(filter.priority)) {
       this.priorityFilter.set(filter.priority as TicketPriority);
@@ -567,6 +593,7 @@ export class TicketsComponent {
     description: '',
     relatedPartnerId: '',
     assignedToUserId: '',
+    categoryId: '',
     priority: 'MEDIUM' as TicketPriority,
     status: 'OPEN' as TicketStatus,
     type: 'Software issue'
@@ -581,6 +608,7 @@ export class TicketsComponent {
       description: '',
       relatedPartnerId: this.state.partners()[0]?.id || '',
       assignedToUserId: this.state.users()[0]?.id || '',
+      categoryId: '',
       priority: 'MEDIUM',
       status: 'OPEN',
       type: this.state.ticketTypes()[0] || 'Software issue'
@@ -597,6 +625,7 @@ export class TicketsComponent {
       description: ticket.description || '',
       relatedPartnerId: ticket.relatedPartnerId || ticket.partnerId || '',
       assignedToUserId: ticket.assignedToUserId || '',
+      categoryId: ticket.categoryId || '',
       priority: ticket.priority,
       status: ticket.status,
       type: ticket.type || this.state.ticketTypes()[0] || 'Software issue'
@@ -617,6 +646,7 @@ export class TicketsComponent {
         relatedEntityType: this.newTicket.relatedPartnerId ? 'PARTNER' : undefined,
         relatedEntityId: this.newTicket.relatedPartnerId || undefined,
         assignedToUserId: this.newTicket.assignedToUserId || undefined,
+        categoryId: this.newTicket.categoryId || undefined,
         priority: this.newTicket.priority,
         status: this.newTicket.status,
         type: this.newTicket.type
@@ -632,6 +662,7 @@ export class TicketsComponent {
         relatedEntityType: partnerId ? 'PARTNER' : undefined,
         relatedEntityId: partnerId,
         assignedToUserId: this.newTicket.assignedToUserId || undefined,
+        categoryId: this.newTicket.categoryId || undefined,
         status: this.newTicket.status,
         priority: this.newTicket.priority,
         type: this.newTicket.type,

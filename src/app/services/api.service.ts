@@ -7,7 +7,7 @@ import type {
   Organization, CrmUser, CrmTeam, CrmGroup, GroupMessage, GroupMeeting,
   Partner, LeadContact, LeadActivity, LeadStatusHistory, CustomerCard,
   Deal, Proposal, ProposalTemplate, Task, Ticket, Invoice, PurchaseOrder,
-  Campaign, AutomationRule, Notification, Brand, BusinessType, LeadKpiStats
+  Campaign, AutomationRule, Notification, Brand, BusinessType, LeadKpiStats, Category
 } from './crm-state.service';
 import type { WhatsAppAccount, CampaignRecipient, CampaignStats } from './domains/whatsapp-campaigns.service';
 import type { PartnerLedger } from '../shared/partner-ledger.model';
@@ -437,6 +437,24 @@ export class ApiService extends BaseApiService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   private static businessTypeFromDto(dto: any): BusinessType {
     return { id: dto.id, name: dto.name, isActive: dto.is_active };
+  }
+
+  // Categories: single-word coloured labels on tickets and tasks. A small taxonomy, so the
+  // endpoint returns the whole list rather than a page.
+  getCategories(): Observable<Category[]> {
+    return this.get(`/categories`);
+  }
+
+  createCategory(category: { name: string; color: string }): Observable<Category> {
+    return this.post(`/categories`, category);
+  }
+
+  updateCategory(id: string, category: { name: string; color: string }): Observable<Category> {
+    return this.patch(`/categories/${id}`, category);
+  }
+
+  deleteCategory(id: string): Observable<void> {
+    return this.delete(`/categories/${id}`);
   }
 
   // Brands (product lines a partner/lead is attributed to) and Business Types

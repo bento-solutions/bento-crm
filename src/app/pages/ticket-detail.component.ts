@@ -14,6 +14,8 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 import { ClampDetectDirective } from '../shared/clamp-detect.directive';
 import { ToastService } from '../services/toast.service';
 import { ConfirmService } from '../shared/ui/confirm.service';
+import { CategoryPillComponent } from '../shared/ui/category-pill.component';
+import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
 
 type TaskPriority = NonNullable<Task['priority']>;
 interface TaskDraft { title: string; description: string; status: Task['status']; priority: TaskPriority | ''; assignedToUserId: string; dueDate: string }
@@ -27,7 +29,7 @@ interface TaskDraft { title: string; description: string; status: Task['status']
  */
 @Component({
   selector: 'app-ticket-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent, UserPickerComponent, AttachmentsComponent, ClampDetectDirective],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, UserAvatarComponent, UserPickerComponent, AttachmentsComponent, ClampDetectDirective, CategoryPillComponent, CategoryPickerComponent],
   template: `
     <div class="page max-w-5xl mx-auto">
       <a routerLink="/tickets" class="page-back">
@@ -41,6 +43,7 @@ interface TaskDraft { title: string; description: string; status: Task['status']
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0 flex-1 space-y-2">
               <div class="flex flex-wrap items-center gap-2">
+                <app-category-pill [categoryId]="t.categoryId" />
                 <span [class]="statusColor(t.status)" class="badge">{{ statusLabel(t.status) }}</span>
                 <span class="inline-flex items-center gap-1 text-meta font-semibold" [class]="priorityColor(t.priority)">
                   <mat-icon class="icon-sm">flag</mat-icon>{{ priorityLabel(t.priority) }}
@@ -124,6 +127,11 @@ interface TaskDraft { title: string; description: string; status: Task['status']
             <div>
               <label for="td_deadline" class="field-label mb-1.5">Deadline</label>
               <input id="td_deadline" type="date" [ngModel]="t.deadline || ''" (ngModelChange)="patch({ deadline: $event || undefined })" [disabled]="!canWrite()" class="input-field w-full" />
+            </div>
+            <div class="col-span-2 md:col-span-4">
+              <span class="field-label mb-1.5 block">Category</span>
+              <app-category-picker [value]="t.categoryId || ''" (valueChange)="patch({ categoryId: $event || undefined })" [disabled]="!canWrite()"
+                                   hint="Every task on this ticket takes the same category." />
             </div>
           </div>
         </div>

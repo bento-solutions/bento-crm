@@ -44,6 +44,12 @@ export class TasksService {
     });
   }
 
+  /** Re-reads the tasks from the server, e.g. after the server changed some on its own (a ticket's category). */
+  refresh(): void {
+    if (!this.isLoaded()) return;
+    this.api.getTasks().subscribe({ next: tasks => this.tasks.set(tasks) });
+  }
+
   /**
    * Raises a task for a ticket through the ticket sub-resource, so the link and the inherited
    * defaults (assignee, priority, due date) are applied server-side. `onCreated` lets callers
@@ -137,7 +143,7 @@ export class TasksService {
   }
 
   /** Edits a task's own fields. Sends the full current task for the same reason as `updateStatus`. */
-  updateDetails(id: string, changes: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assignedTeamId' | 'assignedToUserId' | 'dueDate'>>, onSaved?: () => void): void {
+  updateDetails(id: string, changes: Partial<Pick<Task, 'title' | 'description' | 'categoryId' | 'status' | 'priority' | 'assignedTeamId' | 'assignedToUserId' | 'dueDate' | 'relatedEntityType' | 'relatedEntityId'>>, onSaved?: () => void): void {
     const current = this.tasks().find(t => t.id === id);
     if (!current) return;
     this.api.updateTask(id, { ...current, ...changes }).subscribe({

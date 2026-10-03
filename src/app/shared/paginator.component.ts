@@ -15,8 +15,8 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="paginator">
       <label class="paginator__size">
-        <span>Rows per page</span>
-        <select [ngModel]="pageSize()" (ngModelChange)="pageSizeChange.emit($event); pageChange.emit(1)" class="input-field input-sm" aria-label="Rows per page">
+        <span>{{ label() }}</span>
+        <select [ngModel]="pageSize()" (ngModelChange)="pageSizeChange.emit($event); pageChange.emit(1)" class="input-field input-sm" [attr.aria-label]="label()">
           <option [ngValue]="5">5</option>
           <option [ngValue]="10">10</option>
           <option [ngValue]="20">20</option>
@@ -56,6 +56,8 @@ export class PaginatorComponent {
   currentPage = input.required<number>();
   totalPages = input.required<number>();
   pageSize = input<number>(10);
+  /** What one page holds, for the size picker ("Rows per page", "Tickets per page"…). */
+  label = input<string>('Rows per page');
 
   pageChange = output<number>();
   pageSizeChange = output<number>();

@@ -8,7 +8,7 @@ import { CrmStateService } from '../../services/crm-state.service';
  * permissionGuard when the check maps to one of the backend's actual @PreAuthorize
  * authorities rather than one of the coarser legacy CrmRole.permissions flags.
  */
-export function authorityGuard(authority: string): CanActivateFn {
+export function authorityGuard(...authorities: string[]): CanActivateFn {
   return () => {
     const state = inject(CrmStateService);
     const router = inject(Router);
@@ -17,7 +17,7 @@ export function authorityGuard(authority: string): CanActivateFn {
       return router.parseUrl('/');
     }
 
-    if (state.hasAuthority(authority)) {
+    if (authorities.some(a => state.hasAuthority(a))) {
       return true;
     }
 

@@ -635,6 +635,22 @@ export interface LeadKpiStats {
   monthly_series: number[];
 }
 
+/** The hues a category can take; they are the design system's entity tones (see styles.css `.tone`). */
+export type CategoryColor = 'slate' | 'blue' | 'sky' | 'violet' | 'emerald' | 'amber' | 'rose';
+
+/**
+ * A single-word coloured label ("CRMbento", "Orthoflow") naming the product or project a ticket
+ * or task belongs to. A ticket carries at most one and its tasks inherit it.
+ */
+export interface Category {
+  id: string;
+  name: string;
+  color: CategoryColor;
+  /** How many tickets / tasks carry it right now (read-only, from the list endpoint). */
+  ticketCount?: number;
+  taskCount?: number;
+}
+
 export interface Brand {
   id: string;
   name: string;
@@ -680,6 +696,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  categoryId?: string;
   assignedTeamId?: string;
   assignedToUserId?: string;
   assignedByUserId?: string;
@@ -905,6 +922,7 @@ export interface Ticket {
   title: string;
   description?: string;
   type: string;
+  categoryId?: string;
   status: TicketStatus;
   priority: TicketPriority;
   assignedToUserId?: string;

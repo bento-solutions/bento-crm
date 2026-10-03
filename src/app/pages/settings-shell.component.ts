@@ -52,6 +52,12 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
             Brands
           </a>
         }
+        @if (state.hasAuthority('TICKETS_WRITE') || state.hasAuthority('TASKS_WRITE')) {
+          <a routerLink="/settings/categories" routerLinkActive="is-active" class="tab">
+            <mat-icon>label</mat-icon>
+            Categories
+          </a>
+        }
       </nav>
 
       <router-outlet></router-outlet>

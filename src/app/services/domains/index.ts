@@ -2,6 +2,7 @@ export * from './deals.service';
 export * from './partners.service';
 export * from './tasks.service';
 export * from './tickets.service';
+export * from './categories.service';
 export * from './invoices.service';
 export * from './proposals.service';
 export * from './purchase-orders.service';
