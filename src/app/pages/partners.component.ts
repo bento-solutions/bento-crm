@@ -124,6 +124,11 @@ import { ToastService } from '../services/toast.service';
                 <option value="">All Interested Products</option>
                 @for (brand of state.brands(); track brand.id) { <option [value]="brand.name">{{ brand.name }}</option> }
               </select>
+              <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field" aria-label="Filter by assigned to">
+                <option value="">All Owners</option>
+                <option value="NONE">Unassigned</option>
+                @for (user of state.users(); track user.id) { <option [value]="user.id">{{ user.displayName }}</option> }
+              </select>
               <span class="toolbar__count toolbar__spacer">Showing {{ pageStart() }}–{{ pageEnd() }} of {{ filteredLeads().length }} leads</span>
             </div>
 
@@ -689,6 +694,11 @@ import { ToastService } from '../services/toast.service';
                 Table
               </button>
             </div>
+            <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field" aria-label="Filter by assigned to">
+              <option value="">All Owners</option>
+              <option value="NONE">Unassigned</option>
+              @for (user of state.users(); track user.id) { <option [value]="user.id">{{ user.displayName }}</option> }
+            </select>
             <span class="toolbar__count toolbar__spacer">{{ filteredPartners().length }} {{ activeTab() }}{{ filteredPartners().length === 1 ? '' : 's' }}</span>
           </div>
 
@@ -1059,6 +1069,22 @@ export class PartnersComponent {
   brandFilter = signal('');
   businessTypeFilter = signal('');
   interestedProductFilter = signal('');
+
+  /** Narrow leads / customers / prospects / vendors to one owner ('NONE' = unassigned, '' = everyone). Remembered across sessions. */
+  private static readonly ASSIGNEE_FILTER_KEY = 'bento_partner_assignee_filter';
+  assigneeFilter = signal<string>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem(PartnersComponent.ASSIGNEE_FILTER_KEY) || '' : ''
+  );
+
+  setAssigneeFilter(value: string) {
+    this.assigneeFilter.set(value);
+    this.currentPage.set(1);
+    this.partnersPage.set(1);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(PartnersComponent.ASSIGNEE_FILTER_KEY, value);
+    }
+  }
+
   selectedLead = signal<Lead | null>(null);
   activeDetailTab = signal<'info' | 'activities' | 'attachments' | 'history'>('info');
   activeConvertMenuId = signal<string | null>(null);
@@ -1182,6 +1208,10 @@ export class PartnersComponent {
     }
     if (this.interestedProductFilter()) {
       list = list.filter(l => (l.productInterests || []).some(pi => pi.product === this.interestedProductFilter()));
+    }
+    const assignee = this.assigneeFilter();
+    if (assignee) {
+      list = list.filter(l => assignee === 'NONE' ? !l.assignedToUserId : l.assignedToUserId === assignee);
     }
     if (this.searchQuery().trim()) {
       const q = this.searchQuery().toLowerCase();
@@ -1353,7 +1383,11 @@ export class PartnersComponent {
     // Note: Using state.partners() for type-based filtering since PartnersService
     // Partner model doesn't include type field. For full PartnersService integration,
     // the service should be extended to support partner type/role classification.
-    return this.state.partners().filter(p => p.type === this.activeTab());
+    const assignee = this.assigneeFilter();
+    return this.state.partners().filter(p =>
+      p.type === this.activeTab() &&
+      (!assignee || (assignee === 'NONE' ? !p.assignedTo : p.assignedTo === assignee))
+    );
   };
 
   partnersPage = signal(1);

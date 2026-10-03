@@ -1360,6 +1360,31 @@ export class CrmStateService {
     })));
   }
 
+  /**
+   * Roles without USERS_READ can't list /users, which would leave every lead owner
+   * unresolved ("Unassigned") and the Assigned To filters empty. The directory exposes
+   * names/avatars only, so merge it under whatever is already known (e.g. the current
+   * user's full profile from /auth/me) rather than replacing it.
+   */
+  private loadUserDirectory(): void {
+    this.api.getUserDirectory().subscribe({
+      next: (entries) => {
+        if (!entries || entries.length === 0) return;
+        this.users.update(existing => {
+          const known = new Map(existing.map(u => [u.id, u]));
+          const merged = entries.map(e => {
+            const prev = known.get(e.id);
+            known.delete(e.id);
+            return prev ? { ...this.userFromDto(e), ...prev } : this.userFromDto(e);
+          });
+          return [...merged, ...known.values()];
+        });
+        this.rehydrateTeamMembership();
+      },
+      error: (err) => console.warn('Failed to load user directory:', err)
+    });
+  }
+
   // Initialize eager data from API (app-wide dependencies)
   private loadEagerDataFromApi(): void {
     this.api.getUsers().subscribe({
@@ -1370,7 +1395,8 @@ export class CrmStateService {
         }
       },
       error: (err) => {
-        console.warn('Failed to load users from API, using seed data:', err);
+        console.warn('Failed to load users from API, falling back to the user directory:', err);
+        this.loadUserDirectory();
       }
     });
 

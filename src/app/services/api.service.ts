@@ -276,6 +276,15 @@ export class ApiService extends BaseApiService {
     );
   }
 
+  // Names/avatars of every org member, readable by any role. Roles without USERS_READ
+  // (salesperson, support, viewer) get a 403 from getUsers(), so lead owners and
+  // assignee filters fall back to this.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+  getUserDirectory(): Observable<any[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
+    return this.get<any[]>(`/users/directory`);
+  }
+
   getUser(id: string): Observable<CrmUser> {
     return this.get(`/users/${id}`);
   }
