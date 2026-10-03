@@ -137,7 +137,7 @@ export class TasksService {
   }
 
   /** Edits a task's own fields. Sends the full current task for the same reason as `updateStatus`. */
-  updateDetails(id: string, changes: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assignedToUserId' | 'dueDate'>>, onSaved?: () => void): void {
+  updateDetails(id: string, changes: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assignedTeamId' | 'assignedToUserId' | 'dueDate'>>, onSaved?: () => void): void {
     const current = this.tasks().find(t => t.id === id);
     if (!current) return;
     this.api.updateTask(id, { ...current, ...changes }).subscribe({

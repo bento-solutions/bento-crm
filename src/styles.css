@@ -768,6 +768,10 @@ mat-icon.mat-icon { color: revert-layer; }
   .tab.is-active .count-pill, .tab[aria-selected='true'] .count-pill {
     background: var(--color-accent-light); color: var(--color-accent-text);
   }
+  /* A count that needs attention (e.g. overdue tasks) — status colour, so it also wins on the active tab. */
+  .count-pill.is-alert, .tab.is-active .count-pill.is-alert, .tab[aria-selected='true'] .count-pill.is-alert {
+    background: var(--color-danger-light); color: var(--color-danger-text);
+  }
 
   .segmented, .tab-group {
     display: inline-flex; gap: 2px; padding: 3px;

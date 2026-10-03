@@ -20,6 +20,9 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 
+type TaskScope = 'open' | 'overdue' | 'completed' | 'all';
+type TaskSort = 'smart' | 'due' | 'priority' | 'newest';
+
 @Component({
   selector: 'app-tasks',
   imports: [MatIconModule, CommonModule, FormsModule, DragDropModule, CreatedByBadgeComponent, RouterModule, DataStatusBannerComponent, PaginatorComponent, TranslatePipe, RelatedEntityPickerComponent, UserPickerComponent, UserAvatarComponent, PageHeaderComponent, EmptyStateComponent],
@@ -45,6 +48,18 @@ import { ConfirmService } from '../shared/ui/confirm.service';
     .kanban-column {
       transition: background-color 200ms ease;
     }
+    /* Keep the quick actions reachable when the table scrolls sideways on tablets; phones need the width for the title. */
+    @media (min-width: 768px) {
+      .tasks-table .col-actions {
+        position: sticky;
+        inset-inline-end: 0;
+        background: var(--color-surface);
+        box-shadow: -1px 0 0 var(--color-border-light);
+      }
+      .tasks-table th.col-actions { background: var(--color-subtle); }
+      .tasks-table tr:hover td.col-actions { background: var(--color-surface-hover); }
+      .tasks-table tr.is-selected td.col-actions { background: var(--color-accent-light); }
+    }
   `],
   template: `
     <div class="page">
@@ -57,6 +72,18 @@ import { ConfirmService } from '../shared/ui/confirm.service';
         }
       </app-page-header>
 
+      @if (activeView() === 'list') {
+        <div class="tabs" role="tablist" aria-label="Task scope">
+          @for (s of scopeTabs; track s.id) {
+            <button role="tab" class="tab" [class.is-active]="scope() === s.id" [attr.aria-selected]="scope() === s.id" (click)="setScope(s.id)">
+              <mat-icon>{{ s.icon }}</mat-icon>
+              {{ s.label }}
+              <span class="count-pill" [class.is-alert]="s.id === 'overdue' && scopeCounts()[s.id] > 0">{{ scopeCounts()[s.id] }}</span>
+            </button>
+          }
+        </div>
+      }
+
       <div class="toolbar">
         <div class="segmented" role="group" aria-label="Task view">
           <button class="segmented__item" [class.is-active]="activeView() === 'list'" [attr.aria-pressed]="activeView() === 'list'" (click)="activeView.set('list')">
@@ -68,6 +95,17 @@ import { ConfirmService } from '../shared/ui/confirm.service';
             {{ 'tasks.kanban' | translate }}
           </button>
         </div>
+        <label class="search-field">
+          <mat-icon>search</mat-icon>
+          <input type="search" class="input-field" placeholder="Search tasks…" aria-label="Search tasks"
+                 [ngModel]="searchTerm()" (ngModelChange)="setSearch($event)" />
+        </label>
+        <select [ngModel]="activePriorityFilter()" (ngModelChange)="activePriorityFilter.set($event); tasksPage.set(1)" class="input-field" aria-label="Filter tasks by priority">
+          <option [ngValue]="null">All Priorities</option>
+          <option value="Urgent">Urgent</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
         <select [ngModel]="assigneeFilter()" (ngModelChange)="setAssigneeFilter($event)" class="input-field" aria-label="Filter tasks by assignee">
           <option value="">All assignees</option>
           <option value="NONE">{{ 'leads.unassigned' | translate }}</option>
@@ -82,120 +120,179 @@ import { ConfirmService } from '../shared/ui/confirm.service';
           <option value="PARTNER">Partner tasks</option>
           <option value="NONE">Unlinked</option>
         </select>
-        @if (activePriorityFilter()) {
-          <span class="chip" [attr.title]="'tasks.filteredBy' | translate">
-            Priority
-            <span [class]="getPriorityColor(activePriorityFilter()!)" class="badge">{{ activePriorityFilter() }}</span>
-            <button (click)="clearFilter()" title="Clear filter" aria-label="Clear priority filter" class="btn-icon btn-sm">
-              <mat-icon class="icon-sm">close</mat-icon>
-            </button>
-          </span>
+        @if (activeView() === 'list') {
+          <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event); tasksPage.set(1)" class="input-field" aria-label="Sort tasks">
+            <option value="smart">Sort: Most urgent</option>
+            <option value="due">Sort: Due date</option>
+            <option value="priority">Sort: Priority</option>
+            <option value="newest">Sort: Newest</option>
+          </select>
         }
-        <span class="toolbar__count toolbar__spacer">{{ filteredTasks().length }} task{{ filteredTasks().length !== 1 ? 's' : '' }}</span>
+        @if (hasActiveFilters()) {
+          <button (click)="clearFilters()" class="btn-ghost btn-sm">
+            <mat-icon>close</mat-icon>
+            Clear
+          </button>
+        }
+        <span class="toolbar__count toolbar__spacer">{{ visibleCount() }} task{{ visibleCount() !== 1 ? 's' : '' }}</span>
       </div>
 
       @if (tasksService.isLoading$()) {
-        <app-data-status-banner [loading]="true" [variant]="'tiles'" [tiles]="6" />
+        <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="7" [rows]="8" />
       } @else {
 
       <!-- List View -->
       @if (activeView() === 'list') {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          @for (task of paginatedTasks(); track task.id) {
-            <div class="card p-5 flex flex-col justify-between transition-all">
-              <div>
-                <div class="flex justify-between items-start mb-3">
-                  <div class="flex items-center gap-1.5">
-                    <span [class]="getStatusColor(task.status)" class="badge">
-                      {{task.status}}
-                    </span>
+        <div class="table-card">
+          <table class="data-table tasks-table">
+            <thead>
+              <tr>
+                <th scope="col" class="col-check">
+                  <input type="checkbox" [checked]="allOnPageSelected()" (change)="toggleSelectAll($event)" class="cursor-pointer" aria-label="Select all tasks on this page" />
+                </th>
+                <th scope="col">Priority</th>
+                <th scope="col">Task</th>
+                <th scope="col">Assignee</th>
+                <th scope="col">Due</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (task of paginatedTasks(); track task.id) {
+                <tr [class.is-selected]="selectedIds().has(task.id)">
+                  <td class="col-check">
+                    <input type="checkbox" [checked]="selectedIds().has(task.id)" (change)="toggleSelect(task.id)" class="cursor-pointer" [attr.aria-label]="'Select ' + task.title" />
+                  </td>
+                  <td class="whitespace-nowrap">
                     @if (task.priority) {
-                      <span [class]="getPriorityColor(task.priority)" class="badge">{{task.priority}}</span>
-                    }
-                  </div>
-                  <span class="text-xs text-ink-3">#{{ task.id.slice(0, 8) }}</span>
-                </div>
-                <h4 class="card-title mb-1">{{task.title}}</h4>
-                <p class="text-xs text-ink-3 mb-3">{{task.description}}</p>
-
-                @if (getRelatedLabel(task); as label) {
-                  @if (ticketRoute(task); as route) {
-                    <a [routerLink]="route" class="btn-secondary btn-sm mb-4" title="Open ticket">
-                      <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
-                      {{label}}
-                    </a>
-                  } @else {
-                    <div class="text-xs text-ink bg-muted border border-line rounded-lg p-1.5 px-2 mb-4 inline-flex items-center gap-1 font-medium">
-                      <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
-                      {{label}}
-                    </div>
-                  }
-                }
-              </div>
-
-              <div class="border-t border-line-soft pt-3 flex flex-col gap-2 mt-4">
-                <div class="flex justify-between items-center text-xs">
-                  <span class="text-ink-3 font-medium">Created By:</span>
-                  <app-created-by-badge [createdBy]="task.createdBy" [createdAt]="task.createdAt" />
-                </div>
-                <div class="flex justify-between items-center text-xs">
-                  <span class="text-ink-3 font-medium">Assigned Team:</span>
-                  <span class="badge badge-neutral">{{getTeamName(task.assignedTeamId)}}</span>
-                </div>
-                <div class="flex justify-between items-center text-xs">
-                  <span class="text-ink-3 font-medium">Assigned Person:</span>
-                  <span class="flex items-center gap-1.5 font-semibold text-ink-2">
-                    @if (task.assignedToUserId) {
-                      <app-user-avatar [userId]="task.assignedToUserId" [size]="18" />
-                      {{ getAssigneeName(task.assignedToUserId) }}
+                      <div class="flex items-center">
+                        <mat-icon [class]="getPriorityInk(task.priority)" class="icon-md">flag</mat-icon>
+                        <span [class]="getPriorityInk(task.priority)" class="ml-1.5 text-meta font-semibold">{{ task.priority }}</span>
+                      </div>
                     } @else {
-                      {{ 'leads.unassigned' | translate }}
+                      <span class="text-ink-4">—</span>
                     }
-                  </span>
-                </div>
-
-                <div class="flex gap-2 pt-2 border-t border-line-soft">
-                  @if (task.status === 'Pending' && canWrite()) {
-                    <button (click)="tasksService.updateStatus(task.id, 'In Progress')" class="btn-secondary btn-sm w-full">
-                      Start Task
-                    </button>
-                  } @else if (task.status === 'In Progress' && canWrite()) {
-                    <button (click)="tasksService.updateStatus(task.id, 'Completed')" class="btn-primary btn-sm w-full">
-                      Complete Task
-                    </button>
-                  } @else if (task.status === 'Completed') {
-                    <span class="text-ink text-xs font-semibold py-1.5 text-center w-full flex items-center justify-center">
-                      <mat-icon class="mr-0.5 icon-sm">check_circle</mat-icon> Completed
-                    </span>
-                  }
-                  @if (state.currentUserPermissions().canDeleteRecords) {
-                    <button (click)="deleteTask(task)" title="Delete task" class="btn-icon btn-sm btn-danger-hover shrink-0">
-  <mat-icon class="icon-sm">delete</mat-icon>
-</button>
-                  }
-
-                  @if (task.status !== 'Completed' && canWrite()) {
-                    <button (click)="openAssignModal(task)" class="btn-secondary btn-sm">
-                      <mat-icon class="icon-sm">person</mat-icon> Assign
-                    </button>
-                  }
-                </div>
-              </div>
-            </div>
-          } @empty {
-            <div class="col-span-full card">
-              <app-empty-state icon="task_alt" [title]="'tasks.noTasks' | translate" text="Tasks you create or are assigned will show up here." />
-            </div>
+                  </td>
+                  <td>
+                    <button type="button" (click)="openEditModal(task)" class="table-name-link text-sm font-medium text-ink max-w-md wrap-break-word"
+                            [class.line-through]="task.status === 'Completed'" [class.text-ink-3]="task.status === 'Completed'" [title]="createdTooltip(task)">{{ task.title }}</button>
+                    @if (task.description) {
+                      <div class="text-meta text-ink-3 font-medium mt-0.5 truncate max-w-md" [title]="task.description">{{ task.description }}</div>
+                    }
+                    @if (getRelatedLabel(task); as label) {
+                      <div class="mt-1.5">
+                        @if (ticketRoute(task); as route) {
+                          <a [routerLink]="route" class="badge badge-neutral hover:underline" title="Open ticket">
+                            <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
+                            <span class="truncate max-w-xs">{{ label }}</span>
+                          </a>
+                        } @else {
+                          <span class="badge badge-neutral">
+                            <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
+                            <span class="truncate max-w-xs">{{ label }}</span>
+                          </span>
+                        }
+                      </div>
+                    }
+                  </td>
+                  <td class="whitespace-nowrap">
+                    @if (task.assignedToUserId) {
+                      <div class="flex items-center gap-2 text-ink-2">
+                        <app-user-avatar [userId]="task.assignedToUserId" [size]="20" />
+                        <div class="flex flex-col">
+                          <span>{{ getAssigneeName(task.assignedToUserId) }}</span>
+                          @if (task.assignedTeamId) {
+                            <span class="text-meta text-ink-3">{{ getTeamName(task.assignedTeamId) }}</span>
+                          }
+                        </div>
+                      </div>
+                    } @else if (task.status !== 'Completed' && canWrite()) {
+                      <button type="button" (click)="openAssignModal(task)" class="btn-secondary btn-sm">
+                        <mat-icon class="icon-sm">person_add</mat-icon> Assign
+                      </button>
+                    } @else {
+                      <span class="text-ink-3">{{ 'leads.unassigned' | translate }}</span>
+                    }
+                  </td>
+                  <td class="whitespace-nowrap">
+                    @if (dueInfo(task); as due) {
+                      <span class="inline-flex items-center gap-1 text-xs" [class]="due.cls" [title]="due.title">
+                        <mat-icon class="icon-xs">{{ due.icon }}</mat-icon>{{ due.label }}
+                      </span>
+                    } @else {
+                      <span class="text-ink-4">—</span>
+                    }
+                  </td>
+                  <td class="whitespace-nowrap">
+                    <select [ngModel]="task.status" (ngModelChange)="tasksService.updateStatus(task.id, $event)" [disabled]="!canWrite()"
+                            [class]="getStatusColor(task.status)" class="pill-select" [attr.aria-label]="'Status of ' + task.title">
+                      @if (!statusOptions.includes(task.status)) { <option [value]="task.status">{{ task.status }}</option> }
+                      @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+                    </select>
+                  </td>
+                  <td class="col-actions">
+                    <div class="inline-flex items-center gap-1">
+                      @if (canWrite()) {
+                        @switch (task.status) {
+                          @case ('Pending') {
+                            <button (click)="tasksService.updateStatus(task.id, 'In Progress')" class="btn-secondary btn-sm" title="Start working on this task">
+                              <mat-icon class="icon-sm">play_arrow</mat-icon> Start
+                            </button>
+                          }
+                          @case ('In Progress') {
+                            <button (click)="tasksService.updateStatus(task.id, 'Completed')" class="btn-primary btn-sm" title="Mark as completed">
+                              <mat-icon class="icon-sm">check</mat-icon> Done
+                            </button>
+                          }
+                          @case ('Completed') {
+                            <button (click)="tasksService.updateStatus(task.id, 'Pending')" class="btn-secondary btn-sm" title="Reopen this task">
+                              <mat-icon class="icon-sm">undo</mat-icon> Reopen
+                            </button>
+                          }
+                          @default {
+                            <button (click)="tasksService.updateStatus(task.id, 'In Progress')" class="btn-secondary btn-sm" title="Resume this blocked task">
+                              <mat-icon class="icon-sm">play_arrow</mat-icon> Resume
+                            </button>
+                          }
+                        }
+                        @if (task.status !== 'Completed') {
+                          <button (click)="openAssignModal(task)" class="btn-icon btn-sm" title="Assign" aria-label="Assign task">
+                            <mat-icon class="icon-sm">person_add</mat-icon>
+                          </button>
+                        }
+                        <button (click)="openEditModal(task)" class="btn-icon btn-sm" title="Edit task" aria-label="Edit task">
+                          <mat-icon class="icon-sm">edit</mat-icon>
+                        </button>
+                      }
+                      @if (state.currentUserPermissions().canDeleteRecords) {
+                        <button (click)="deleteTask(task)" class="btn-icon btn-sm btn-danger-hover" title="Delete task" aria-label="Delete task">
+                          <mat-icon class="icon-sm">delete</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="row-empty">
+                    <app-empty-state icon="task_alt"
+                      [title]="hasActiveFilters() ? 'No tasks match your filters' : emptyTitle()"
+                      [text]="hasActiveFilters() ? 'Try a different search or clear the filters.' : 'Tasks you create or are assigned will show up here.'" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (scopedTasks().length > 0) {
+            <app-paginator
+              [currentPage]="currentPage()"
+              [totalPages]="tasksTotalPages()"
+              [pageSize]="tasksPageSize()"
+              (pageChange)="tasksPage.set($event)"
+              (pageSizeChange)="tasksPageSize.set($event)" />
           }
         </div>
-        @if (filteredTasks().length > 0) {
-          <app-paginator
-            [currentPage]="tasksPage()"
-            [totalPages]="tasksTotalPages()"
-            [pageSize]="tasksPageSize()"
-            (pageChange)="tasksPage.set($event)"
-            (pageSizeChange)="tasksPageSize.set($event)" />
-        }
       }
 
       <!-- Kanban View -->
@@ -389,6 +486,24 @@ import { ConfirmService } from '../shared/ui/confirm.service';
       @if (tasksService.error$()) {
         <app-data-status-banner [error]="tasksService.error$()" />
       }
+      @if (selectedIds().size > 0 && activeView() === 'list') {
+        <div class="bulk-action-bar">
+          <span class="font-semibold">{{ selectedIds().size }} selected</span>
+          <div class="bulk-action-bar__sep"></div>
+          @if (canWrite()) {
+            <select (change)="bulkAssign($event)" aria-label="Assign selected tasks">
+              <option value="">Assign to…</option>
+              @for (u of state.users(); track u.id) { <option [value]="u.id">{{u.displayName}}</option> }
+            </select>
+            <select (change)="bulkChangeStatus($event)" aria-label="Change status of selected tasks">
+              <option value="">Change status…</option>
+              @for (s of statusOptions; track s) { <option [value]="s">{{s}}</option> }
+            </select>
+          }
+          <button class="bulk-action-bar__btn" (click)="bulkExport()">Export CSV</button>
+          <button class="bulk-action-bar__btn is-quiet" (click)="clearSelection()">Clear</button>
+        </div>
+      }
     </div>
 
     <!-- Create Task Modal -->
@@ -449,6 +564,73 @@ import { ConfirmService } from '../shared/ui/confirm.service';
       </div>
     }
 
+    <!-- Edit Task Modal -->
+    @if (editingTask(); as task) {
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
+          <div class="flex justify-between items-center">
+            <h3 class="modal-title">Edit task</h3>
+            <button (click)="closeEditModal()" class="btn-icon btn-sm" aria-label="Close">
+              <mat-icon class="icon-sm">close</mat-icon>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label for="edit_task_title" class="field-label mb-1.5">Task Title</label>
+              <input id="edit_task_title" [(ngModel)]="editData.title" type="text" class="input-field w-full">
+            </div>
+            <div>
+              <label for="edit_task_description" class="field-label mb-1.5">Description</label>
+              <textarea id="edit_task_description" [(ngModel)]="editData.description" rows="3" class="input-field w-full"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="edit_task_status" class="field-label mb-1.5">Status</label>
+                <select id="edit_task_status" [(ngModel)]="editData.status" class="input-field w-full">
+                  @if (!statusOptions.includes(editData.status)) { <option [value]="editData.status">{{ editData.status }}</option> }
+                  @for (s of statusOptions; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+              </div>
+              <div>
+                <label for="edit_task_priority" class="field-label mb-1.5">Priority</label>
+                <select id="edit_task_priority" [(ngModel)]="editData.priority" class="input-field w-full">
+                  <option value="">None</option>
+                  <option value="Urgent">Urgent</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="edit_task_due" class="field-label mb-1.5">Due Date</label>
+                <input id="edit_task_due" [(ngModel)]="editData.dueDate" type="date" class="input-field w-full">
+              </div>
+              <div>
+                <label for="edit_task_team" class="field-label mb-1.5">Assigned Team</label>
+                <select id="edit_task_team" [(ngModel)]="editData.assignedTeamId" class="input-field w-full">
+                  <option value="">{{ 'leads.unassigned' | translate }}</option>
+                  @for (team of state.teams(); track team.id) {
+                    <option [value]="team.id">{{team.name}}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div>
+              <span class="eyebrow block mb-1">Assigned Person</span>
+              <app-user-picker [(value)]="editData.assignedToUserId" />
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-4 border-t border-line-soft">
+            <button (click)="closeEditModal()" class="btn-secondary">{{ 'common.cancel' | translate }}</button>
+            <button (click)="saveEdit(task)" [disabled]="!editData.title.trim()" class="btn-primary">{{ 'common.save' | translate }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Assign Modal -->
     @if (assignModalOpen()) {
       <div class="modal-backdrop">
@@ -498,32 +680,213 @@ export class TasksComponent {
     }
   }
 
-  /** All tasks, filtered by priority, linked record and/or assignee if a filter is active */
+  searchTerm = signal('');
+  scope = signal<TaskScope>('open');
+  sortBy = signal<TaskSort>('smart');
+  selectedIds = signal<Set<string>>(new Set());
+
+  readonly scopeTabs: { id: TaskScope; label: string; icon: string }[] = [
+    { id: 'open', label: 'Open', icon: 'pending_actions' },
+    { id: 'overdue', label: 'Overdue', icon: 'event_busy' },
+    { id: 'completed', label: 'Completed', icon: 'task_alt' },
+    { id: 'all', label: 'All', icon: 'list_alt' }
+  ];
+  readonly statusOptions: Task['status'][] = ['Pending', 'In Progress', 'Completed'];
+
+  /** Local calendar day (YYYY-MM-DD) — due dates are plain dates, so compare against the user's today, not UTC's. */
+  private today = TasksComponent.localDay(new Date());
+  private static localDay(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  private static dayNumber(day: string): number {
+    return Math.round(Date.parse(day.slice(0, 10) + 'T00:00:00Z') / 86_400_000);
+  }
+
+  setSearch(value: string) {
+    this.searchTerm.set(value ?? '');
+    this.tasksPage.set(1);
+  }
+
+  setScope(scope: TaskScope) {
+    this.scope.set(scope);
+    this.tasksPage.set(1);
+  }
+
+  /** Search, priority, linked record and assignee — shared by the list and the board. */
   filteredTasks = computed(() => {
     const priority = this.activePriorityFilter();
     const link = this.linkFilter();
     const assignee = this.assigneeFilter();
+    const q = this.searchTerm().trim().toLowerCase();
     return this.tasksService.allTasks().filter(t =>
+      (!q || t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q) || t.id.toLowerCase().includes(q) ||
+        this.getRelatedLabel(t).toLowerCase().includes(q) || this.getAssigneeName(t.assignedToUserId).toLowerCase().includes(q)) &&
       (!priority || t.priority === priority) &&
       (!link || (link === 'NONE' ? !t.relatedEntityType : t.relatedEntityType === link)) &&
       (!assignee || (assignee === 'NONE' ? !t.assignedToUserId : t.assignedToUserId === assignee))
     );
   });
 
+  hasActiveFilters = computed(() => !!this.searchTerm() || !!this.activePriorityFilter() || !!this.linkFilter() || !!this.assigneeFilter());
+
+  isOverdue(task: Task): boolean {
+    return !!task.dueDate && task.status !== 'Completed' && task.dueDate.slice(0, 10) < this.today;
+  }
+
+  /** Tab counts follow the active filters, so "Overdue 3" always means 3 matching tasks. */
+  scopeCounts = computed<Record<TaskScope, number>>(() => {
+    const tasks = this.filteredTasks();
+    return {
+      open: tasks.filter(t => t.status !== 'Completed').length,
+      overdue: tasks.filter(t => this.isOverdue(t)).length,
+      completed: tasks.filter(t => t.status === 'Completed').length,
+      all: tasks.length
+    };
+  });
+
+  /** Filtered tasks for the active tab, ordered per the sort picker. */
+  scopedTasks = computed(() => {
+    const scope = this.scope();
+    const tasks = this.filteredTasks().filter(t =>
+      scope === 'all' || (scope === 'open' && t.status !== 'Completed') ||
+      (scope === 'overdue' && this.isOverdue(t)) || (scope === 'completed' && t.status === 'Completed'));
+    return this.sortTasks(tasks, this.sortBy());
+  });
+
+  visibleCount = computed(() => this.activeView() === 'list' ? this.scopedTasks().length : this.filteredTasks().length);
+
+  private sortTasks(tasks: Task[], sort: TaskSort): Task[] {
+    const prio = (t: Task) => t.priority === 'Urgent' ? 0 : t.priority === 'Medium' ? 1 : t.priority === 'Low' ? 2 : 3;
+    const due = (t: Task) => t.dueDate ? t.dueDate.slice(0, 10) : '9999-12-31';
+    const done = (t: Task) => t.status === 'Completed' ? 1 : 0;
+    const newest = (a: Task, b: Task) => (b.createdAt || '').localeCompare(a.createdAt || '');
+    return [...tasks].sort((a, b) => {
+      switch (sort) {
+        case 'due': return done(a) - done(b) || due(a).localeCompare(due(b)) || newest(a, b);
+        case 'priority': return done(a) - done(b) || prio(a) - prio(b) || due(a).localeCompare(due(b)) || newest(a, b);
+        case 'newest': return newest(a, b);
+        default: // most urgent: overdue → priority → soonest due → newest; finished work sinks
+          return done(a) - done(b) || Number(this.isOverdue(b)) - Number(this.isOverdue(a)) ||
+            prio(a) - prio(b) || due(a).localeCompare(due(b)) || newest(a, b);
+      }
+    });
+  }
+
   pendingTasks = computed(() => this.filteredTasks().filter(t => t.status === 'Pending'));
   inProgressTasks = computed(() => this.filteredTasks().filter(t => t.status === 'In Progress'));
   completedTasks = computed(() => this.filteredTasks().filter(t => t.status === 'Completed'));
 
   tasksPage = signal(1);
-  tasksPageSize = signal(9);
-  tasksTotalPages = computed(() => Math.max(1, Math.ceil(this.filteredTasks().length / this.tasksPageSize())));
+  tasksPageSize = signal(10);
+  tasksTotalPages = computed(() => Math.max(1, Math.ceil(this.scopedTasks().length / this.tasksPageSize())));
+  /** The requested page, held within range when tasks leave the tab (e.g. completing one on "Open"). */
+  currentPage = computed(() => Math.min(this.tasksPage(), this.tasksTotalPages()));
   paginatedTasks = computed(() => {
-    const start = (this.tasksPage() - 1) * this.tasksPageSize();
-    return this.filteredTasks().slice(start, start + this.tasksPageSize());
+    const start = (this.currentPage() - 1) * this.tasksPageSize();
+    return this.scopedTasks().slice(start, start + this.tasksPageSize());
   });
 
-  clearFilter() {
+  createdTooltip(task: Task): string {
+    const by = task.createdBy ? this.getAssigneeName(task.createdBy) : '';
+    const on = task.createdAt ? new Date(task.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '';
+    return by || on ? `Created${by ? ' by ' + by : ''}${on ? ' on ' + on : ''}` : task.title;
+  }
+
+  emptyTitle(): string {
+    switch (this.scope()) {
+      case 'overdue': return 'Nothing overdue';
+      case 'completed': return 'No completed tasks yet';
+      case 'open': return 'No open tasks';
+      default: return 'No tasks yet';
+    }
+  }
+
+  /** Due-date cell: relative wording and urgency colour, with the exact date on hover. */
+  dueInfo(task: Task): { label: string; cls: string; icon: string; title: string } | null {
+    if (!task.dueDate) return null;
+    const day = task.dueDate.slice(0, 10);
+    const diff = TasksComponent.dayNumber(day) - TasksComponent.dayNumber(this.today);
+    const date = new Date(day + 'T00:00:00');
+    const sameYear = date.getFullYear() === new Date().getFullYear();
+    const exact = date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+    const title = date.toLocaleDateString(undefined, { dateStyle: 'full' });
+    if (task.status === 'Completed') return { label: exact, cls: 'text-ink-3', icon: 'event_available', title };
+    if (diff < 0) return { label: `${-diff}d overdue`, cls: 'text-danger-ink font-semibold', icon: 'event_busy', title };
+    if (diff === 0) return { label: 'Due today', cls: 'text-warning-ink font-semibold', icon: 'today', title };
+    if (diff === 1) return { label: 'Tomorrow', cls: 'text-warning-ink', icon: 'event', title };
+    if (diff <= 7) return { label: `In ${diff} days`, cls: 'text-ink-2', icon: 'event', title };
+    return { label: exact, cls: 'text-ink-2', icon: 'event', title };
+  }
+
+  clearFilters() {
+    this.searchTerm.set('');
     this.activePriorityFilter.set(null);
+    this.linkFilter.set('');
+    this.setAssigneeFilter('');
+  }
+
+  // ---- Selection & bulk actions ----
+
+  allOnPageSelected = computed(() => {
+    const page = this.paginatedTasks();
+    const selected = this.selectedIds();
+    return page.length > 0 && page.every(t => selected.has(t.id));
+  });
+
+  toggleSelect(id: string) {
+    const next = new Set(this.selectedIds());
+    if (!next.delete(id)) next.add(id);
+    this.selectedIds.set(next);
+  }
+
+  toggleSelectAll(event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    const next = new Set(this.selectedIds());
+    for (const t of this.paginatedTasks()) {
+      if (checked) next.add(t.id); else next.delete(t.id);
+    }
+    this.selectedIds.set(next);
+  }
+
+  clearSelection() {
+    this.selectedIds.set(new Set());
+  }
+
+  private selectedTasks(): Task[] {
+    const ids = this.selectedIds();
+    return this.tasksService.allTasks().filter(t => ids.has(t.id));
+  }
+
+  bulkAssign(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    if (!select.value || !this.canWrite()) return;
+    for (const t of this.selectedTasks()) this.tasksService.updateStatus(t.id, t.status, select.value);
+    select.value = '';
+    this.clearSelection();
+  }
+
+  bulkChangeStatus(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    if (!select.value || !this.canWrite()) return;
+    for (const t of this.selectedTasks()) this.tasksService.updateStatus(t.id, select.value as Task['status']);
+    select.value = '';
+    this.clearSelection();
+  }
+
+  bulkExport() {
+    const escapeCsv = (val: string) => `"${(val ?? '').replace(/"/g, '""')}"`;
+    const rows = this.selectedTasks().map(t => [
+      t.title, t.priority || '', t.status, this.getAssigneeName(t.assignedToUserId), t.dueDate?.slice(0, 10) || '', this.getRelatedLabel(t)
+    ].map(escapeCsv).join(','));
+    const csv = [['Title', 'Priority', 'Status', 'Assignee', 'Due', 'Related to'].join(','), ...rows].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tasks-export.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async deleteTask(task: Task) {
@@ -606,7 +969,18 @@ export class TasksComponent {
     switch (status) {
       case 'Completed': return 'badge-success';
       case 'In Progress': return 'badge-info';
-      default: return 'bg-muted text-ink border border-line';
+      case 'Blocked': return 'badge-warning';
+      default: return 'badge-neutral';
+    }
+  }
+
+  /** Text/icon colour for the list's priority flag (the badge variants are for chips). */
+  getPriorityInk(priority: string) {
+    switch (priority) {
+      case 'Urgent': return 'text-danger-ink';
+      case 'Medium': return 'text-warning-ink';
+      case 'Low': return 'text-success-ink';
+      default: return 'text-ink-3';
     }
   }
 
@@ -671,6 +1045,42 @@ export class TasksComponent {
     this.selectedTask.set(task);
     this.reassignedUser = task.assignedToUserId || '';
     this.assignModalOpen.set(true);
+  }
+
+  editingTask = signal<Task | null>(null);
+  editData = { title: '', description: '', status: 'Pending' as Task['status'], priority: '' as Task['priority'] | '', assignedTeamId: '', assignedToUserId: '', dueDate: '' };
+
+  openEditModal(task: Task) {
+    if (!this.canWrite()) return;
+    this.editData = {
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      priority: task.priority || '',
+      assignedTeamId: task.assignedTeamId || '',
+      assignedToUserId: task.assignedToUserId || '',
+      dueDate: task.dueDate?.slice(0, 10) || ''
+    };
+    this.editingTask.set(task);
+  }
+
+  closeEditModal() {
+    this.editingTask.set(null);
+  }
+
+  saveEdit(task: Task) {
+    const d = this.editData;
+    const title = d.title.trim();
+    if (!title || !this.canWrite()) return;
+    this.tasksService.updateDetails(task.id, {
+      title,
+      description: d.description.trim() || undefined,
+      status: d.status,
+      priority: d.priority || undefined,
+      assignedTeamId: d.assignedTeamId || undefined,
+      assignedToUserId: d.assignedToUserId || undefined,
+      dueDate: d.dueDate || undefined
+    }, () => this.closeEditModal());
   }
 
   saveAssignment() {
