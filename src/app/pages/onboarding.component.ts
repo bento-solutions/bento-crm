@@ -502,12 +502,8 @@ export class OnboardingComponent {
       phone: this.joinPhone().trim() || undefined
     }).subscribe({
       next: (response) => {
-        localStorage.setItem('accessToken', response.access_token);
-        if (response.refresh_token) {
-          localStorage.setItem('refreshToken', response.refresh_token);
-        }
         this.loading.set(false);
-        this.state.setCurrentUser(response.user.id);
+        this.state.startSession(response);
         window.location.href = '/';
       },
       error: (err) => {
@@ -582,12 +578,8 @@ export class OnboardingComponent {
 
         this.authApi.login({ email: this.adminEmail().trim(), password: this.adminPassword() }).subscribe({
           next: (response) => {
-            localStorage.setItem('accessToken', response.access_token);
-            if (response.refresh_token) {
-              localStorage.setItem('refreshToken', response.refresh_token);
-            }
             this.loading.set(false);
-            this.state.setCurrentUser(response.user.id);
+            this.state.startSession(response);
             this.router.navigate(['/']);
           },
           error: (err) => {

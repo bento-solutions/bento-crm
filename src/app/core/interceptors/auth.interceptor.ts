@@ -6,18 +6,21 @@ import {
   HttpInterceptor,
   HttpErrorResponse,
 } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, finalize, map, shareReplay, switchMap, take } from 'rxjs/operators';
+import { Observable, defer, firstValueFrom, throwError } from 'rxjs';
+import { catchError, finalize, shareReplay, switchMap, take } from 'rxjs/operators';
 import { CrmStateService } from '../../services/crm-state.service';
 import { AuthApiService, LoginResponse } from '../services/auth-api.service';
+
+/** Name of the Web Lock that serialises token refreshes across every tab of the app. */
+const REFRESH_LOCK = 'bento-auth-refresh';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private state = inject(CrmStateService);
   private authApi = inject(AuthApiService);
 
-  // Coordinates concurrent 401s so only one /auth/refresh call is in flight at a
-  // time. Every request that 401s while a refresh is running subscribes to this
+  // Coordinates concurrent 401s so only one /auth/refresh call is in flight per
+  // tab. Every request that 401s while a refresh is running subscribes to this
   // same shared observable, so they all resolve together -- on success they retry
   // with the new token, and on failure they all receive the error. The previous
   // BehaviorSubject approach only ever emitted on success, so a failed refresh
@@ -43,7 +46,7 @@ export class AuthInterceptor implements HttpInterceptor {
         // app's eager data loads, re-fired the same 401s, and reloaded again:
         // an infinite reload loop for anyone who wasn't logged in yet.
         if (error.status === 401 && token && !isAuthEndpoint) {
-          return this.handleUnauthorized(request, next);
+          return this.handleUnauthorized(request, next, token);
         }
         return throwError(() => error);
       })
@@ -69,19 +72,22 @@ export class AuthInterceptor implements HttpInterceptor {
     return authedRequest;
   }
 
-  private handleUnauthorized(originalRequest: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+  private handleUnauthorized(
+    originalRequest: HttpRequest<unknown>,
+    next: HttpHandler,
+    rejectedToken: string
+  ): Observable<HttpEvent<unknown>> {
+    // The rejected token may already have been replaced -- by a refresh this tab
+    // finished a moment ago, or by another tab, since all tabs share localStorage.
+    // Retrying with the current one costs nothing, whereas refreshing again would
+    // present a refresh token that has already been spent.
+    const current = this.readAccessToken();
+    if (current && current !== rejectedToken) {
+      return next.handle(this.applyHeaders(originalRequest, current));
+    }
 
     if (!this.refresh$) {
-      this.refresh$ = this.authApi.refresh(refreshToken || '').pipe(
-        map((response: LoginResponse) => {
-          this.storeTokens(response);
-          return response.access_token;
-        }),
-        catchError((refreshError) => {
-          this.state.logout();
-          return throwError(() => refreshError);
-        }),
+      this.refresh$ = defer(() => this.refreshAcrossTabs(rejectedToken)).pipe(
         // Reset once the cycle settles (success or failure) so the next 401 starts
         // a fresh refresh instead of replaying this one's stale result.
         finalize(() => { this.refresh$ = null; }),
@@ -95,6 +101,56 @@ export class AuthInterceptor implements HttpInterceptor {
       take(1),
       switchMap((token) => next.handle(this.applyHeaders(originalRequest, token)))
     );
+  }
+
+  /**
+   * Refresh tokens are single-use: the backend rotates them on every refresh and
+   * treats a spent one presented again as a stolen credential. All tabs share one
+   * refresh token through localStorage, so two tabs whose access token expired
+   * together both presented it; the slower one was refused, logged out, and in
+   * doing so cleared the tokens the faster tab had just stored -- leaving that tab
+   * signed in on screen with no session behind it. A Web Lock makes the tabs take
+   * turns, and inside it each tab first checks whether the one ahead of it already
+   * refreshed.
+   */
+  private async refreshAcrossTabs(rejectedToken: string): Promise<string> {
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    if (!locks) {
+      return this.refreshOnce(rejectedToken);
+    }
+    // request() holds the lock until the callback's promise settles, then resolves with its value.
+    return await locks.request(REFRESH_LOCK, () => this.refreshOnce(rejectedToken));
+  }
+
+  private async refreshOnce(rejectedToken: string): Promise<string> {
+    const current = this.readAccessToken();
+    if (current && current !== rejectedToken) {
+      return current;
+    }
+
+    const presented = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') || '' : '';
+    try {
+      const response = await firstValueFrom(this.authApi.refresh(presented));
+      this.storeTokens(response);
+      return response.access_token;
+    } catch (refreshError) {
+      // Only the backend refusing the refresh token ends the session. A 429, a 5xx
+      // or a dropped connection says nothing about whether it is still valid, and
+      // logging out on those threw users back to the login screen whenever the rate
+      // limiter tripped. And if another tab has stored a newer refresh token in the
+      // meantime, the session is alive even though this attempt lost.
+      const status = (refreshError as { status?: number }).status;
+      const rejected = status === 401 || status === 403;
+      const unchanged = typeof localStorage === 'undefined' || localStorage.getItem('refreshToken') === (presented || null);
+      if (rejected && unchanged) {
+        this.state.logout();
+      }
+      throw refreshError;
+    }
+  }
+
+  private readAccessToken(): string | null {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') : null;
   }
 
   private storeTokens(response: LoginResponse): void {

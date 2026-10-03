@@ -55,6 +55,27 @@ export class ApiClientError extends Error {
   }
 }
 
+/** Longest wait a rate-limited request sits out before failing instead (seconds). */
+const MAX_RATE_LIMIT_WAIT_SECONDS = 5;
+
+/**
+ * Retry delay for a 429, or the error itself for anything else. The rate limiter
+ * refuses a request before it runs, so resending is safe even for writes -- a
+ * "Start task" click that hit the limit used to fail with a red toast and only
+ * succeed when the user tried again. Waits longer than a few seconds fail at once
+ * rather than freezing the UI.
+ */
+function rateLimitDelay(error: HttpErrorResponse): Observable<unknown> {
+  if (error.status === 429) {
+    const header = Number(error.headers?.get('X-Rate-Limit-Retry-After-Seconds'));
+    const waitSeconds = Number.isFinite(header) ? Math.max(header, 1) : 1;
+    if (waitSeconds <= MAX_RATE_LIMIT_WAIT_SECONDS) {
+      return timer(waitSeconds * 1000);
+    }
+  }
+  return throwError(() => error);
+}
+
 @Injectable({ providedIn: 'root' })
 export class BaseApiService {
   protected readonly baseUrl = API_CONFIG.baseUrl;
@@ -69,12 +90,13 @@ export class BaseApiService {
       // Only retry transient failures. Retrying a 4xx (validation error, auth
       // failure, not found) is pointless and, for auth endpoints, actively
       // harmful -- it burns rate-limit budget and can trip account lockout.
+      // A 429 is the exception: the server says exactly when to come back.
       retry({
         count: HTTP_CONFIG.retryAttempts,
         delay: (error: HttpErrorResponse, retryCount) =>
           error.status === 0 || error.status >= 500
             ? timer(HTTP_CONFIG.retryDelay * retryCount)
-            : throwError(() => error),
+            : rateLimitDelay(error),
       }),
       catchError(error => this.handleError(error))
     );
@@ -84,6 +106,7 @@ export class BaseApiService {
     const url = this.buildUrl(endpoint);
     return this.http.post<T>(url, body).pipe(
       timeout(HTTP_CONFIG.timeout),
+      retry({ count: HTTP_CONFIG.retryAttempts, delay: rateLimitDelay }),
       catchError(error => this.handleError(error))
     );
   }
@@ -92,6 +115,7 @@ export class BaseApiService {
     const url = this.buildUrl(endpoint);
     return this.http.patch<T>(url, body).pipe(
       timeout(HTTP_CONFIG.timeout),
+      retry({ count: HTTP_CONFIG.retryAttempts, delay: rateLimitDelay }),
       catchError(error => this.handleError(error))
     );
   }
@@ -100,6 +124,7 @@ export class BaseApiService {
     const url = this.buildUrl(endpoint);
     return this.http.delete<T>(url).pipe(
       timeout(HTTP_CONFIG.timeout),
+      retry({ count: HTTP_CONFIG.retryAttempts, delay: rateLimitDelay }),
       catchError(error => this.handleError(error))
     );
   }

@@ -414,12 +414,8 @@ export class InviteAcceptComponent {
 
     this.invitationApi.acceptLoggedIn(targetId).subscribe({
       next: (response) => {
-        localStorage.setItem('accessToken', response.access_token);
-        if (response.refresh_token) {
-          localStorage.setItem('refreshToken', response.refresh_token);
-        }
         this.loading.set(false);
-        this.state.setCurrentUser(response.user.id);
+        this.state.startSession(response);
         window.location.href = '/';
       },
       error: (err) => {
@@ -457,12 +453,8 @@ export class InviteAcceptComponent {
       next: (response) => {
         // Accepting returns a full session, so the invitee lands inside the app rather than
         // on a login form asking for the password they just chose.
-        localStorage.setItem('accessToken', response.access_token);
-        if (response.refresh_token) {
-          localStorage.setItem('refreshToken', response.refresh_token);
-        }
         this.loading.set(false);
-        this.state.setCurrentUser(response.user.id);
+        this.state.startSession(response);
         this.router.navigate(['/']);
       },
       error: (err) => {

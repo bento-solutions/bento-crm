@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
-import { AuthApiService, OrganizationChoice } from '../core/services/auth-api.service';
+import { AuthApiService, LoginResponse, OrganizationChoice } from '../core/services/auth-api.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 
@@ -663,15 +663,14 @@ export class LoginComponent {
     });
   }
 
-  private handleLoginSuccess(response: any): void {
-    localStorage.setItem('accessToken', response.access_token);
-    if (response.refresh_token) {
-      localStorage.setItem('refreshToken', response.refresh_token);
-    }
-    localStorage.setItem('bento_auth', 'true');
+  private handleLoginSuccess(response: LoginResponse): void {
     this.loading.set(false);
-    this.state.setCurrentUser(response.user.id);
-    this.router.navigate(['/']);
+    this.state.startSession(response);
+    // While signed out, authGuard turned the first navigation away, which leaves
+    // the router believing it is already at "/" -- so a plain navigate(['/']) was
+    // ignored as a same-URL navigation and the shell came up with an empty outlet
+    // (a blank dashboard) until a reload. 'reload' makes the router run it anyway.
+    this.router.navigate(['/'], { onSameUrlNavigation: 'reload' });
   }
 
 }

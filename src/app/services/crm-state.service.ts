@@ -11,6 +11,7 @@ import { isSupportedLanguage } from '../core/i18n/language';
 import { InvitationApiService, InvitationDto, InvitationRole } from '../core/services/invitation-api.service';
 import { RelatedEntityType } from '../shared/related-entity.model';
 import { environment } from '../../environments/environment';
+import { CurrentUser, LoginResponse } from '../core/services/auth-api.service';
 
 export interface Organization {
   id: string;
@@ -2335,8 +2336,25 @@ export class CrmStateService {
   setCurrentUser(userId: string): void {
     this.currentUserId.set(userId);
     this.isAuthenticated.set(true);
-    this.saveAuthState(true);
+    // The id is written before the auth flag: other tabs adopt the session when
+    // the flag appears (see syncSessionAcrossTabs) and must find the id already set.
     this.saveCurrentUserId(userId);
+    this.saveAuthState(true);
+  }
+
+  /**
+   * Signs this tab in with a session the backend just issued (login, signup,
+   * invitation). The response already carries the user, so the profile is known
+   * immediately instead of showing "?" until GET /users or /auth/me answers.
+   */
+  startSession(response: LoginResponse): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('accessToken', response.access_token);
+      if (response.refresh_token) {
+        localStorage.setItem('refreshToken', response.refresh_token);
+      }
+    }
+    this.adoptCurrentUser(response.user);
   }
 
   login(email: string): boolean {
@@ -2354,65 +2372,67 @@ export class CrmStateService {
     // Fetch the current user data from the API and update the state
     if (this.isAuthenticated()) {
       this.api.getMe().subscribe({
-        next: (user) => {
-          // Map CurrentUser to CrmUser
-          const crmUser: CrmUser = {
-            id: user.id,
-            displayName: user.display_name,
-            name: user.display_name,
-            email: user.email,
-            initials: user.initials || this.deriveInitials(user.display_name || 'U U'),
-            avatarColor: user.avatar_color || this.getAvatarColor(user.id),
-            // The backend sends UserRole in SCREAMING_CASE ("ADMIN"); RoleId is lowercase.
-            // Casting straight across silently produced a roleId no permission table has an
-            // entry for, so every lookup fell through to the viewer defaults and hid the
-            // Users and Teams settings tabs from actual admins.
-            roleId: CrmStateService.BACKEND_TO_ROLE_ID[user.role] ?? 'viewer',
-            role: user.role,
-            teamId: user.team_id,
-            team: null,
-            isActive: user.is_active,
-            phone: user.phone || undefined,
-            jobTitle: user.job_title || undefined,
-            preferences: {
-              language: isSupportedLanguage(user.language) ? user.language : 'en',
-              // Backend has no theme field: preserve the persisted choice so a
-              // refresh never drops a dark/system selection back to light-only
-              // state without applying it to the DOM.
-              theme: this.users().find(u => u.id === user.id)?.preferences.theme || this.loadSavedTheme(),
-              notifyOnLeadAssign: true,
-              notifyOnDealUpdate: true,
-              notifyOnMention: true,
-            },
-            createdAt: new Date(),
-            lastActiveAt: new Date(),
-          };
-
-          // The token is the identity: adopt the server-side user id so a stale
-          // bento_current_user_id (e.g. a seed id from an older session) can
-          // never point the profile at the wrong user after a refresh.
-          this.setCurrentUser(user.id);
-
-          // Update the current user in the users list. This MUST produce a new
-          // array reference: signals skip notification on Object.is-equal
-          // values, so mutating the array in place and returning it silently
-          // left `currentUser` stuck at undefined (profile "?", lost info)
-          // whenever GET /users failed or resolved in the "wrong" order --
-          // e.g. for roles without USERS_READ, where /auth/me is the only
-          // source of the current user.
-          this.users.update(users => {
-            const index = users.findIndex(u => u.id === user.id);
-            if (index >= 0) {
-              return users.map(u => u.id === user.id ? { ...u, ...crmUser } : u);
-            }
-            return [...users, crmUser];
-          });
-        },
+        next: (user) => this.adoptCurrentUser(user),
         error: (err) => {
           console.error('Failed to sync current user from API:', err);
         }
       });
     }
+  }
+
+  private adoptCurrentUser(user: CurrentUser): void {
+    // Map CurrentUser to CrmUser
+    const crmUser: CrmUser = {
+      id: user.id,
+      displayName: user.display_name,
+      name: user.display_name,
+      email: user.email,
+      initials: user.initials || this.deriveInitials(user.display_name || 'U U'),
+      avatarColor: user.avatar_color || this.getAvatarColor(user.id),
+      // The backend sends UserRole in SCREAMING_CASE ("ADMIN"); RoleId is lowercase.
+      // Casting straight across silently produced a roleId no permission table has an
+      // entry for, so every lookup fell through to the viewer defaults and hid the
+      // Users and Teams settings tabs from actual admins.
+      roleId: CrmStateService.BACKEND_TO_ROLE_ID[user.role] ?? 'viewer',
+      role: user.role,
+      teamId: user.team_id,
+      team: null,
+      isActive: user.is_active,
+      phone: user.phone || undefined,
+      jobTitle: user.job_title || undefined,
+      preferences: {
+        language: isSupportedLanguage(user.language) ? user.language : 'en',
+        // Backend has no theme field: preserve the persisted choice so a
+        // refresh never drops a dark/system selection back to light-only
+        // state without applying it to the DOM.
+        theme: this.users().find(u => u.id === user.id)?.preferences.theme || this.loadSavedTheme(),
+        notifyOnLeadAssign: true,
+        notifyOnDealUpdate: true,
+        notifyOnMention: true,
+      },
+      createdAt: new Date(),
+      lastActiveAt: new Date(),
+    };
+
+    // The token is the identity: adopt the server-side user id so a stale
+    // bento_current_user_id (e.g. a seed id from an older session) can
+    // never point the profile at the wrong user after a refresh.
+    this.setCurrentUser(user.id);
+
+    // Update the current user in the users list. This MUST produce a new
+    // array reference: signals skip notification on Object.is-equal
+    // values, so mutating the array in place and returning it silently
+    // left `currentUser` stuck at undefined (profile "?", lost info)
+    // whenever GET /users failed or resolved in the "wrong" order --
+    // e.g. for roles without USERS_READ, where /auth/me is the only
+    // source of the current user.
+    this.users.update(users => {
+      const index = users.findIndex(u => u.id === user.id);
+      if (index >= 0) {
+        return users.map(u => u.id === user.id ? { ...u, ...crmUser } : u);
+      }
+      return [...users, crmUser];
+    });
   }
 
   logout(): void {
@@ -2425,6 +2445,37 @@ export class CrmStateService {
       localStorage.removeItem('bento_current_user_id');
     }
   }
+
+  /**
+   * Every tab shares the session through localStorage, but each keeps its own
+   * isAuthenticated signal. Without this, a tab stayed in the signed-in shell
+   * after another tab signed out or lost the session, and every request it sent
+   * went out without a token and failed -- the profile showed "?" and actions such
+   * as starting a task errored until a reload.
+   */
+  private syncSessionAcrossTabs(): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+    window.addEventListener('storage', (event: StorageEvent) => {
+      // A null key means another tab cleared the whole storage.
+      if (event.storageArea !== localStorage) return;
+      if (event.key !== null && !CrmStateService.SESSION_KEYS.includes(event.key)) return;
+
+      const signedIn = this.loadAuthState();
+      if (!signedIn && this.isAuthenticated()) {
+        this.logout();
+      } else if (signedIn && !this.isAuthenticated()) {
+        // Signed in from another tab: boot fresh into that session rather than
+        // patching it into a page that was built for the login screen.
+        window.location.reload();
+      } else if (signedIn && this.loadCurrentUserId() !== this.currentUserId()) {
+        // A different account signed in elsewhere; everything this tab holds
+        // belongs to the previous one.
+        window.location.reload();
+      }
+    });
+  }
+
+  private static readonly SESSION_KEYS = ['accessToken', 'refreshToken', 'bento_auth', 'bento_current_user_id'];
 
   // Proposal templates
   proposalTemplates = signal<ProposalTemplate[]>([]);
@@ -4848,6 +4899,8 @@ export class CrmStateService {
   private eagerDataLoadedFor: boolean | null = null;
 
   constructor() {
+    this.syncSessionAcrossTabs();
+
     // Eager data (organization, users, teams, groups, notifications) is
     // protected — fetching it while logged out just produces a wall of 401s.
     // Load it once whenever isAuthenticated() becomes true (on boot with a
