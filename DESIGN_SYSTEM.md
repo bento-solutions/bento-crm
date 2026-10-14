@@ -5,9 +5,18 @@ One visual language for every module. The rules below are enforced by `npm run l
 
 Source of truth: [`src/styles.css`](src/styles.css). Shared building blocks: [`src/app/shared/ui/`](src/app/shared/ui/).
 
+## Look and feel
+
+A soft, warm, low-contrast SaaS look: a white icon rail (`--sidebar-*` tokens) that expands from an edge toggle, a
+warm grey canvas, flat white cards with hairline borders and no shadows, and one butter-amber primary (`#FCD38D`, dark
+`--color-on-primary` text) for the main actions and the selected nav item. Tabs and segmented controls are grey tracks
+with a white selected item; badges are soft pastel tints; KPI numerals are large and light (weight 400).
+Radii: controls 10px, cards 14px, overlays 18px. Typeface: DM Sans; icons: Material Symbols Outlined (weight 300).
+
 ## Principles
 
-1. **Blue means interactive.** Primary buttons, links, selected tabs/nav, focus rings. Blue is never a status.
+1. **Amber means action.** Primary buttons, the selected nav item, focus rings and links (`accent-text`). Amber is
+   never used as a status on its own.
 2. **Colour is for meaning.** Semantic hues (`success`, `warning`, `danger`, `info`) carry *status* and always come
    with text or an icon. Entity hues (see tones) carry *identity* and are decorative.
 3. **Every screen has the same anatomy:** page header → stat cards → tabs → toolbar → content (table / cards / board).
@@ -37,7 +46,7 @@ Chart series use `--chart-1…6`; per-person identity colours come from `identit
 
 ## Type scale
 
-Inter, 600 for emphasis (no 700+). Sizes are tokens — never `text-[13px]`.
+DM Sans, 500 for headings and 600 for emphasis (no 700+). Sizes are tokens — never `text-[13px]`.
 
 | Token | px | Use |
 |---|---|---|
@@ -46,15 +55,16 @@ Inter, 600 for emphasis (no 700+). Sizes are tokens — never `text-[13px]`.
 | `text-sm` / `text-body` | **13** | default body, controls, table cells |
 | `text-base` | 14 | emphasised body |
 | `text-lg` | 16 | card / modal / section titles |
-| `text-xl` | 20 | page titles, KPI numerals |
+| `text-xl` | 20 | section numerals |
 | `text-2xl` | 24 | hero numerals |
 
 Roles: `.t-title`, `.t-heading`, `.eyebrow` (11px caps), `.field-label` (12px), `.num` (tabular numerals).
 
 ## Space, radius, elevation
 
-4px grid. Page gutter 24 (16 on phones), section gap 24, card padding 20, tile padding 16, control height 36 (28 small / 40 large).
-Radius roles: controls **8** (`rounded-lg`) · cards **12** (`rounded-xl`) · overlays **16** (`rounded-2xl`) · pills `rounded-full`.
+4px grid. Page gutter 32 (16 on phones), section gap 24, card padding 20, tile padding 16, control height 36 (28 small / 40 large).
+Page titles are 24px, KPI numerals 28px.
+Radius roles: controls **10** (`rounded-lg`) · cards **16** (`rounded-xl`) · overlays **20** (`rounded-2xl`) · buttons, tabs and pills `rounded-full`.
 Shadows: `shadow-xs` cards, `shadow-lg` menus, `shadow-overlay` modals.
 
 ## Icons
@@ -72,7 +82,7 @@ Material Icons at five sizes only: `icon-xs` 14 · `icon-sm` 16 (buttons, row ac
 | Buttons | `.btn-primary` · `.btn-secondary` · `.btn-ghost` · `.btn-danger` · `.btn-danger-soft` · `.btn-icon` (+ `.btn-sm`, `.btn-lg`, `.btn-block`) |
 | Form | `.field-label` + `.input-field` (inputs, selects, textareas) · `.search-field` · `.pill-select` (inline-edit status) · `.choice-row` · `.switch` |
 | Status | `.badge` + `.badge-success/warning/danger/info/violet/accent/neutral` · `.count-pill` |
-| Section switching | `.tabs` + `.tab` (`is-active`) — navigation between sections |
+| Section switching | `.tabs` + `.tab` (`is-active`) — pill tabs in a white track, navigation between sections |
 | View switching | `.segmented` + `.segmented__item` — table/board, currency, sub-sections |
 | Filters | `.toolbar` with `.search-field`, selects, `.toolbar__count`, `.toolbar__spacer` |
 | Tables | `.table-card` > `table.data-table` (`.col-actions`, `.col-num`, `.row-empty`, `.cell-title`, `.cell-sub`) |

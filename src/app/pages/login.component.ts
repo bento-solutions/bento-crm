@@ -19,28 +19,83 @@ import { TranslationService } from '../services/translation.service';
       background: var(--color-bg);
     }
 
+    /* Split screen: a soft, misty brand panel beside the sign-in form. */
     .login-container {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       min-height: 100vh;
+      padding: 16px;
+      gap: 16px;
+      background: var(--color-bg);
+    }
+
+    .login-hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 48px;
+      padding: 44px 48px;
+      border-radius: var(--r-overlay);
+      background: linear-gradient(160deg,
+        color-mix(in srgb, var(--color-info) 30%, var(--color-surface)) 0%,
+        color-mix(in srgb, var(--chart-6) 32%, var(--color-surface)) 50%,
+        color-mix(in srgb, var(--color-info) 16%, var(--color-surface)) 100%);
+      color: var(--color-text-primary);
+      overflow: hidden;
+    }
+
+    .login-hero__brand { display: flex; align-items: center; gap: 12px; }
+    .login-hero__brand img {
+      width: 40px; height: 40px; padding: 7px; border-radius: var(--r-control);
+      background: var(--color-inverse); object-fit: contain;
+    }
+    .login-hero__brand span { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+
+    .login-hero__eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px;
+      border-radius: var(--r-pill); font-size: 13px; font-weight: 500;
+      background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-surface) 90%, transparent);
+    }
+    .login-hero__eyebrow mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .login-hero__title {
+      margin: 20px 0 0; max-width: 540px;
+      font-size: 42px; line-height: 1.1; font-weight: 500; letter-spacing: -0.03em;
+    }
+    .login-hero__subtitle { margin: 14px 0 0; max-width: 460px; font-size: 16px; line-height: 1.6; color: var(--color-text-secondary); }
+
+    .login-hero__features { display: flex; flex-direction: column; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+    .login-hero__features li {
+      display: flex; align-items: center; gap: 14px; max-width: 440px;
+      padding: 12px 14px; border-radius: var(--r-card);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      font-size: 14px; font-weight: 500;
+    }
+    .login-hero__num {
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--color-primary); color: var(--color-on-primary);
+      font-size: 12px; font-weight: 600;
+    }
+    .login-hero__foot { font-size: 12px; color: var(--color-text-secondary); }
+
+    .login-panel {
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 48px 24px;
     }
 
     .login-card {
       width: 100%;
       max-width: 400px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--r-overlay);
-      box-shadow: var(--shadow-xs);
-      padding: 40px 32px 32px;
     }
 
     .login-logo {
-      display: flex;
+      display: none;
       align-items: center;
-      justify-content: center;
       gap: 10px;
       margin-bottom: 32px;
     }
@@ -53,29 +108,37 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .login-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 20px;
       letter-spacing: -0.02em;
       color: var(--color-text-primary);
     }
 
     .login-title {
-      text-align: center;
-      margin-bottom: 6px;
+      margin-bottom: 28px;
     }
 
     .login-title h1 {
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 32px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
       color: var(--color-text-primary);
       margin: 0;
     }
 
     .login-title p {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--color-text-tertiary);
-      margin: 4px 0 0;
+      margin: 6px 0 0;
     }
+
+    @media (max-width: 960px) {
+      .login-container { grid-template-columns: 1fr; padding: 0; }
+      .login-hero { display: none; }
+      .login-logo { display: flex; }
+    }
+
+    .login-card .input-field { height: 46px; font-size: 14px; background: var(--color-surface); }
 
     .form-group {
       margin-bottom: 16px;
@@ -160,13 +223,14 @@ import { TranslationService } from '../services/translation.service';
       color: var(--color-on-primary);
       border: none;
       border-radius: var(--r-control);
-      height: var(--control-height-lg);
+      height: 48px;
       padding: 0 16px;
-      font-size: 13px;
-      font-weight: 500;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       transition: background 150ms ease;
-      margin-top: 8px;
+      margin-top: 12px;
     }
 
     .login-btn:hover {
@@ -415,6 +479,24 @@ import { TranslationService } from '../services/translation.service';
   `],
   template: `
     <div class="login-container">
+      <aside class="login-hero">
+        <div class="login-hero__brand">
+          <img src="logo.webp" alt="" />
+          <span>Bento</span>
+        </div>
+        <div>
+          <span class="login-hero__eyebrow"><mat-icon>auto_awesome</mat-icon>{{ 'login.hero.eyebrow' | translate }}</span>
+          <h2 class="login-hero__title">{{ 'login.hero.title' | translate }}</h2>
+          <p class="login-hero__subtitle">{{ 'login.hero.subtitle' | translate }}</p>
+          <ul class="login-hero__features">
+            <li><span class="login-hero__num">01</span>{{ 'login.hero.centralize' | translate }}</li>
+            <li><span class="login-hero__num">02</span>{{ 'login.hero.automate' | translate }}</li>
+            <li><span class="login-hero__num">03</span>{{ 'login.hero.collaborate' | translate }}</li>
+          </ul>
+        </div>
+        <div class="login-hero__foot">© Bento CRM</div>
+      </aside>
+      <div class="login-panel">
       <div class="login-card">
         <div class="login-logo">
           <img src="logo.webp" alt="Bento Logo" />
@@ -551,6 +633,7 @@ import { TranslationService } from '../services/translation.service';
             <a routerLink="/onboarding">{{ 'login.createOrg' | translate }}</a>
           </p>
         }
+      </div>
       </div>
     </div>
   `

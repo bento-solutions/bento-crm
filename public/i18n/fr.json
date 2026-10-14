@@ -56,6 +56,12 @@
 
   "login.title": "Bienvenue",
   "login.subtitle": "Connectez-vous à votre compte pour continuer",
+  "login.hero.eyebrow": "CRM tout-en-un",
+  "login.hero.title": "Gérez, collaborez et performez depuis un seul endroit",
+  "login.hero.subtitle": "Partenaires, affaires, tâches, tickets et factures réunis dans un seul espace.",
+  "login.hero.centralize": "Centralisez vos clients, votre pipeline et vos documents",
+  "login.hero.automate": "Automatisez relances, rappels et campagnes",
+  "login.hero.collaborate": "Collaborez avec votre équipe en temps réel",
   "login.email": "E-mail",
   "login.emailPlaceholder": "Entrez votre e-mail",
   "login.password": "Mot de passe",

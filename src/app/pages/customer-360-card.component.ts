@@ -71,7 +71,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               </div>
             </div>
             <div class="flex items-center gap-4 group">
-              <mat-icon class="text-ink-4 shrink-0">phone_outline</mat-icon>
+              <mat-icon class="text-ink-4 shrink-0">call</mat-icon>
               <div class="flex-1">
                 <span class="eyebrow block">Phone Number</span>
                 <span class="text-base font-semibold text-ink">{{ view().partner.phone || '—' }}</span>

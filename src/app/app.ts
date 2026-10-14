@@ -153,6 +153,12 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/groups', submenu: 'Groups', subIcon: 'forum', action: 'Manage collaboration group settings', keywords: 'settings groups collaboration' },
 ];
 
+const SIDEBAR_COLLAPSED_KEY = 'bento.sidebarCollapsed';
+
+function readSidebarCollapsed(): boolean {
+  try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'false'; } catch { return true; }
+}
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent],
@@ -169,24 +175,25 @@ const SEARCH_ITEMS: SearchItem[] = [
       overflow: hidden;
     }
 
-    /* ── Sidebar ── */
+    /* ── Sidebar: a slim white icon rail that expands to show labels ── */
     .app-sidebar {
-      width: 224px;
-      min-width: 224px;
+      position: relative;
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
       height: 100vh;
-      background: var(--color-surface);
-      border-right: 1px solid var(--color-border);
+      background: var(--sidebar-bg);
+      color: var(--sidebar-ink);
+      border-inline-end: 1px solid var(--sidebar-border);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
       z-index: 40;
       flex-shrink: 0;
       transition: width 200ms ease, min-width 200ms ease;
     }
 
     .app-sidebar.collapsed {
-      width: 60px;
-      min-width: 60px;
+      width: var(--sidebar-width-collapsed);
+      min-width: var(--sidebar-width-collapsed);
     }
 
     .app-sidebar.collapsed .sidebar-section-title {
@@ -197,273 +204,241 @@ const SEARCH_ITEMS: SearchItem[] = [
       overflow: hidden;
     }
 
-    .app-sidebar.collapsed .nav-label {
-      max-width: 0;
-      opacity: 0;
-      margin-left: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-logo span {
-      max-width: 0;
-      opacity: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-user-info {
-      max-width: 0;
-      opacity: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-user {
-      gap: 0;
+    .app-sidebar.collapsed .nav-label,
+    .app-sidebar.collapsed .sidebar-logo span,
+    .app-sidebar.collapsed .sidebar-user-info,
+    .app-sidebar.collapsed .sidebar-user-chevron {
+      display: none;
     }
 
     .sidebar-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 20px 16px 16px;
+      gap: 12px;
+      padding: 22px 18px 18px;
       flex-shrink: 0;
+      cursor: pointer;
     }
 
     .app-sidebar.collapsed .sidebar-logo {
-      gap: 0;
+      justify-content: center;
+      padding-inline: 0;
     }
 
+    /* The logo sits on a dark tile, like the reference design. */
     .sidebar-logo img {
-      width: 28px;
-      height: 28px;
+      width: 40px;
+      height: 40px;
+      padding: 7px;
       object-fit: contain;
       border-radius: var(--r-control);
-    }
-
-    .sidebar-collapse-btn {
-      margin-left: auto;
-      width: 28px;
-      height: 28px;
-      border-radius: var(--r-control);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-      border: none;
-      color: var(--color-text-tertiary);
-      cursor: pointer;
-      transition: all 150ms ease;
+      background: var(--color-inverse);
       flex-shrink: 0;
-      overflow: hidden;
-    }
-
-    .sidebar-collapse-btn:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-    }
-
-    .sidebar-collapse-btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-
-    .app-sidebar.collapsed .sidebar-collapse-btn {
-      opacity: 0;
-      pointer-events: none;
-      width: 0;
-      margin-left: 0;
-      overflow: hidden;
-    }
-
-    .app-sidebar.collapsed .sidebar-link,
-    .app-sidebar.collapsed .sidebar-bottom-link {
-      justify-content: center;
-      gap: 0;
-      padding: 7px 0;
     }
 
     .sidebar-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 16px;
-      letter-spacing: -0.02em;
-      color: var(--color-text-heading);
-      max-width: 100px;
-      opacity: 1;
+      letter-spacing: -0.01em;
+      color: var(--sidebar-ink-strong);
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
+      text-overflow: ellipsis;
     }
+
+    /* Expand / collapse handle on the rail's edge. */
+    .sidebar-edge-toggle {
+      position: absolute;
+      inset-inline-end: -14px;
+      top: 50%;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      z-index: 2;
+      transition: background 150ms ease, color 150ms ease;
+    }
+
+    .sidebar-edge-toggle:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-text-primary);
+    }
+
+    .sidebar-edge-toggle mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+    }
+
+    [dir='rtl'] .sidebar-edge-toggle mat-icon { transform: scaleX(-1); }
 
     .sidebar-nav {
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 4px 10px;
+      padding: 4px 18px 12px;
+      scrollbar-width: none;
+    }
+
+    .sidebar-nav::-webkit-scrollbar { display: none; }
+
+    .app-sidebar.collapsed .sidebar-nav {
+      padding-inline: 18px;
     }
 
     .sidebar-section-title {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--color-text-tertiary);
-      padding: 18px 12px 6px;
+      color: var(--sidebar-muted);
+      padding: 14px 10px 6px;
       max-height: 40px;
-      opacity: 1;
       overflow: hidden;
-      transition: max-height 200ms ease, opacity 150ms ease, padding 200ms ease;
     }
 
     .sidebar-section-title:first-child {
-      padding-top: 6px;
+      padding-top: 4px;
     }
 
-    .sidebar-link {
+    .app-sidebar.collapsed .sidebar-section-title + .sidebar-link,
+    .app-sidebar.collapsed .sidebar-section-title:not(:first-child) {
+      margin-top: 4px;
+    }
+
+    .sidebar-link,
+    .sidebar-bottom-link {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
+      gap: 12px;
+      height: 40px;
+      padding: 0 10px;
       border-radius: var(--r-control);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
-      color: var(--color-text-secondary);
+      color: var(--sidebar-ink);
       cursor: pointer;
-      transition: all 200ms ease;
+      transition: background 150ms ease, color 150ms ease;
       text-decoration: none;
-      margin: 1px 0;
+      margin: 3px 0;
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: start;
+      font-family: inherit;
     }
 
-    .sidebar-link:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
+    .app-sidebar.collapsed .sidebar-link,
+    .app-sidebar.collapsed .sidebar-bottom-link {
+      justify-content: center;
+      width: 40px;
+      padding: 0;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-bottom-link:hover {
+      background: var(--sidebar-hover);
+      color: var(--sidebar-ink-strong);
+    }
+
+    .sidebar-link.active,
+    .sidebar-bottom-link.active {
+      background: var(--sidebar-active-bg);
+      color: var(--sidebar-active-ink);
+    }
+
+    .sidebar-link mat-icon,
+    .sidebar-bottom-link mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      line-height: 22px;
+    }
+
+    .nav-label {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .nav-badge {
       margin-inline-start: auto;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
-      border-radius: 9px;
-      background: var(--color-primary);
-      color: var(--color-on-primary);
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: var(--r-pill);
+      background: var(--color-danger);
+      color: white;
       font-size: 11px;
-      font-weight: 700;
-      line-height: 18px;
+      font-weight: 600;
+      line-height: 20px;
       text-align: center;
     }
 
     .app-sidebar.collapsed .nav-badge {
       position: absolute;
       margin: 0;
-      transform: translate(14px, -10px);
+      top: -4px;
+      inset-inline-end: -6px;
       min-width: 16px;
       height: 16px;
       line-height: 16px;
       font-size: 10px;
-    }
-
-    .sidebar-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
-    }
-
-    .sidebar-link.active mat-icon {
-      color: var(--color-accent-text);
-    }
-
-    .sidebar-link mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-      line-height: 20px;
-    }
-
-    .nav-label {
-      margin-left: 10px;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 200px;
-      opacity: 1;
-      transition: max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
+      padding: 0 4px;
     }
 
     .sidebar-bottom {
       flex-shrink: 0;
-      border-top: 1px solid var(--color-border);
-      padding: 8px 10px;
-    }
-
-    .sidebar-bottom-link {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
-      border-radius: var(--r-control);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: all 200ms ease;
-      text-decoration: none;
-      background: transparent;
-      border: none;
-      width: 100%;
-      text-align: left;
-    }
-
-    .sidebar-bottom-link:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-    }
-
-    .sidebar-bottom-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
-    }
-
-    .sidebar-bottom-link.active mat-icon {
-      color: var(--color-accent-text);
+      padding: 8px 18px 18px;
     }
 
     .sidebar-user {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
-      border-top: 1px solid var(--color-border-light);
-      margin-top: 4px;
+      padding: 6px;
       cursor: pointer;
-      border-radius: var(--r-control);
+      border-radius: var(--r-card);
       transition: background 150ms ease;
       text-decoration: none;
     }
 
+    .app-sidebar.collapsed .sidebar-user {
+      justify-content: center;
+      padding: 6px 0;
+    }
+
     .sidebar-user:hover {
-      background: var(--color-surface-hover);
+      background: var(--sidebar-hover);
     }
 
     .sidebar-user-chevron {
       font-size: 16px;
       width: 16px;
       height: 16px;
-      color: var(--color-text-tertiary);
+      color: var(--sidebar-muted);
       flex-shrink: 0;
-      transition: transform 200ms ease;
     }
 
     .sidebar-profile-wrapper {
       position: relative;
-      border-top: 1px solid var(--color-border-light);
-      margin-top: 4px;
+      margin-top: 10px;
     }
 
     .sidebar-profile-wrapper .sidebar-user {
-      border-top: none;
-      margin-top: 0;
       background: none;
       border: none;
       width: 100%;
-      text-align: left;
+      text-align: start;
       font-family: inherit;
       font-size: inherit;
       line-height: inherit;
@@ -471,20 +446,20 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .profile-menu {
       position: absolute;
-      bottom: calc(100% + 4px);
+      bottom: calc(100% + 6px);
       left: 0;
       right: 0;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--r-card);
       box-shadow: var(--shadow-lg);
-      padding: 4px;
+      padding: 6px;
       z-index: 60;
       overflow: hidden;
     }
 
     .app-sidebar.collapsed .profile-menu {
-      left: 56px;
+      left: 52px;
       bottom: 0;
       right: auto;
       min-width: 180px;
@@ -505,7 +480,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       background: none;
       border: none;
       width: 100%;
-      text-align: left;
+      text-align: start;
       font-family: inherit;
     }
 
@@ -524,17 +499,14 @@ const SEARCH_ITEMS: SearchItem[] = [
     .sidebar-user-info {
       flex: 1;
       min-width: 0;
-      max-width: 150px;
-      opacity: 1;
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
     }
 
     .sidebar-user-name {
       font-size: 13px;
-      font-weight: 600;
-      color: var(--color-text-heading);
+      font-weight: 500;
+      color: var(--sidebar-ink-strong);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -542,7 +514,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-user-role {
       font-size: 11px;
-      color: var(--color-text-tertiary);
+      color: var(--sidebar-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -555,34 +527,36 @@ const SEARCH_ITEMS: SearchItem[] = [
       flex-direction: column;
       min-width: 0;
       overflow: hidden;
+      background: var(--color-bg);
     }
 
+    /* The top bar blends into the canvas: no bar, just the search and actions. */
     .content-topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
       min-height: var(--topbar-height);
-      padding: 8px var(--content-padding);
-      background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
+      padding: 18px 36px 0;
+      background: transparent;
       flex-shrink: 0;
       z-index: 30;
     }
 
     .topbar-search {
       position: relative;
-      max-width: 400px;
+      max-width: 360px;
       flex: 1;
     }
 
     .topbar-search input {
       width: 100%;
-      height: var(--control-height);
-      padding: 0 12px 0 36px;
-      background: var(--color-bg);
-      border: 1px solid var(--color-border);
+      height: 40px;
+      padding: 0 14px 0 38px;
+      background: var(--color-surface-active);
+      border: 1px solid var(--color-border-strong);
       border-radius: var(--r-control);
+      font-family: inherit;
       font-size: 13px;
       color: var(--color-text-heading);
       outline: none;
@@ -595,13 +569,13 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-search input:focus {
       background: var(--color-surface);
-      border-color: var(--color-accent-text);
+      border-color: var(--color-focus);
       box-shadow: 0 0 0 3px var(--color-focus-ring);
     }
 
     .topbar-search mat-icon {
       position: absolute;
-      left: 10px;
+      left: 12px;
       top: 50%;
       transform: translateY(-50%);
       font-size: 18px;
@@ -613,7 +587,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-search .clear-btn {
       position: absolute;
-      right: 8px;
+      right: 12px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
@@ -632,19 +606,24 @@ const SEARCH_ITEMS: SearchItem[] = [
     .topbar-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
+    .topbar-actions .create-menu .btn-primary {
+      height: 40px;
+      padding-inline: 16px;
+    }
+
     .topbar-icon-btn {
-      width: var(--control-height);
-      height: var(--control-height);
+      width: 40px;
+      height: 40px;
       border-radius: var(--r-control);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
-      border: 1px solid transparent;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       color: var(--color-text-secondary);
       cursor: pointer;
       transition: all 150ms ease;
@@ -653,8 +632,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-icon-btn:hover {
       background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-      border-color: var(--color-border);
+      color: var(--color-text-primary);
     }
 
     .topbar-icon-btn mat-icon {
@@ -670,8 +648,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       min-width: 18px;
       height: 18px;
       padding: 0 4px;
-      background: var(--color-primary);
-      border: 2px solid var(--color-surface);
+      background: var(--color-danger);
+      border: 2px solid var(--color-bg);
       border-radius: 9999px;
       display: flex;
       align-items: center;
@@ -679,13 +657,15 @@ const SEARCH_ITEMS: SearchItem[] = [
       font-size: 11px;
       line-height: 1;
       font-weight: 600;
-      color: var(--color-on-primary);
+      color: white;
     }
 
     .topbar-avatar {
       flex-shrink: 0;
+      margin-inline-start: 4px;
       border-radius: 9999px;
       overflow: hidden;
+      box-shadow: none;
     }
 
     .search-dropdown {
@@ -772,7 +752,7 @@ const SEARCH_ITEMS: SearchItem[] = [
     .content-main {
       flex: 1;
       overflow-y: auto;
-      padding: var(--content-padding);
+      padding: 22px 36px 40px;
     }
 
     /* Pages are centred with a generous cap so ultra-wide screens keep readable line lengths. */
@@ -815,7 +795,7 @@ const SEARCH_ITEMS: SearchItem[] = [
     @media (max-width: 768px) {
       .app-sidebar {
         position: fixed;
-        left: -224px;
+        left: calc(-1 * var(--sidebar-width));
         top: 0;
         bottom: 0;
         transition: left 250ms ease;
@@ -828,6 +808,10 @@ const SEARCH_ITEMS: SearchItem[] = [
 
       .mobile-sidebar-toggle {
         display: flex;
+      }
+
+      .sidebar-edge-toggle {
+        display: none;
       }
 
       .mobile-overlay {
@@ -851,7 +835,7 @@ const SEARCH_ITEMS: SearchItem[] = [
         }
 
         <!-- Sidebar -->
-        <aside class="app-sidebar" [class.mobile-open]="mobileMenuOpen()" [class.collapsed]="sidebarCollapsed()">
+        <aside class="app-sidebar" [class.mobile-open]="mobileMenuOpen()" [class.collapsed]="sidebarCollapsed() && !mobileMenuOpen()">
 
           <!-- Logo + collapse toggle -->
           <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
@@ -862,14 +846,17 @@ const SEARCH_ITEMS: SearchItem[] = [
               <img src="logo.webp" alt="Bento Logo" />
             }
             <span>{{ state.organization().name || 'Bento' }}</span>
-            <button
-              class="sidebar-collapse-btn"
-              (click)="toggleCollapse($event)"
-              [title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-            >
-              <mat-icon>{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</mat-icon>
-            </button>
           </div>
+
+          <button
+            class="sidebar-edge-toggle"
+            (click)="toggleCollapse($event)"
+            [title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-expanded]="!sidebarCollapsed()"
+          >
+            <mat-icon>{{ sidebarCollapsed() ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left' }}</mat-icon>
+          </button>
 
           <!-- Navigation -->
           <nav class="sidebar-nav">
@@ -1153,7 +1140,8 @@ export class App implements OnInit, OnDestroy {
   mobileMenuOpen = signal(false);
 
   // Sidebar collapse
-  sidebarCollapsed = signal(false);
+  /** The rail starts as icons only; the choice is remembered per browser. */
+  sidebarCollapsed = signal(readSidebarCollapsed());
 
   orgLogoUrl = computed(() => {
     return this.state.resolveLogoUrl(this.state.organization().logoUrl);
@@ -1170,6 +1158,7 @@ export class App implements OnInit, OnDestroy {
   toggleCollapse(event: Event) {
     event.stopPropagation();
     this.sidebarCollapsed.update(v => !v);
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(this.sidebarCollapsed())); } catch { /* storage unavailable */ }
   }
 
   // Current user display name

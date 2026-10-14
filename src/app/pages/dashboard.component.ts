@@ -441,10 +441,10 @@ const CATALOG: TileDef[] = [
     .dash-stack { display: flex; flex-direction: column; gap: 4px; }
     .dash-figure { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .dash-value {
-      font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em;
+      font-size: 30px; font-weight: 400; line-height: 1.1; letter-spacing: -0.03em;
       color: var(--color-text-heading); font-variant-numeric: tabular-nums;
     }
-    .dash-value--kpi { font-size: 20px; }
+    .dash-value--kpi { font-size: 30px; }
     .dash-caption { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
     .dash-caption--tight { margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .dash-sublabel {
@@ -556,7 +556,7 @@ const CATALOG: TileDef[] = [
       .donut__slice { transition: none; }
     }
     .donut__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .donut__total { font-size: 20px; font-weight: 600; line-height: 1; color: var(--color-text-heading); font-variant-numeric: tabular-nums; }
+    .donut__total { font-size: 24px; font-weight: 500; line-height: 1; color: var(--color-text-heading); font-variant-numeric: tabular-nums; }
     .donut__unit { margin-top: 2px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-tertiary); }
     .legend { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
     .legend__row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
