@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CrmStateService, Invoice } from '../services/crm-state.service';
 import { InvoicesService } from '../services/domains/invoices.service';
@@ -28,7 +29,7 @@ interface InvoiceLine {
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   template: `
     <div class="page">
       <app-page-header title="Finance" subtitle="Invoices, payables and late-payment recovery">
@@ -72,6 +73,10 @@ interface InvoiceLine {
             <span class="count-pill">{{ overdueInvoices().length }}</span>
           }
         </button>
+        <a routerLink="/finance/recurring" class="tab">
+          <mat-icon>autorenew</mat-icon>
+          {{ 'recurring.tab' | translate }}
+        </a>
       </div>
 
         <!-- Invoices View -->

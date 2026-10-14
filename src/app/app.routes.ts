@@ -20,6 +20,7 @@ export const routes: Routes = [
   { path: 'partners', canActivate: [authGuard], loadComponent: () => import('./pages/partners.component').then(m => m.PartnersComponent) },
   { path: 'partners/lead/:id', canActivate: [authGuard], loadComponent: () => import('./pages/lead-detail.component').then(m => m.LeadDetailComponent) },
   { path: 'finance', canActivate: [authGuard], loadComponent: () => import('./pages/finance.component').then(m => m.FinanceComponent) },
+  { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
   { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },
   { path: 'automation', canActivate: [authGuard], loadComponent: () => import('./pages/automation.component').then(m => m.AutomationComponent) },
@@ -38,6 +39,7 @@ export const routes: Routes = [
       // other is the standalone main-nav entry point.
       { path: 'groups', loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },
       { path: 'whatsapp', canActivate: [authorityGuard('WHATSAPP_ADMIN')], loadComponent: () => import('./pages/settings-whatsapp.component').then(m => m.SettingsWhatsAppComponent) },
+      { path: 'billing', loadComponent: () => import('./pages/settings-billing.component').then(m => m.SettingsBillingComponent) },
       { path: 'api-tokens', canActivate: [authorityGuard('API_TOKENS_MANAGE')], loadComponent: () => import('./pages/settings-api-tokens.component').then(m => m.SettingsApiTokensComponent) },
       { path: 'brands', canActivate: [authorityGuard('PARTNERS_WRITE')], loadComponent: () => import('./pages/settings-brands.component').then(m => m.SettingsBrandsComponent) },
       { path: 'categories', canActivate: [authorityGuard('TICKETS_WRITE', 'TASKS_WRITE')], loadComponent: () => import('./pages/settings-categories.component').then(m => m.SettingsCategoriesComponent) }

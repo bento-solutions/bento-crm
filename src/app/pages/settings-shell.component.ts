@@ -40,6 +40,10 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
             WhatsApp
           </a>
         }
+        <a routerLink="/settings/billing" routerLinkActive="is-active" class="tab">
+          <mat-icon>notifications_active</mat-icon>
+          Billing
+        </a>
         @if (state.hasAuthority('API_TOKENS_MANAGE')) {
           <a routerLink="/settings/api-tokens" routerLinkActive="is-active" class="tab">
             <mat-icon>key</mat-icon>
