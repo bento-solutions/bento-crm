@@ -1,12 +1,14 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { ToastService } from '../services/toast.service';
 import { CrmStateService } from '../services/crm-state.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { ConfirmService } from '../shared/ui/confirm.service';
 import { PartnersService } from '../services/domains/partners.service';
 import {
   GeneratedInvoice,
@@ -46,216 +48,214 @@ function emptyForm(): RecurringInvoiceInput {
  */
 @Component({
   selector: 'app-recurring-invoices',
-  imports: [FormsModule, RouterLink, MatIconModule, TranslatePipe],
-  styles: [`
-    .ri-card { background: var(--color-surface); border: 1px solid var(--color-border); }
-    .ri-muted { color: var(--color-text-secondary); }
-    .ri-faint { color: var(--color-text-tertiary); }
-    .ri-input { background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text-primary); }
-    .ri-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); }
-    .ri-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .ri-btn-primary { background: var(--color-text-primary); color: var(--color-surface); }
-    .ri-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .ri-danger { color: var(--color-danger); }
-    .ri-row { border-top: 1px solid var(--color-border-light); }
-    .ri-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
-    .ri-active { background: var(--color-success-light); color: var(--color-success); }
-    .ri-paused { background: var(--color-warning-light); color: var(--color-text-primary); }
-    .ri-ended { background: var(--color-bg); color: var(--color-text-tertiary); border: 1px solid var(--color-border); }
-  `],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent],
   template: `
-    <div class="space-y-6 max-w-5xl">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <a routerLink="/finance" class="text-xs ri-muted inline-flex items-center gap-1 mb-1">
-            <mat-icon class="!text-[14px] !w-3.5 !h-3.5">arrow_back</mat-icon>{{ 'recurring.back' | translate }}
-          </a>
-          <h1 class="text-lg font-bold">{{ 'recurring.title' | translate }}</h1>
-          <p class="text-sm ri-muted mt-1">{{ 'recurring.subtitle' | translate }}</p>
-        </div>
+    <div class="page">
+      <app-page-header [title]="'recurring.title' | translate" [subtitle]="'recurring.subtitle' | translate"
+                       backLink="/finance" [backLabel]="'recurring.back' | translate">
         @if (!editing() && canCreate()) {
-          <button type="button" class="ri-btn-primary text-sm font-semibold px-4 py-2 rounded-lg inline-flex items-center gap-1" (click)="startCreate()">
-            <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">add</mat-icon>{{ 'recurring.new' | translate }}
+          <button actions type="button" class="btn-primary" (click)="startCreate()">
+            <mat-icon>add</mat-icon>{{ 'recurring.new' | translate }}
           </button>
         }
-      </div>
+      </app-page-header>
 
       @if (editing()) {
-        <section class="ri-card rounded-2xl p-6 space-y-5">
-          <h2 class="text-base font-bold">{{ (editingId() ? 'recurring.editTitle' : 'recurring.newTitle') | translate }}</h2>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.customer' | translate }}</span>
-              <select class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [ngModel]="form().partnerId" (ngModelChange)="patch({ partnerId: $event })">
-                <option value="" disabled>{{ 'recurring.pickCustomer' | translate }}</option>
-                @for (c of customers(); track c.id) {
-                  <option [value]="c.id">{{ c.name }}{{ c.email ? '' : ' (' + ('recurring.noEmail' | translate) + ')' }}</option>
-                }
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.name' | translate }}</span>
-              <input class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm" maxlength="255" [placeholder]="'recurring.namePlaceholder' | translate"
-                     [ngModel]="form().name" (ngModelChange)="patch({ name: $event })" />
-            </label>
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">{{ (editingId() ? 'recurring.editTitle' : 'recurring.newTitle') | translate }}</h2>
           </div>
-
-          <div class="grid gap-4 sm:grid-cols-4">
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.every' | translate }}</span>
-              <input type="number" min="1" max="24" class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [disabled]="scheduleLocked()"
-                     [ngModel]="form().intervalCount" (ngModelChange)="patch({ intervalCount: +$event || 1 })" />
-            </label>
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.frequency' | translate }}</span>
-              <select class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [disabled]="scheduleLocked()"
-                      [ngModel]="form().frequency" (ngModelChange)="patch({ frequency: $event })">
-                @for (f of frequencies; track f) {
-                  <option [value]="f">{{ ('recurring.freq.' + f) | translate }}</option>
-                }
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.startDate' | translate }}</span>
-              <input type="date" class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [disabled]="scheduleLocked()"
-                     [ngModel]="form().startDate" (ngModelChange)="patch({ startDate: $event })" />
-            </label>
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.endDate' | translate }}</span>
-              <input type="date" class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm"
-                     [ngModel]="form().endDate ?? ''" (ngModelChange)="patch({ endDate: $event || null })" />
-            </label>
-          </div>
-          @if (scheduleLocked()) {
-            <p class="text-xs ri-faint -mt-2">{{ 'recurring.scheduleLocked' | translate }}</p>
-          }
-
-          <div class="grid gap-4 sm:grid-cols-2 items-end">
-            <label class="block">
-              <span class="text-xs font-semibold ri-muted">{{ 'recurring.terms' | translate }}</span>
-              <input type="number" min="0" max="365" class="ri-input w-full rounded-lg px-3 py-2 mt-1 text-sm"
-                     [ngModel]="form().paymentTermsDays" (ngModelChange)="patch({ paymentTermsDays: +$event || 0 })" />
-            </label>
-            <label class="flex items-start gap-2 text-sm pb-2">
-              <input type="checkbox" class="mt-1" [ngModel]="form().autoSend" (ngModelChange)="patch({ autoSend: $event })" />
-              <span>
-                <span class="font-semibold block">{{ 'recurring.autoSend' | translate }}</span>
-                <span class="text-xs ri-muted">{{ 'recurring.autoSendHint' | translate }}</span>
-              </span>
-            </label>
-          </div>
-
-          <div>
-            <p class="text-xs font-semibold ri-muted mb-2">{{ 'recurring.lines' | translate }}</p>
-            <div class="space-y-2">
-              @for (line of form().lines; track $index; let i = $index) {
-                <div class="grid gap-2 grid-cols-12 items-center">
-                  <input class="ri-input col-span-12 sm:col-span-5 rounded-lg px-3 py-2 text-sm" [placeholder]="'recurring.lineDescription' | translate"
-                         [ngModel]="line.description" (ngModelChange)="setLine(i, { description: $event })" />
-                  <input type="number" min="0" step="any" class="ri-input col-span-3 sm:col-span-2 rounded-lg px-3 py-2 text-sm" [attr.aria-label]="'recurring.qty' | translate"
-                         [ngModel]="line.qty" (ngModelChange)="setLine(i, { qty: +$event })" />
-                  <input type="number" min="0" step="any" class="ri-input col-span-4 sm:col-span-2 rounded-lg px-3 py-2 text-sm" [attr.aria-label]="'recurring.unitPrice' | translate"
-                         [ngModel]="line.unitPrice" (ngModelChange)="setLine(i, { unitPrice: +$event })" />
-                  <select class="ri-input col-span-3 sm:col-span-2 rounded-lg px-2 py-2 text-sm" [attr.aria-label]="'recurring.vat' | translate"
-                          [ngModel]="line.vatRate" (ngModelChange)="setLine(i, { vatRate: +$event })">
-                    @for (r of vatRates; track r) {
-                      <option [ngValue]="r">TVA {{ r * 100 }} %</option>
-                    }
-                  </select>
-                  <button type="button" class="ri-btn col-span-2 sm:col-span-1 rounded-lg py-2 inline-flex justify-center" [disabled]="form().lines.length === 1"
-                          (click)="removeLine(i)" [attr.aria-label]="'recurring.removeLine' | translate">
-                    <mat-icon class="!text-[16px] !w-4 !h-4">delete</mat-icon>
-                  </button>
-                </div>
-              }
+          <div class="card-body space-y-5">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="field-label">{{ 'recurring.customer' | translate }}</span>
+                <select class="input-field" [ngModel]="form().partnerId" (ngModelChange)="patch({ partnerId: $event })">
+                  <option value="" disabled>{{ 'recurring.pickCustomer' | translate }}</option>
+                  @for (c of customers(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}{{ c.email ? '' : ' (' + ('recurring.noEmail' | translate) + ')' }}</option>
+                  }
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'recurring.name' | translate }}</span>
+                <input class="input-field" maxlength="255" [placeholder]="'recurring.namePlaceholder' | translate"
+                       [ngModel]="form().name" (ngModelChange)="patch({ name: $event })" />
+              </label>
             </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
-              <button type="button" class="ri-btn text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1" (click)="addLine()">
-                <mat-icon class="!text-[14px] !w-3.5 !h-3.5">add</mat-icon>{{ 'recurring.addLine' | translate }}
-              </button>
-              <p class="text-sm">
-                <span class="ri-muted">{{ 'recurring.perInvoice' | translate }}</span>
-                <strong class="ms-1">{{ money(formTotal()) }}</strong>
-                <span class="text-xs ri-faint ms-1">({{ 'recurring.ht' | translate }} {{ money(formSubtotal()) }})</span>
-              </p>
+
+            <div class="grid gap-4 sm:grid-cols-4">
+              <label class="block">
+                <span class="field-label">{{ 'recurring.every' | translate }}</span>
+                <input type="number" min="1" max="24" class="input-field" [disabled]="scheduleLocked()"
+                       [ngModel]="form().intervalCount" (ngModelChange)="patch({ intervalCount: +$event || 1 })" />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'recurring.frequency' | translate }}</span>
+                <select class="input-field" [disabled]="scheduleLocked()"
+                        [ngModel]="form().frequency" (ngModelChange)="patch({ frequency: $event })">
+                  @for (f of frequencies; track f) {
+                    <option [value]="f">{{ ('recurring.freq.' + f) | translate }}</option>
+                  }
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'recurring.startDate' | translate }}</span>
+                <input type="date" class="input-field" [disabled]="scheduleLocked()"
+                       [ngModel]="form().startDate" (ngModelChange)="patch({ startDate: $event })" />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'recurring.endDate' | translate }}</span>
+                <input type="date" class="input-field"
+                       [ngModel]="form().endDate ?? ''" (ngModelChange)="patch({ endDate: $event || null })" />
+              </label>
+            </div>
+            @if (scheduleLocked()) {
+              <p class="text-xs text-ink-3 -mt-2">{{ 'recurring.scheduleLocked' | translate }}</p>
+            }
+
+            <div class="grid gap-4 sm:grid-cols-2 items-end">
+              <label class="block">
+                <span class="field-label">{{ 'recurring.terms' | translate }}</span>
+                <input type="number" min="0" max="365" class="input-field"
+                       [ngModel]="form().paymentTermsDays" (ngModelChange)="patch({ paymentTermsDays: +$event || 0 })" />
+              </label>
+              <div class="flex items-start gap-3 pb-1">
+                <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="form().autoSend"
+                        [attr.aria-label]="'recurring.autoSend' | translate" (click)="patch({ autoSend: !form().autoSend })"></button>
+                <span>
+                  <span class="text-sm font-medium text-ink block">{{ 'recurring.autoSend' | translate }}</span>
+                  <span class="text-xs text-ink-3">{{ 'recurring.autoSendHint' | translate }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <p class="field-label">{{ 'recurring.lines' | translate }}</p>
+              <div class="space-y-2">
+                @for (line of form().lines; track $index; let i = $index) {
+                  <div class="grid gap-2 grid-cols-12 items-center">
+                    <input class="input-field col-span-12 sm:col-span-5" [placeholder]="'recurring.lineDescription' | translate"
+                           [ngModel]="line.description" (ngModelChange)="setLine(i, { description: $event })" />
+                    <input type="number" min="0" step="any" class="input-field col-span-3 sm:col-span-2" [attr.aria-label]="'recurring.qty' | translate"
+                           [ngModel]="line.qty" (ngModelChange)="setLine(i, { qty: +$event })" />
+                    <input type="number" min="0" step="any" class="input-field col-span-4 sm:col-span-2" [attr.aria-label]="'recurring.unitPrice' | translate"
+                           [ngModel]="line.unitPrice" (ngModelChange)="setLine(i, { unitPrice: +$event })" />
+                    <select class="input-field col-span-3 sm:col-span-2" [attr.aria-label]="'recurring.vat' | translate"
+                            [ngModel]="line.vatRate" (ngModelChange)="setLine(i, { vatRate: +$event })">
+                      @for (r of vatRates; track r) {
+                        <option [ngValue]="r">TVA {{ r * 100 }} %</option>
+                      }
+                    </select>
+                    <button type="button" class="btn-icon col-span-2 sm:col-span-1 justify-self-center" [disabled]="form().lines.length === 1"
+                            (click)="removeLine(i)" [attr.aria-label]="'recurring.removeLine' | translate">
+                      <mat-icon class="icon-sm">delete</mat-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
+                <button type="button" class="btn-ghost btn-sm" (click)="addLine()">
+                  <mat-icon class="icon-sm">add</mat-icon>{{ 'recurring.addLine' | translate }}
+                </button>
+                <p class="text-sm">
+                  <span class="text-ink-2">{{ 'recurring.perInvoice' | translate }}</span>
+                  <span class="num font-semibold text-ink ms-1">{{ money(formTotal()) }}</span>
+                  <span class="text-xs text-ink-3 ms-1">({{ 'recurring.ht' | translate }} {{ money(formSubtotal()) }})</span>
+                </p>
+              </div>
             </div>
           </div>
-
-          <div class="flex gap-2">
-            <button type="button" class="ri-btn-primary text-sm font-semibold px-4 py-2 rounded-lg" [disabled]="busy() || !canSave()" (click)="save()">
+          <div class="card-footer flex gap-2 justify-end">
+            <button type="button" class="btn-secondary" (click)="cancel()">{{ 'inbox.cancel' | translate }}</button>
+            <button type="button" class="btn-primary" [disabled]="busy() || !canSave()" (click)="save()">
               {{ 'recurring.save' | translate }}
             </button>
-            <button type="button" class="ri-btn text-sm px-4 py-2 rounded-lg" (click)="cancel()">{{ 'inbox.cancel' | translate }}</button>
           </div>
         </section>
       }
 
-      <section class="ri-card rounded-2xl p-6">
-        @for (t of templates(); track t.id) {
-          <div class="ri-row py-4 first:border-t-0 first:pt-0">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold flex items-center gap-2 flex-wrap">
-                  {{ t.name }}
-                  <span class="ri-badge" [class.ri-active]="t.status === 'ACTIVE'" [class.ri-paused]="t.status === 'PAUSED'" [class.ri-ended]="t.status === 'ENDED'">
-                    {{ ('recurring.status.' + t.status) | translate }}
-                  </span>
-                </p>
-                <p class="text-xs ri-muted mt-0.5">{{ customerName(t.partnerId) }} · {{ schedule(t) }} · {{ money(t.total) }}</p>
-                <p class="text-xs ri-faint mt-0.5">
-                  @if (t.status === 'ACTIVE' && t.nextRunDate) {
-                    {{ 'recurring.nextOn' | translate: { date: date(t.nextRunDate) } }} ·
+      <div class="table-card">
+        @if (templates().length) {
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ 'recurring.name' | translate }}</th>
+                  <th>{{ 'recurring.customer' | translate }}</th>
+                  <th>{{ 'recurring.frequency' | translate }}</th>
+                  <th class="col-num">{{ 'recurring.perInvoice' | translate }}</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of templates(); track t.id) {
+                  <tr>
+                    <td>
+                      <div class="cell-title flex items-center gap-2 flex-wrap">
+                        {{ t.name }}
+                        <span class="badge" [class.badge-success]="t.status === 'ACTIVE'" [class.badge-warning]="t.status === 'PAUSED'" [class.badge-neutral]="t.status === 'ENDED'">
+                          {{ ('recurring.status.' + t.status) | translate }}
+                        </span>
+                      </div>
+                      <div class="cell-sub">
+                        @if (t.status === 'ACTIVE' && t.nextRunDate) {
+                          {{ 'recurring.nextOn' | translate: { date: date(t.nextRunDate) } }} ·
+                        }
+                        {{ 'recurring.generated' | translate: { n: t.generatedCount } }}
+                        @if (!t.autoSend) { · {{ 'recurring.draftOnly' | translate }} }
+                      </div>
+                    </td>
+                    <td>{{ customerName(t.partnerId) }}</td>
+                    <td>{{ schedule(t) }}</td>
+                    <td class="col-num num">{{ money(t.total) }}</td>
+                    <td class="col-actions">
+                      <div class="flex flex-wrap justify-end gap-1.5">
+                        @if (t.status !== 'ENDED' && canCreate()) {
+                          <button type="button" class="btn-primary btn-sm" [disabled]="busy()" (click)="generateNow(t)">{{ 'recurring.generateNow' | translate }}</button>
+                        }
+                        @if (canWrite()) {
+                          @if (t.status === 'ACTIVE') {
+                            <button type="button" class="btn-secondary btn-sm" [disabled]="busy()" (click)="pause(t)">{{ 'recurring.pause' | translate }}</button>
+                          } @else if (t.status === 'PAUSED') {
+                            <button type="button" class="btn-secondary btn-sm" [disabled]="busy()" (click)="resume(t)">{{ 'recurring.resume' | translate }}</button>
+                          }
+                          <button type="button" class="btn-ghost btn-sm" (click)="startEdit(t)">{{ 'recurring.edit' | translate }}</button>
+                        }
+                        <button type="button" class="btn-ghost btn-sm" (click)="toggleHistory(t)">
+                          {{ (openId() === t.id ? 'recurring.hideInvoices' : 'recurring.showInvoices') | translate }}
+                        </button>
+                        @if (canDelete()) {
+                          <button type="button" class="btn-icon" [attr.aria-label]="'recurring.delete' | translate" (click)="remove(t)">
+                            <mat-icon class="icon-sm">delete</mat-icon>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                  @if (openId() === t.id) {
+                    <tr>
+                      <td colspan="5" class="bg-subtle">
+                        @for (inv of history(); track inv.id) {
+                          <div class="flex flex-wrap justify-between gap-2 text-xs py-1">
+                            <span class="font-medium text-ink">{{ inv.invoiceNumber }}</span>
+                            <span class="text-ink-2">{{ date(inv.invoiceDate) }} → {{ date(inv.dueDate) }}</span>
+                            <span class="badge badge-neutral">{{ ('recurring.invoiceStatus.' + inv.status) | translate }}</span>
+                            <span class="num font-medium text-ink">{{ money(inv.total) }}</span>
+                          </div>
+                        } @empty {
+                          <p class="text-xs text-ink-3 py-1">{{ 'recurring.noInvoicesYet' | translate }}</p>
+                        }
+                      </td>
+                    </tr>
                   }
-                  {{ 'recurring.generated' | translate: { n: t.generatedCount } }}
-                  @if (!t.autoSend) { · {{ 'recurring.draftOnly' | translate }} }
-                </p>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                @if (t.status !== 'ENDED' && canCreate()) {
-                  <button type="button" class="ri-btn text-xs font-semibold px-3 py-1.5 rounded-lg" [disabled]="busy()" (click)="generateNow(t)">{{ 'recurring.generateNow' | translate }}</button>
                 }
-                @if (canWrite()) {
-                  @if (t.status === 'ACTIVE') {
-                    <button type="button" class="ri-btn text-xs px-3 py-1.5 rounded-lg" [disabled]="busy()" (click)="pause(t)">{{ 'recurring.pause' | translate }}</button>
-                  } @else if (t.status === 'PAUSED') {
-                    <button type="button" class="ri-btn text-xs px-3 py-1.5 rounded-lg" [disabled]="busy()" (click)="resume(t)">{{ 'recurring.resume' | translate }}</button>
-                  }
-                  <button type="button" class="ri-btn text-xs px-3 py-1.5 rounded-lg" (click)="startEdit(t)">{{ 'recurring.edit' | translate }}</button>
-                }
-                <button type="button" class="ri-btn text-xs px-3 py-1.5 rounded-lg" (click)="toggleHistory(t)">
-                  {{ (openId() === t.id ? 'recurring.hideInvoices' : 'recurring.showInvoices') | translate }}
-                </button>
-                @if (canDelete()) {
-                  <button type="button" class="ri-btn ri-danger text-xs px-3 py-1.5 rounded-lg" [attr.aria-label]="'recurring.delete' | translate" (click)="remove(t)">
-                    <mat-icon class="!text-[14px] !w-3.5 !h-3.5">delete</mat-icon>
-                  </button>
-                }
-              </div>
-            </div>
-            @if (openId() === t.id) {
-              <div class="mt-3 rounded-xl px-4 py-2" style="background: var(--color-bg)">
-                @for (inv of history(); track inv.id) {
-                  <div class="flex flex-wrap justify-between gap-2 text-xs py-1.5">
-                    <span class="font-semibold">{{ inv.invoiceNumber }}</span>
-                    <span class="ri-muted">{{ date(inv.invoiceDate) }} → {{ date(inv.dueDate) }}</span>
-                    <span>{{ ('recurring.invoiceStatus.' + inv.status) | translate }}</span>
-                    <span class="font-semibold">{{ money(inv.total) }}</span>
-                  </div>
-                } @empty {
-                  <p class="text-xs ri-faint py-1.5">{{ 'recurring.noInvoicesYet' | translate }}</p>
-                }
-              </div>
-            }
+              </tbody>
+            </table>
           </div>
-        } @empty {
-          <div class="text-center py-8">
-            <mat-icon class="ri-faint">autorenew</mat-icon>
-            <p class="text-sm font-semibold mt-2">{{ 'recurring.emptyTitle' | translate }}</p>
-            <p class="text-xs ri-muted mt-1">{{ 'recurring.emptyBody' | translate }}</p>
-          </div>
+        } @else {
+          <app-empty-state icon="autorenew" [title]="'recurring.emptyTitle' | translate" [text]="'recurring.emptyBody' | translate" />
         }
-      </section>
+      </div>
     </div>
   `
 })
@@ -265,6 +265,7 @@ export class RecurringInvoicesComponent implements OnInit {
   private state = inject(CrmStateService);
   private i18n = inject(TranslationService);
   private toast = inject(ToastService);
+  private confirm = inject(ConfirmService);
 
   protected readonly frequencies = FREQUENCIES;
   protected readonly vatRates = VAT_RATES;
@@ -382,7 +383,7 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   async generateNow(t: RecurringInvoice): Promise<void> {
-    if (!confirm(this.i18n.t('recurring.generateConfirm', { name: t.name }))) return;
+    if (!(await this.confirm.ask({ title: this.i18n.t('recurring.generateConfirm', { name: t.name }) }))) return;
     this.busy.set(true);
     try {
       const invoice = await firstValueFrom(this.api.generateNow(t.id));
@@ -406,7 +407,7 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   async remove(t: RecurringInvoice): Promise<void> {
-    if (!confirm(this.i18n.t('recurring.deleteConfirm', { name: t.name }))) return;
+    if (!(await this.confirm.ask({ title: this.i18n.t('recurring.deleteConfirm', { name: t.name }), danger: true }))) return;
     await this.act(() => firstValueFrom(this.api.remove(t.id)));
   }
 

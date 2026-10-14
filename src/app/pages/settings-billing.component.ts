@@ -6,6 +6,7 @@ import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { ToastService } from '../services/toast.service';
 import { CrmStateService } from '../services/crm-state.service';
+import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { InvoiceRemindersApi, ReminderRunResult } from '../services/domains/invoice-reminders.service';
 
 /** The reminder days offered as one-click choices; any other day can be added by hand. */
@@ -17,76 +18,63 @@ const PRESETS = [-7, -3, 0, 1, 3, 7, 15, 30];
  */
 @Component({
   selector: 'app-settings-billing',
-  imports: [FormsModule, MatIconModule, TranslatePipe],
-  styles: [`
-    .bl-card { background: var(--color-surface); border: 1px solid var(--color-border); }
-    .bl-muted { color: var(--color-text-secondary); }
-    .bl-faint { color: var(--color-text-tertiary); }
-    .bl-input { background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-text-primary); }
-    .bl-btn { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); }
-    .bl-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .bl-btn-primary { background: var(--color-text-primary); color: var(--color-surface); }
-    .bl-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .bl-chip { border: 1px solid var(--color-border); }
-    .bl-chip-on { border-color: var(--color-accent); background: var(--color-accent-light); font-weight: 600; }
-    .bl-note { background: var(--color-bg); }
-  `],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
     <div class="space-y-6 max-w-3xl">
-      <section class="bl-card rounded-2xl p-6 space-y-5">
-        <div>
-          <h2 class="text-base font-bold">{{ 'billing.title' | translate }}</h2>
-          <p class="text-sm bl-muted mt-1">{{ 'billing.subtitle' | translate }}</p>
-        </div>
+      <app-page-header size="section" [title]="'billing.title' | translate" [subtitle]="'billing.subtitle' | translate" />
 
-        <label class="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" class="mt-1" [disabled]="!canWrite()" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)" />
-          <span>
-            <span class="text-sm font-semibold block">{{ 'billing.enable' | translate }}</span>
-            <span class="text-xs bl-muted">{{ 'billing.enableHint' | translate }}</span>
-          </span>
-        </label>
+      <section class="card">
+        <div class="card-body space-y-6">
+          <div class="flex items-start gap-3">
+            <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="enabled()" [disabled]="!canWrite()"
+                    [attr.aria-label]="'billing.enable' | translate" (click)="enabled.set(!enabled())"></button>
+            <span>
+              <span class="text-sm font-medium text-ink block">{{ 'billing.enable' | translate }}</span>
+              <span class="text-xs text-ink-3">{{ 'billing.enableHint' | translate }}</span>
+            </span>
+          </div>
 
-        <div>
-          <p class="text-xs font-semibold bl-muted mb-2">{{ 'billing.when' | translate }}</p>
-          <div class="flex flex-wrap gap-2">
-            @for (d of choices(); track d) {
-              <button type="button" class="bl-chip text-xs px-3 py-1.5 rounded-full" [class.bl-chip-on]="offsets().has(d)"
-                      [disabled]="!canWrite()" [attr.aria-pressed]="offsets().has(d)" (click)="toggle(d)">
-                {{ label(d) }}
+          <div>
+            <p class="field-label">{{ 'billing.when' | translate }}</p>
+            <div class="flex flex-wrap gap-2">
+              @for (d of choices(); track d) {
+                <button type="button" class="btn-sm" [class.btn-primary]="offsets().has(d)" [class.btn-secondary]="!offsets().has(d)"
+                        [disabled]="!canWrite()" [attr.aria-pressed]="offsets().has(d)" (click)="toggle(d)">
+                  {{ label(d) }}
+                </button>
+              }
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <input type="number" min="-30" max="365" class="input-field w-24" [disabled]="!canWrite()"
+                     [attr.aria-label]="'billing.customDay' | translate" [ngModel]="custom()" (ngModelChange)="custom.set($event)" />
+              <button type="button" class="btn-secondary btn-sm" [disabled]="!canWrite() || !validCustom()" (click)="addCustom()">
+                {{ 'billing.addDay' | translate }}
               </button>
-            }
+              <span class="text-xs text-ink-3">{{ 'billing.customHint' | translate }}</span>
+            </div>
           </div>
-          <div class="flex items-center gap-2 mt-3">
-            <input type="number" min="-30" max="365" class="bl-input w-24 rounded-lg px-3 py-1.5 text-sm" [disabled]="!canWrite()"
-                   [attr.aria-label]="'billing.customDay' | translate" [ngModel]="custom()" (ngModelChange)="custom.set($event)" />
-            <button type="button" class="bl-btn text-xs font-semibold px-3 py-1.5 rounded-lg" [disabled]="!canWrite() || !validCustom()" (click)="addCustom()">
-              {{ 'billing.addDay' | translate }}
-            </button>
-            <span class="text-xs bl-faint">{{ 'billing.customHint' | translate }}</span>
-          </div>
+
+          <label class="block">
+            <span class="field-label">{{ 'billing.message' | translate }}</span>
+            <textarea rows="3" maxlength="2000" class="input-field" [disabled]="!canWrite()"
+                      [placeholder]="'billing.messagePlaceholder' | translate" [ngModel]="message()" (ngModelChange)="message.set($event)"></textarea>
+          </label>
+
+          <div class="alert alert-info text-xs">{{ 'billing.note' | translate }}</div>
+
+          @if (lastRun(); as r) {
+            <p class="text-xs text-ink-2">{{ 'billing.runResult' | translate: { sent: r.remindersSent, overdue: r.markedOverdue, skipped: r.skippedNoEmail } }}</p>
+          }
         </div>
-
-        <label class="block">
-          <span class="text-xs font-semibold bl-muted">{{ 'billing.message' | translate }}</span>
-          <textarea rows="3" maxlength="2000" class="bl-input w-full rounded-lg px-3 py-2 mt-1 text-sm" [disabled]="!canWrite()"
-                    [placeholder]="'billing.messagePlaceholder' | translate" [ngModel]="message()" (ngModelChange)="message.set($event)"></textarea>
-        </label>
-
-        <p class="bl-note text-xs rounded-lg px-3 py-2">{{ 'billing.note' | translate }}</p>
-
         @if (canWrite()) {
-          <div class="flex flex-wrap gap-2">
-            <button type="button" class="bl-btn-primary text-sm font-semibold px-4 py-2 rounded-lg" [disabled]="busy() || offsets().size === 0" (click)="save()">
+          <div class="card-footer flex flex-wrap gap-2 justify-end">
+            <button type="button" class="btn-secondary" [disabled]="busy()" (click)="runNow()">
+              <mat-icon class="icon-sm">send</mat-icon>{{ 'billing.runNow' | translate }}
+            </button>
+            <button type="button" class="btn-primary" [disabled]="busy() || offsets().size === 0" (click)="save()">
               {{ 'billing.save' | translate }}
             </button>
-            <button type="button" class="bl-btn text-sm px-4 py-2 rounded-lg inline-flex items-center gap-1" [disabled]="busy()" (click)="runNow()">
-              <mat-icon class="!text-[16px] !w-4 !h-4">send</mat-icon>{{ 'billing.runNow' | translate }}
-            </button>
           </div>
-        }
-        @if (lastRun(); as r) {
-          <p class="text-xs bl-muted">{{ 'billing.runResult' | translate: { sent: r.remindersSent, overdue: r.markedOverdue, skipped: r.skippedNoEmail } }}</p>
         }
       </section>
     </div>
