@@ -659,6 +659,9 @@ export interface Brand {
   colorHex?: string;
   isDefault?: boolean;
   isActive?: boolean;
+  /** Logo and footer this brand's customers see on invoices, instead of the organization's. */
+  invoiceLogoFileId?: string | null;
+  invoiceFooter?: string | null;
 }
 
 /** Structured referential for a partner's line of business. */
@@ -886,6 +889,8 @@ export interface Invoice {
   /** Tax-exclusive line sum; `amount` is the tax-inclusive total from the backend. */
   subtotal?: number;
   tax?: number;
+  /** Supplier bills: the day the organization plans to pay it. */
+  scheduledPaymentDate?: string;
   // Customer administrative information
   customerAccount?: string;   // Unique account code / ERP ID
   customerName?: string;      // Official corporate name

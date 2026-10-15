@@ -12,3 +12,6 @@ export function identityColor(seed: string): string {
   const hash = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return IDENTITY_PALETTE[hash % IDENTITY_PALETTE.length];
 }
+
+/** Default accent of generated invoice PDFs; mirrors the backend's fallback. */
+export const DEFAULT_INVOICE_ACCENT = '#1F2937';

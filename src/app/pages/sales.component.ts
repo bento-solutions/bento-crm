@@ -12,6 +12,8 @@ import { SalesPipelineBoardComponent } from './sales-pipeline-board.component';
 import { DealsService } from '../services/domains/deals.service';
 import { ProposalsService } from '../services/domains/proposals.service';
 import { PurchaseOrdersService } from '../services/domains/purchase-orders.service';
+import { PayablesApi } from '../services/domains/payables.service';
+import { InvoicesService } from '../services/domains/invoices.service';
 import { PartnersService } from '../services/domains/partners.service';
 import { TasksService } from '../services/domains/tasks.service';
 import { CrmStateService } from '../services/crm-state.service';
@@ -437,6 +439,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="btn-secondary btn-sm ml-auto" title="Assign Task">
                       <mat-icon class="icon-xs">assignment</mat-icon> Assign
                     </button>
+                    @if (canBill(po)) {
+                      <button (click)="$event.stopPropagation(); openBill(po)" class="btn-primary btn-sm">{{ 'bills.createBill' | translate }}</button>
+                    }
                     @if (po.status === 'Sent' && canWritePO()) {
                       <button (click)="$event.stopPropagation(); openSetDeliveryDatePOModal(po)" class="btn-secondary btn-sm">Set Del. Date</button>
                       <button (click)="$event.stopPropagation(); purchaseOrdersService.updateStatus(po.id, 'Delivered')" class="btn-primary btn-sm">Receive Goods</button>
@@ -1116,6 +1121,43 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       </div>
     }
 
+    <!-- Supplier bill from a purchase order -->
+    @if (billingPO(); as po) {
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
+          <div class="modal-header">
+            <h3 class="modal-title">{{ 'bills.createTitle' | translate }}</h3>
+            <button (click)="billingPO.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+              <mat-icon class="icon-sm">close</mat-icon>
+            </button>
+          </div>
+          <p class="text-sm text-ink-2">{{ 'bills.createHint' | translate: { po: po.orderNumber || ('#' + po.id.slice(0, 8)), amount: formatCurrency(po.amount) } }}</p>
+          <div class="space-y-3 mt-3">
+            <label class="block">
+              <span class="field-label">{{ 'bills.supplierNumber' | translate }}</span>
+              <input class="input-field" maxlength="100" [placeholder]="'bills.supplierNumberPlaceholder' | translate"
+                     [value]="billForm().supplierInvoiceNumber" (input)="patchBill({ supplierInvoiceNumber: $any($event.target).value })" />
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ 'bills.invoiceDate' | translate }}</span>
+                <input type="date" class="input-field" [value]="billForm().invoiceDate" (input)="patchBill({ invoiceDate: $any($event.target).value })" />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'bills.terms' | translate }}</span>
+                <input type="number" min="0" max="365" class="input-field" [value]="billForm().paymentTermsDays"
+                       (input)="patchBill({ paymentTermsDays: +$any($event.target).value || 0 })" />
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" (click)="billingPO.set(null)">{{ 'inbox.cancel' | translate }}</button>
+            <button class="btn-primary" [disabled]="billBusy()" (click)="createBill(po)">{{ 'bills.createBill' | translate }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Set Delivery Date PO Modal -->
     @if (setDeliveryDateModalOpen()) {
       <div class="modal-backdrop">
@@ -1782,6 +1824,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <mat-icon class="icon-sm">assignment</mat-icon> Assign Task
                   </button>
                 }
+                @if (canBill(po)) {
+                  <button (click)="openBill(po); closePODrawer()" class="btn-primary btn-sm">{{ 'bills.createBill' | translate }}</button>
+                }
                 @if (po.status === 'Sent' && canWritePO()) {
                   <button (click)="openSetDeliveryDatePOModal(po); closePODrawer()" class="btn-secondary btn-sm">Set Del. Date</button>
                   <button (click)="purchaseOrdersService.updateStatus(po.id, 'Delivered'); closePODrawer()" class="btn-primary btn-sm">Receive Goods</button>
@@ -2402,6 +2447,49 @@ export class SalesComponent {
   }
   canCreatePO(): boolean { return this.state.hasAuthority('PURCHASE_ORDERS_CREATE'); }
   canWritePO(): boolean { return this.state.hasAuthority('PURCHASE_ORDERS_WRITE'); }
+
+  private payables = inject(PayablesApi);
+  private invoicesService = inject(InvoicesService);
+  billingPO = signal<PurchaseOrder | null>(null);
+  billBusy = signal(false);
+  billForm = signal({ supplierInvoiceNumber: '', invoiceDate: new Date().toISOString().slice(0, 10), paymentTermsDays: 30 });
+
+  /** A confirmed or delivered order that has not been billed yet can become the supplier's bill. */
+  canBill(po: PurchaseOrder): boolean {
+    return (po.status === 'Confirmed' || po.status === 'Delivered' || po.status === 'Sent')
+      && this.state.hasAuthority('INVOICES_CREATE');
+  }
+
+  openBill(po: PurchaseOrder): void {
+    this.billForm.set({ supplierInvoiceNumber: '', invoiceDate: new Date().toISOString().slice(0, 10), paymentTermsDays: 30 });
+    this.billingPO.set(po);
+  }
+
+  patchBill(change: Partial<{ supplierInvoiceNumber: string; invoiceDate: string; paymentTermsDays: number }>): void {
+    this.billForm.update(f => ({ ...f, ...change }));
+  }
+
+  createBill(po: PurchaseOrder): void {
+    const f = this.billForm();
+    this.billBusy.set(true);
+    this.payables.billPurchaseOrder(po.id, {
+      supplierInvoiceNumber: f.supplierInvoiceNumber.trim() || null,
+      invoiceDate: f.invoiceDate || null,
+      paymentTermsDays: f.paymentTermsDays,
+    }).subscribe({
+      next: bill => {
+        this.billBusy.set(false);
+        this.billingPO.set(null);
+        this.purchaseOrdersService.purchaseOrders.update(list => list.map(p => p.id === po.id ? { ...p, status: 'Invoiced' } : p));
+        this.invoicesService.load(undefined, true);
+        this.notify.show(this.translation.t('bills.created', { number: bill.invoiceNumber ?? '' }), { type: 'success' });
+      },
+      error: e => {
+        this.billBusy.set(false);
+        this.notify.show((e as { detail?: string })?.detail || this.translation.t('bills.error'), { type: 'error' });
+      },
+    });
+  }
   canCreateTask(): boolean { return this.state.hasAuthority('TASKS_CREATE'); }
   canWriteDealActivity(): boolean { return this.state.hasAuthority('DEAL_ACTIVITIES_WRITE'); }
   canCreateDealActivity(): boolean { return this.state.hasAuthority('DEAL_ACTIVITIES_CREATE'); }

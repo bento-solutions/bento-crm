@@ -40,6 +40,7 @@ export const routes: Routes = [
       { path: 'groups', loadComponent: () => import('./pages/groups.component').then(m => m.GroupsComponent) },
       { path: 'whatsapp', canActivate: [authorityGuard('WHATSAPP_ADMIN')], loadComponent: () => import('./pages/settings-whatsapp.component').then(m => m.SettingsWhatsAppComponent) },
       { path: 'billing', loadComponent: () => import('./pages/settings-billing.component').then(m => m.SettingsBillingComponent) },
+      { path: 'invoice-template', loadComponent: () => import('./pages/settings-invoice-template.component').then(m => m.SettingsInvoiceTemplateComponent) },
       { path: 'api-tokens', canActivate: [authorityGuard('API_TOKENS_MANAGE')], loadComponent: () => import('./pages/settings-api-tokens.component').then(m => m.SettingsApiTokensComponent) },
       { path: 'brands', canActivate: [authorityGuard('PARTNERS_WRITE')], loadComponent: () => import('./pages/settings-brands.component').then(m => m.SettingsBrandsComponent) },
       { path: 'categories', canActivate: [authorityGuard('TICKETS_WRITE', 'TASKS_WRITE')], loadComponent: () => import('./pages/settings-categories.component').then(m => m.SettingsCategoriesComponent) }

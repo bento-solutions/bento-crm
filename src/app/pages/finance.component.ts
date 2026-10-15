@@ -1,6 +1,8 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { FinanceAgingComponent } from './finance-aging.component';
+import { PayablesApi } from '../services/domains/payables.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CrmStateService, Invoice } from '../services/crm-state.service';
 import { InvoicesService } from '../services/domains/invoices.service';
@@ -17,6 +19,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
+import { ToastService } from '../services/toast.service';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -29,11 +32,11 @@ interface InvoiceLine {
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   template: `
     <div class="page">
       <app-page-header title="Finance" subtitle="Invoices, payables and late-payment recovery">
-        @if (canCreate() && activeTab() !== 'Recovery') {
+        @if (canCreate() && isInvoiceTab()) {
           <button actions class="btn-primary" (click)="openCreateInvoiceModal()">
             <mat-icon>add</mat-icon>
             New Invoice
@@ -41,7 +44,7 @@ interface InvoiceLine {
         }
       </app-page-header>
 
-      @if (activeTab() !== 'Recovery') {
+      @if (isInvoiceTab()) {
         <div class="stat-grid">
           <app-stat-card label="Outstanding" [value]="money0(outstandingTotal())" icon="account_balance_wallet" tone="slate"
                          [hint]="unpaidCount() + ' unpaid invoice' + (unpaidCount() === 1 ? '' : 's')" />
@@ -73,14 +76,23 @@ interface InvoiceLine {
             <span class="count-pill">{{ overdueInvoices().length }}</span>
           }
         </button>
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'Aging'" [attr.aria-selected]="activeTab() === 'Aging'"
+                (click)="setFinanceTab('Aging')">
+          <mat-icon>stacked_bar_chart</mat-icon>
+          {{ 'aging.tab' | translate }}
+        </button>
         <a routerLink="/finance/recurring" class="tab">
           <mat-icon>autorenew</mat-icon>
           {{ 'recurring.tab' | translate }}
         </a>
       </div>
 
+        @if (activeTab() === 'Aging') {
+          <app-finance-aging />
+        }
+
         <!-- Invoices View -->
-        @if (activeTab() !== 'Recovery') {
+        @if (isInvoiceTab()) {
           <div class="card overflow-x-auto">
           @if (invoicesService.isLoading$()) {
             <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="7" [rows]="8" />
@@ -101,7 +113,7 @@ interface InvoiceLine {
                 @for (invoice of paginatedInvoices(); track invoice.id) {
                   <tr>
                     <td class="whitespace-nowrap text-ink">
-                      #{{ invoice.id.slice(0, 8) }}
+                      {{ invoice.invoiceNumber || '#' + invoice.id.slice(0, 8) }}
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm font-medium text-ink">{{getPartnerName(invoice.partnerId)}}</div>
@@ -112,6 +124,9 @@ interface InvoiceLine {
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm text-ink-3">{{invoice.dueDate}}</div>
+                      @if (invoice.type === 'Vendor' && invoice.scheduledPaymentDate && invoice.status !== 'Paid') {
+                        <div class="text-xs text-ink-2">{{ 'bills.payOn' | translate: { date: invoice.scheduledPaymentDate } }}</div>
+                      }
                     </td>
                     <td class="whitespace-nowrap">
                       <app-created-by-badge [createdBy]="invoice.createdBy" [createdAt]="invoice.createdAt" />
@@ -129,6 +144,9 @@ interface InvoiceLine {
                       <button (click)="openInvoiceAttachments(invoice)" title="Attachments" aria-label="Attachments" class="btn-icon btn-sm">
                         <mat-icon class="icon-sm">attach_file</mat-icon>
                       </button>
+                      @if (invoice.type === 'Vendor' && invoice.status !== 'Paid' && canWrite()) {
+                        <button (click)="openSchedule(invoice)" class="btn-ghost btn-sm">{{ 'bills.schedule' | translate }}</button>
+                      }
                       @if (invoice.status !== 'Paid' && canWrite()) {
                         <button (click)="markInvoicePaid(invoice)" class="btn-secondary btn-sm">Mark Paid</button>
                       }
@@ -161,6 +179,30 @@ interface InvoiceLine {
                     </button>
                   </div>
                   <app-attachments ownerEntityType="INVOICE" [ownerEntityId]="invoiceForAttachments.id" [canWrite]="canWrite()" />
+                </div>
+              </div>
+            }
+            @if (scheduling(); as bill) {
+              <div class="modal-backdrop">
+                <div class="modal modal-sm">
+                  <div class="modal-header">
+                    <h3 class="modal-title">{{ 'bills.scheduleTitle' | translate }}</h3>
+                    <button (click)="scheduling.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+                      <mat-icon class="icon-sm">close</mat-icon>
+                    </button>
+                  </div>
+                  <p class="text-sm text-ink-2">{{ 'bills.scheduleHint' | translate: { number: bill.invoiceNumber || bill.id.slice(0, 8), due: bill.dueDate || '—' } }}</p>
+                  <label class="block mt-3">
+                    <span class="field-label">{{ 'bills.payOnLabel' | translate }}</span>
+                    <input type="date" class="input-field" [value]="scheduleDate()" (input)="scheduleDate.set($any($event.target).value)" />
+                  </label>
+                  <div class="modal-footer">
+                    @if (bill.scheduledPaymentDate) {
+                      <button class="btn-ghost" (click)="saveSchedule(bill, null)">{{ 'bills.clear' | translate }}</button>
+                    }
+                    <button class="btn-secondary" (click)="scheduling.set(null)">{{ 'inbox.cancel' | translate }}</button>
+                    <button class="btn-primary" [disabled]="!scheduleDate()" (click)="saveSchedule(bill, scheduleDate())">{{ 'bills.save' | translate }}</button>
+                  </div>
                 </div>
               </div>
             }
@@ -664,14 +706,39 @@ export class FinanceComponent {
   invoicesService = inject(InvoicesService);
   translation = inject(TranslationService);
   private api = inject(ApiService);
-  activeTab = signal<'Customer' | 'Vendor' | 'Recovery'>('Customer');
+  activeTab = signal<'Customer' | 'Vendor' | 'Recovery' | 'Aging'>('Customer');
+  private payables = inject(PayablesApi);
+  private toast = inject(ToastService);
+  scheduling = signal<Invoice | null>(null);
+  scheduleDate = signal('');
 
-  setFinanceTab(tab: 'Customer' | 'Vendor' | 'Recovery'): void {
+  isInvoiceTab(): boolean {
+    return this.activeTab() === 'Customer' || this.activeTab() === 'Vendor';
+  }
+
+  openSchedule(bill: Invoice): void {
+    this.scheduling.set(bill);
+    this.scheduleDate.set(bill.scheduledPaymentDate || bill.dueDate || '');
+  }
+
+  saveSchedule(bill: Invoice, date: string | null): void {
+    this.payables.schedulePayment(bill.id, date).subscribe({
+      next: () => {
+        this.invoicesService.invoices.update(list => list.map(i => i.id === bill.id ? { ...i, scheduledPaymentDate: date ?? undefined } : i));
+        this.scheduling.set(null);
+        this.toast.show(this.translation.t(date ? 'bills.scheduled' : 'bills.unscheduled'), { type: 'success' });
+      },
+      error: e => this.toast.show((e as { detail?: string })?.detail || this.translation.t('bills.error'), { type: 'error' }),
+    });
+  }
+
+  setFinanceTab(tab: 'Customer' | 'Vendor' | 'Recovery' | 'Aging'): void {
     this.activeTab.set(tab);
     const labelMap: Record<string, string> = {
       'Customer': 'finance.customerInvoices',
       'Vendor': 'finance.vendorInvoices',
-      'Recovery': 'finance.recovery'
+      'Recovery': 'finance.recovery',
+      'Aging': 'aging.tab'
     };
     this.state.breadcrumbLabel.set(this.translation.t(labelMap[tab]));
   }

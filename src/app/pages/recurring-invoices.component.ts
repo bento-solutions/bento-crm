@@ -209,7 +209,7 @@ function emptyForm(): RecurringInvoiceInput {
                     <td>{{ schedule(t) }}</td>
                     <td class="col-num num">{{ money(t.total) }}</td>
                     <td class="col-actions">
-                      <div class="flex flex-wrap justify-end gap-1.5">
+                      <div class="flex flex-nowrap items-center justify-end gap-1.5">
                         @if (t.status !== 'ENDED' && canCreate()) {
                           <button type="button" class="btn-primary btn-sm" [disabled]="busy()" (click)="generateNow(t)">{{ 'recurring.generateNow' | translate }}</button>
                         }

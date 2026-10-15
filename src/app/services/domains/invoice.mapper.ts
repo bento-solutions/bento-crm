@@ -30,6 +30,7 @@ export interface InvoiceResponse {
   deliveryAddress?: string;
   vatNumber?: string;
   lines?: Invoice['lines'];
+  scheduledPaymentDate?: string | null;
 }
 
 const TYPE_FROM_API: Record<string, 'Customer' | 'Vendor'> = {
@@ -78,6 +79,7 @@ export function invoiceFromApi(dto: InvoiceResponse): Invoice {
     subtotal: dto.subtotal !== undefined && dto.subtotal !== null ? Number(dto.subtotal) : undefined,
     tax: dto.tax !== undefined && dto.tax !== null ? Number(dto.tax) : undefined,
     sentAt: dto.sentAt ?? undefined,
+    scheduledPaymentDate: dto.scheduledPaymentDate ?? undefined,
     customerAccount: dto.customerAccount ?? undefined,
     customerName: dto.customerName ?? undefined,
     deliveryAddress: dto.deliveryAddress ?? undefined,

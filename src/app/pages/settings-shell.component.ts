@@ -44,6 +44,10 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <mat-icon>notifications_active</mat-icon>
           Billing
         </a>
+        <a routerLink="/settings/invoice-template" routerLinkActive="is-active" class="tab">
+          <mat-icon>receipt_long</mat-icon>
+          Invoices
+        </a>
         @if (state.hasAuthority('API_TOKENS_MANAGE')) {
           <a routerLink="/settings/api-tokens" routerLinkActive="is-active" class="tab">
             <mat-icon>key</mat-icon>
