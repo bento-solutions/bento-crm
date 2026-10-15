@@ -18,13 +18,15 @@ import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
 import { TicketsService } from './services/domains/tickets.service';
 import { WhatsAppInboxStore } from './services/domains/whatsapp-inbox.service';
+import { AssistantPanelComponent } from './shared/assistant-panel.component';
+import { TranslatePipe } from './pipes/translate.pipe';
 
 interface NavItem {
   label: string;
   icon: string;
   route: string;
-  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE). */
-  authority?: string;
+  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE); with a list, any one of them. */
+  authority?: string | string[];
   /** Live count shown next to the label. */
   badge?: 'whatsappUnread';
 }
@@ -70,6 +72,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Groups', icon: 'group_work', route: '/groups' },
       { label: 'Finance', icon: 'account_balance', route: '/finance' },
       { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
+      { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
+      { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   }
 ];
@@ -148,6 +152,8 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Recovery', subIcon: 'healing', tab: 'Recovery', action: 'Send payment reminders for overdue invoices', keywords: 'finance recovery reminders overdue invoices' },
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
   { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
+  { mainMenu: 'Documents', mainIcon: 'folder_open', mainRoute: '/drive', action: 'Browse, upload and share files in the document drive', keywords: 'documents drive files folders upload share' },
+  { mainMenu: 'Documents inbox', mainIcon: 'move_to_inbox', mainRoute: '/inbox-documents', action: 'Check supplier invoices and bank statements received by email or WhatsApp', keywords: 'documents inbox supplier invoices bank statements review ocr' },
   { mainMenu: 'Automation', mainIcon: 'smart_toy', mainRoute: '/automation', action: 'Create and manage workflow automation rules', keywords: 'automation workflows rules triggers conditions' },
   { mainMenu: 'Groups', mainIcon: 'group_work', mainRoute: '/groups', action: 'Collaborate with teams via chat, meetings, and file sharing', keywords: 'groups chat meetings collaboration teams' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/organization', submenu: 'Organization', subIcon: 'business', action: 'Configure organization profile and settings', keywords: 'settings organization company profile' },
@@ -164,7 +170,7 @@ function readSidebarCollapsed(): boolean {
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent],
+  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -767,7 +773,11 @@ function readSidebarCollapsed(): boolean {
 
     @media (max-width: 640px) {
       .content-main { padding: 16px; }
-      .content-topbar { padding-inline: 16px; }
+      .content-topbar { padding-inline: 16px; gap: 8px; }
+      /* Room for the assistant button at 375px: the avatar is also in the sidebar, and "+" says Create. */
+      .topbar-search { min-width: 0; }
+      .topbar-avatar, .create-menu__label { display: none; }
+      .topbar-actions { gap: 6px; }
     }
 
     /* ── Create menu (global "+") ── */
@@ -828,8 +838,8 @@ function readSidebarCollapsed(): boolean {
 
   `],
   template: `
-    <!-- Pay-by-Link pages are for customers: always bare, even when a signed-in user opens one. -->
-    @if (activeRoute().startsWith('/pay/')) {
+    <!-- Pay-by-Link and shared-file pages are for outsiders: always bare, even when a signed-in user opens one. -->
+    @if (activeRoute().startsWith('/pay/') || activeRoute().startsWith('/f/')) {
       <router-outlet></router-outlet>
     } @else if (state.isAuthenticated()) {
       <div class="app-layout search-container">
@@ -869,7 +879,7 @@ function readSidebarCollapsed(): boolean {
             @for (section of navSections; track section.label) {
               <div class="sidebar-section-title">{{ section.label }}</div>
               @for (item of section.items; track item.route) {
-                @if (!item.authority || state.hasAuthority(item.authority)) {
+                @if (canSee(item)) {
                   <a
                     [routerLink]="item.route"
                     class="sidebar-link"
@@ -1019,9 +1029,10 @@ function readSidebarCollapsed(): boolean {
                   (click)="quickActionsOpen.set(!quickActionsOpen())"
                   [attr.aria-expanded]="quickActionsOpen()"
                   aria-haspopup="menu"
+                  aria-label="Create"
                 >
                   <mat-icon>add</mat-icon>
-                  Create
+                  <span class="create-menu__label">Create</span>
                 </button>
                 @if (quickActionsOpen()) {
                   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
@@ -1037,6 +1048,15 @@ function readSidebarCollapsed(): boolean {
                 }
               </div>
 
+              <button
+                class="topbar-icon-btn"
+                (click)="assistantOpen.set(!assistantOpen())"
+                [title]="'assistant.title' | translate"
+                [attr.aria-label]="'assistant.title' | translate"
+                [attr.aria-expanded]="assistantOpen()"
+              >
+                <mat-icon>auto_awesome</mat-icon>
+              </button>
               <button
                 class="topbar-icon-btn"
                 (click)="openInbox()"
@@ -1092,6 +1112,10 @@ function readSidebarCollapsed(): boolean {
         ></app-notification-inbox-drawer>
       }
 
+      @defer (when assistantOpen()) {
+        <app-assistant-panel [open]="assistantOpen()" (closed)="assistantOpen.set(false)" />
+      }
+
       <app-toast-container></app-toast-container>
       <app-confirm-dialog />
     } @else {
@@ -1144,6 +1168,15 @@ export class App implements OnInit, OnDestroy {
 
   // Mobile menu
   mobileMenuOpen = signal(false);
+
+  /** The AI assistant side panel; once opened it stays loaded, so the conversation survives closing it. */
+  assistantOpen = signal(false);
+
+  canSee(item: NavItem): boolean {
+    if (!item.authority) return true;
+    const needed = Array.isArray(item.authority) ? item.authority : [item.authority];
+    return needed.some(a => this.state.hasAuthority(a));
+  }
 
   // Sidebar collapse
   /** The rail starts as icons only; the choice is remembered per browser. */
@@ -1517,7 +1550,8 @@ export class App implements OnInit, OnDestroy {
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();
     if (item.route === '/') return route === '/';
-    return route.startsWith(item.route);
+    // Whole path segments only: '/inbox' must not light up on '/inbox-documents'.
+    return route === item.route || route.startsWith(item.route + '/') || route.startsWith(item.route + '?');
   }
 
   onNotificationOpened() {

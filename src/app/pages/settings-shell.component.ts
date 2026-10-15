@@ -56,6 +56,12 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <mat-icon>credit_card</mat-icon>
           Payments
         </a>
+        @if (state.hasAuthority('INVOICES_READ') || state.hasAuthority('PAYMENTS_READ') || state.hasAuthority('ADMIN_ACCESS')) {
+          <a routerLink="/settings/inboxes" routerLinkActive="is-active" class="tab">
+            <mat-icon>alternate_email</mat-icon>
+            Inboxes
+          </a>
+        }
         @if (state.hasAuthority('API_TOKENS_MANAGE')) {
           <a routerLink="/settings/api-tokens" routerLinkActive="is-active" class="tab">
             <mat-icon>key</mat-icon>

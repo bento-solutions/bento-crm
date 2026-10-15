@@ -10,6 +10,8 @@ export const routes: Routes = [
   // already-signed-in user away from a link they were legitimately sent.
   // Pay-by-Link: public, for the customer; the token in the path is the credential.
   { path: 'pay/:token', loadComponent: () => import('./pages/pay.component').then(m => m.PayComponent) },
+  // Drive share links: public, for whoever was sent the link; the token is the credential.
+  { path: 'f/:token', loadComponent: () => import('./pages/shared-file.component').then(m => m.SharedFileComponent) },
   { path: 'invite/accept', loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent) },
   { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'analytics', canActivate: [authGuard], loadComponent: () => import('./pages/analytics.component').then(m => m.AnalyticsComponent) },
@@ -23,6 +25,8 @@ export const routes: Routes = [
   { path: 'partners/lead/:id', canActivate: [authGuard], loadComponent: () => import('./pages/lead-detail.component').then(m => m.LeadDetailComponent) },
   { path: 'finance', canActivate: [authGuard], loadComponent: () => import('./pages/finance.component').then(m => m.FinanceComponent) },
   { path: 'inventory', canActivate: [authGuard], loadComponent: () => import('./pages/inventory.component').then(m => m.InventoryComponent) },
+  { path: 'drive', canActivate: [authGuard, authorityGuard('FILES_READ')], loadComponent: () => import('./pages/drive.component').then(m => m.DriveComponent) },
+  { path: 'inbox-documents', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/inbound-documents.component').then(m => m.InboundDocumentsComponent) },
   { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
   { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },
@@ -44,6 +48,7 @@ export const routes: Routes = [
       { path: 'whatsapp', canActivate: [authorityGuard('WHATSAPP_ADMIN')], loadComponent: () => import('./pages/settings-whatsapp.component').then(m => m.SettingsWhatsAppComponent) },
       { path: 'billing', loadComponent: () => import('./pages/settings-billing.component').then(m => m.SettingsBillingComponent) },
       { path: 'payments', loadComponent: () => import('./pages/settings-payments.component').then(m => m.SettingsPaymentsComponent) },
+      { path: 'inboxes', canActivate: [authorityGuard('INVOICES_READ', 'PAYMENTS_READ', 'ADMIN_ACCESS')], loadComponent: () => import('./pages/settings-inboxes.component').then(m => m.SettingsInboxesComponent) },
       { path: 'stock', loadComponent: () => import('./pages/settings-stock.component').then(m => m.SettingsStockComponent) },
       { path: 'invoice-template', loadComponent: () => import('./pages/settings-invoice-template.component').then(m => m.SettingsInvoiceTemplateComponent) },
       { path: 'api-tokens', canActivate: [authorityGuard('API_TOKENS_MANAGE')], loadComponent: () => import('./pages/settings-api-tokens.component').then(m => m.SettingsApiTokensComponent) },
