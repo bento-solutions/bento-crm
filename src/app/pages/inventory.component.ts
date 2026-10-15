@@ -404,7 +404,8 @@ export class InventoryComponent implements OnInit {
   });
 
   canMove(): boolean {
-    return this.state.hasAuthority('PURCHASE_ORDERS_WRITE') || this.state.hasAuthority('DEALS_WRITE');
+    // Matches the API: only admins and managers move stock by hand.
+    return this.state.hasAuthority('PURCHASE_ORDERS_WRITE');
   }
 
   canEditProducts(): boolean {

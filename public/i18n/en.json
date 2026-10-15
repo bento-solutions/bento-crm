@@ -1006,5 +1006,6 @@
   "expenses.cat.FEES": "Fees",
   "expenses.cat.SALARIES": "Salaries",
   "expenses.cat.TAXES": "Taxes",
-  "expenses.cat.OTHER": "Other"
+  "expenses.cat.OTHER": "Other",
+  "expenses.vatTooHigh": "VAT can't be more than the amount."
 }

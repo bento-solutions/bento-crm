@@ -142,7 +142,8 @@ function isoDate(d: Date): string {
             <label class="block"><span class="field-label">{{ 'expenses.amountTtc' | translate }}</span>
               <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.amount" /></label>
             <label class="block"><span class="field-label">{{ 'expenses.vatIncluded' | translate }}</span>
-              <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.vatAmount" /></label>
+              <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.vatAmount" />
+              @if (vatTooHigh(f)) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.vatTooHigh' | translate }}</span> }</label>
             <label class="block"><span class="field-label">{{ 'expenses.paidBy' | translate }}</span>
               <select class="input-field" [(ngModel)]="f.paymentMethod">
                 @for (m of methods; track m) { <option [value]="m">{{ ('expenses.method.' + m) | translate }}</option> }
@@ -223,6 +224,10 @@ export class FinanceExpensesComponent implements OnInit {
       expenseDate: isoDate(new Date()), category: this.category() || 'OTHER', description: '', amount: null,
       vatAmount: null, paymentMethod: 'CARD', vendorName: '', reference: '',
     });
+  }
+
+  vatTooHigh(f: ExpenseForm): boolean {
+    return f.vatAmount !== null && f.amount !== null && f.vatAmount > f.amount;
   }
 
   valid(f: ExpenseForm): boolean {

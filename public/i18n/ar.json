@@ -1006,5 +1006,6 @@
   "expenses.cat.FEES": "الأتعاب والرسوم",
   "expenses.cat.SALARIES": "الرواتب",
   "expenses.cat.TAXES": "الضرائب",
-  "expenses.cat.OTHER": "أخرى"
+  "expenses.cat.OTHER": "أخرى",
+  "expenses.vatTooHigh": "لا يمكن أن تتجاوز الضريبة المبلغ."
 }

@@ -1006,5 +1006,6 @@
   "expenses.cat.FEES": "Honoraires et frais",
   "expenses.cat.SALARIES": "Salaires",
   "expenses.cat.TAXES": "Impôts et taxes",
-  "expenses.cat.OTHER": "Autre"
+  "expenses.cat.OTHER": "Autre",
+  "expenses.vatTooHigh": "La TVA ne peut pas dépasser le montant."
 }
