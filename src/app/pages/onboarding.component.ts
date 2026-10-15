@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -12,6 +12,17 @@ import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 const INDUSTRIES = ['Technology', 'Finance', 'Consulting', 'Logistics', 'Retail', 'Education', 'Healthcare', 'Other'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'MAD', 'CAD', 'AUD'];
 const LOGO_COLORS = IDENTITY_PALETTE;
+
+type StockIssueTrigger = 'DEAL_WON' | 'INVOICE_SENT' | 'MANUAL';
+
+/** Same defaults as the server's StockSettings.defaultFor. */
+function defaultStockTrigger(industry: string): StockIssueTrigger {
+  switch (industry.trim().toLowerCase()) {
+    case 'logistics': return 'DEAL_WON';
+    case 'consulting': case 'finance': case 'education': case 'healthcare': return 'MANUAL';
+    default: return 'INVOICE_SENT';
+  }
+}
 
 @Component({
   selector: 'app-onboarding',
@@ -163,6 +174,21 @@ const LOGO_COLORS = IDENTITY_PALETTE;
                     <option [value]="i">{{ i }}</option>
                   }
                 </select>
+              </div>
+
+              <div>
+                <label for="stockTrigger" class="field-label mb-1.5">Take sold goods out of stock when</label>
+                <select id="stockTrigger"
+                  [ngModel]="stockTrigger()"
+                  (ngModelChange)="stockTriggerChoice.set($event)"
+                  name="stockTrigger"
+                  class="input-field w-full cursor-pointer"
+                >
+                  @for (t of stockTriggers; track t.value) {
+                    <option [value]="t.value">{{ t.label }}</option>
+                  }
+                </select>
+                <p class="text-xs text-ink-3 mt-1">Suggested from your industry. You can change it later in Settings, Stock.</p>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
@@ -401,6 +427,14 @@ export class OnboardingComponent {
 
   orgName = signal('');
   orgIndustry = signal(INDUSTRIES[0]);
+  readonly stockTriggers: { value: StockIssueTrigger; label: string }[] = [
+    { value: 'INVOICE_SENT', label: 'The invoice is sent' },
+    { value: 'DEAL_WON', label: 'The deal is won' },
+    { value: 'MANUAL', label: 'Only when I record it' },
+  ];
+  /** Set once the person picks a trigger; until then it follows the industry. */
+  stockTriggerChoice = signal<StockIssueTrigger | null>(null);
+  stockTrigger = computed(() => this.stockTriggerChoice() ?? defaultStockTrigger(this.orgIndustry()));
   orgTimezone = signal(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   orgCurrency = signal(CURRENCIES[0]);
 
@@ -552,6 +586,7 @@ export class OnboardingComponent {
       industry: this.orgIndustry(),
       timezone: this.orgTimezone().trim() || 'UTC',
       default_currency: this.orgCurrency(),
+      stock_issue_trigger: this.stockTrigger(),
       admin_name: this.adminName().trim(),
       admin_email: this.adminEmail().trim(),
       admin_password: this.adminPassword(),

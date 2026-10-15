@@ -2,6 +2,9 @@ import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { FinanceAgingComponent } from './finance-aging.component';
+import { FinanceExpensesComponent } from './finance-expenses.component';
+
+type FinanceTab = 'Customer' | 'Vendor' | 'Recovery' | 'Aging' | 'Expenses';
 import { PayablesApi } from '../services/domains/payables.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CrmStateService, Invoice } from '../services/crm-state.service';
@@ -34,7 +37,7 @@ interface InvoiceLine {
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   template: `
     <div class="page">
       <app-page-header title="Finance" subtitle="Invoices, payables and late-payment recovery">
@@ -83,6 +86,13 @@ interface InvoiceLine {
           <mat-icon>stacked_bar_chart</mat-icon>
           {{ 'aging.tab' | translate }}
         </button>
+        @if (state.hasAuthority('PAYMENTS_READ')) {
+          <button role="tab" class="tab" [class.is-active]="activeTab() === 'Expenses'" [attr.aria-selected]="activeTab() === 'Expenses'"
+                  (click)="setFinanceTab('Expenses')">
+            <mat-icon>payments</mat-icon>
+            {{ 'expenses.tab' | translate }}
+          </button>
+        }
         <a routerLink="/finance/recurring" class="tab">
           <mat-icon>autorenew</mat-icon>
           {{ 'recurring.tab' | translate }}
@@ -91,6 +101,10 @@ interface InvoiceLine {
 
         @if (activeTab() === 'Aging') {
           <app-finance-aging />
+        }
+
+        @if (activeTab() === 'Expenses') {
+          <app-finance-expenses />
         }
 
         <!-- Invoices View -->
@@ -751,7 +765,7 @@ export class FinanceComponent {
   invoicesService = inject(InvoicesService);
   translation = inject(TranslationService);
   private api = inject(ApiService);
-  activeTab = signal<'Customer' | 'Vendor' | 'Recovery' | 'Aging'>('Customer');
+  activeTab = signal<FinanceTab>('Customer');
   private payables = inject(PayablesApi);
   private toast = inject(ToastService);
   scheduling = signal<Invoice | null>(null);
@@ -818,13 +832,14 @@ export class FinanceComponent {
     });
   }
 
-  setFinanceTab(tab: 'Customer' | 'Vendor' | 'Recovery' | 'Aging'): void {
+  setFinanceTab(tab: FinanceTab): void {
     this.activeTab.set(tab);
     const labelMap: Record<string, string> = {
       'Customer': 'finance.customerInvoices',
       'Vendor': 'finance.vendorInvoices',
       'Recovery': 'finance.recovery',
-      'Aging': 'aging.tab'
+      'Aging': 'aging.tab',
+      'Expenses': 'expenses.tab'
     };
     this.state.breadcrumbLabel.set(this.translation.t(labelMap[tab]));
   }
@@ -947,11 +962,9 @@ export class FinanceComponent {
     this.state.loadPartners();
     const tab = this.state.navigateTab();
     if (tab) {
-      this.activeTab.set(tab as 'Customer' | 'Vendor' | 'Recovery');
       this.state.navigateTab.set(null);
     }
-    const label = this.activeTab() === 'Customer' ? 'Customer Invoices' : this.activeTab() === 'Vendor' ? 'Vendor Invoices' : 'Recovery';
-    this.state.breadcrumbLabel.set(label);
+    this.setFinanceTab((['Customer', 'Vendor', 'Recovery', 'Aging', 'Expenses'] as FinanceTab[]).includes(tab as FinanceTab) ? tab as FinanceTab : 'Customer');
     this.updateReminderTemplate();
     // When switching back to Manual, clear deal-bound locked fields and lines
     effect(() => {

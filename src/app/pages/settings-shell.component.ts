@@ -48,6 +48,10 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <mat-icon>receipt_long</mat-icon>
           Invoices
         </a>
+        <a routerLink="/settings/stock" routerLinkActive="is-active" class="tab">
+          <mat-icon>inventory_2</mat-icon>
+          Stock
+        </a>
         <a routerLink="/settings/payments" routerLinkActive="is-active" class="tab">
           <mat-icon>credit_card</mat-icon>
           Payments
