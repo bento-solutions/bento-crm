@@ -13,6 +13,7 @@ import { DataStatusBannerComponent } from '../shared/data-status-banner.componen
 import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { TranslatePipe } from '../pipes/translate.pipe';
+import { remainingAmount } from '../services/domains/invoice.mapper';
 import { TranslationService } from '../services/translation.service';
 import { ApiService } from '../services/api.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
@@ -121,6 +122,9 @@ interface InvoiceLine {
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm text-ink font-semibold">{{formatCurrency(invoice.amount)}}</div>
+                      @if (invoice.status !== 'Paid' && (invoice.amountPaid || 0) > 0) {
+                        <div class="cell-sub">{{ 'invoices.partlyPaid' | translate: { paid: formatCurrency(invoice.amountPaid || 0), left: formatCurrency(remaining(invoice)) } }}</div>
+                      }
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm text-ink-3">{{invoice.dueDate}}</div>
@@ -247,7 +251,7 @@ interface InvoiceLine {
                         <h4 class="font-semibold text-ink">{{getPartnerName(invoice.partnerId)}}</h4>
                         <p class="text-xs text-ink-3 mt-0.5">City: {{getPartnerCity(invoice.partnerId)}} &bull; Phone: {{getPartnerPhone(invoice.partnerId)}}</p>
                         <p class="text-xs text-ink-2 flex items-center gap-2 mt-1.5">
-                          <span class="font-semibold text-ink">{{formatCurrency(invoice.amount)}}</span>
+                          <span class="font-semibold text-ink">{{formatCurrency(remaining(invoice))}}</span>
                           <span>&bull;</span>
                           <span class="text-ink font-semibold">Due Date: {{invoice.dueDate}}</span>
                         </p>
@@ -728,7 +732,7 @@ export class FinanceComponent {
         this.scheduling.set(null);
         this.toast.show(this.translation.t(date ? 'bills.scheduled' : 'bills.unscheduled'), { type: 'success' });
       },
-      error: e => this.toast.show((e as { detail?: string })?.detail || this.translation.t('bills.error'), { type: 'error' }),
+      error: e => this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.translation.t('bills.error'), { type: 'error' }),
     });
   }
 
@@ -815,13 +819,16 @@ export class FinanceComponent {
 
   /** The invoices behind the active tab — the stat cards summarise exactly what the table lists. */
   private activeInvoices = computed(() => (this.activeTab() === 'Vendor' ? this.vendorInvoices() : this.customerInvoices()));
-  private sum = (list: Invoice[]) => list.reduce((total, inv) => total + (inv.amount || 0), 0);
+  /** Sums what is still owed, so partial payments count the way the Aging view counts them. */
+  private sum = (list: Invoice[]) => list.reduce((total, inv) => total + remainingAmount(inv), 0);
+  remaining = remainingAmount;
   private unpaid = computed(() => this.activeInvoices().filter(i => i.status !== 'Paid'));
   private overdue = computed(() => this.activeInvoices().filter(i => i.status === 'Overdue'));
   private paid = computed(() => this.activeInvoices().filter(i => i.status === 'Paid'));
   outstandingTotal = computed(() => this.sum(this.unpaid()));
   overdueTotal = computed(() => this.sum(this.overdue()));
-  paidTotal = computed(() => this.sum(this.paid()));
+  paidTotal = computed(() => this.activeInvoices().reduce(
+    (total, inv) => total + (inv.status === 'Paid' ? (inv.amount || 0) : (inv.amountPaid || 0)), 0));
   unpaidCount = computed(() => this.unpaid().length);
   overdueCount = computed(() => this.overdue().length);
   paidCount = computed(() => this.paid().length);

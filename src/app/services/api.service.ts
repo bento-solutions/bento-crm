@@ -102,8 +102,9 @@ function fromBackendPurchaseOrder(po: PurchaseOrder): PurchaseOrder {
     ...po,
     status: (PO_STATUS_FROM_BACKEND[status] ?? status) as PurchaseOrder['status'],
     vendorId: (dto['vendorPartnerId'] ?? dto['vendorId']) as string,
-    // The backend sends `total` (subtotal + tax), never `amount`; fall back to the lines for old rows.
-    amount: Number(dto['total'] ?? dto['amount'] ?? (po.lines || []).reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0)) || 0
+    // The backend sends `total` (subtotal + 20% VAT), never `amount`. Older rows saved without a
+    // total fall back to their lines plus the same default VAT, which is what their bill will carry.
+    amount: Number(dto['total'] ?? dto['amount'] ?? (po.lines || []).reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0) * 1.2) || 0
   };
 }
 

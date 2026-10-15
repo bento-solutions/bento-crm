@@ -2486,7 +2486,8 @@ export class SalesComponent {
       },
       error: e => {
         this.billBusy.set(false);
-        this.notify.show((e as { detail?: string })?.detail || this.translation.t('bills.error'), { type: 'error' });
+        const err = e as { error?: { detail?: string }; detail?: string };
+        this.notify.show(err?.error?.detail || err?.detail || this.translation.t('bills.error'), { type: 'error' });
       },
     });
   }

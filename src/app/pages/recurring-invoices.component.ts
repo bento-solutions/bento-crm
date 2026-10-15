@@ -183,7 +183,7 @@ function emptyForm(): RecurringInvoiceInput {
                   <th>{{ 'recurring.name' | translate }}</th>
                   <th>{{ 'recurring.customer' | translate }}</th>
                   <th>{{ 'recurring.frequency' | translate }}</th>
-                  <th class="col-num">{{ 'recurring.perInvoice' | translate }}</th>
+                  <th class="col-num">{{ 'recurring.amountPerInvoice' | translate }}</th>
                   <th class="col-actions"></th>
                 </tr>
               </thead>
@@ -438,7 +438,7 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   private fail(e: unknown): void {
-    this.toast.show((e as { detail?: string })?.detail || this.i18n.t('recurring.error'), { type: 'error' });
+    this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.i18n.t('recurring.error'), { type: 'error' });
   }
 
   customerName(partnerId: string): string {
@@ -451,7 +451,7 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   money(amount?: number | null): string {
-    return new Intl.NumberFormat(this.i18n.currentLang(), { style: 'currency', currency: 'MAD' }).format(Number(amount) || 0);
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(Number(amount) || 0);
   }
 
   date(iso?: string | null): string {

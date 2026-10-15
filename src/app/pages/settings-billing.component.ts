@@ -128,7 +128,9 @@ export class SettingsBillingComponent implements OnInit {
 
   label(day: number): string {
     if (day === 0) return this.i18n.t('billing.onDueDate');
-    return this.i18n.t(day < 0 ? 'billing.daysBefore' : 'billing.daysAfter', { n: Math.abs(day) });
+    const n = Math.abs(day);
+    if (n === 1) return this.i18n.t(day < 0 ? 'billing.dayBefore' : 'billing.dayAfter');
+    return this.i18n.t(day < 0 ? 'billing.daysBefore' : 'billing.daysAfter', { n });
   }
 
   async save(): Promise<void> {
@@ -160,6 +162,6 @@ export class SettingsBillingComponent implements OnInit {
   }
 
   private fail(e: unknown): void {
-    this.toast.show((e as { detail?: string })?.detail || this.i18n.t('recurring.error'), { type: 'error' });
+    this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.i18n.t('recurring.error'), { type: 'error' });
   }
 }

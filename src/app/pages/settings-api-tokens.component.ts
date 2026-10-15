@@ -203,7 +203,7 @@ export class SettingsApiTokensComponent implements OnInit {
       this.creating.set(false);
       this.reload();
     } catch (e) {
-      this.toast.show((e as { detail?: string })?.detail || this.i18n.t('waSettings.error'), { type: 'error' });
+      this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.i18n.t('waSettings.error'), { type: 'error' });
     } finally {
       this.busy.set(false);
     }
@@ -215,7 +215,7 @@ export class SettingsApiTokensComponent implements OnInit {
       await firstValueFrom(this.api.revoke(t.id));
       this.reload();
     } catch (e) {
-      this.toast.show((e as { detail?: string })?.detail || this.i18n.t('waSettings.error'), { type: 'error' });
+      this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.i18n.t('waSettings.error'), { type: 'error' });
     }
   }
 

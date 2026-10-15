@@ -822,5 +822,9 @@
   "template.brandSaved": "{{name}} enregistrée",
   "template.logoType": "Le logo doit être une image PNG ou JPEG.",
   "template.logoUploaded": "Logo importé. Enregistrez pour l'appliquer.",
-  "template.error": "Le modèle de facture n'a pas pu être enregistré."
+  "template.error": "Le modèle de facture n'a pas pu être enregistré.",
+  "billing.dayBefore": "1 jour avant l'échéance",
+  "billing.dayAfter": "1 jour après l'échéance",
+  "recurring.amountPerInvoice": "Montant par facture",
+  "invoices.partlyPaid": "{{paid}} payé, reste {{left}}"
 }

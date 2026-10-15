@@ -822,5 +822,9 @@
   "template.brandSaved": "تم حفظ {{name}}",
   "template.logoType": "يجب أن يكون الشعار صورة PNG أو JPEG.",
   "template.logoUploaded": "تم رفع الشعار. احفظ لتطبيقه.",
-  "template.error": "تعذر حفظ نموذج الفاتورة."
+  "template.error": "تعذر حفظ نموذج الفاتورة.",
+  "billing.dayBefore": "قبل الاستحقاق بيوم واحد",
+  "billing.dayAfter": "بعد الاستحقاق بيوم واحد",
+  "recurring.amountPerInvoice": "المبلغ لكل فاتورة",
+  "invoices.partlyPaid": "مدفوع {{paid}}، المتبقي {{left}}"
 }

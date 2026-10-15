@@ -822,5 +822,9 @@
   "template.brandSaved": "{{name}} saved",
   "template.logoType": "The logo must be a PNG or JPEG image.",
   "template.logoUploaded": "Logo uploaded. Save to apply it.",
-  "template.error": "The invoice template could not be saved."
+  "template.error": "The invoice template could not be saved.",
+  "billing.dayBefore": "1 day before due",
+  "billing.dayAfter": "1 day after due",
+  "recurring.amountPerInvoice": "Amount per invoice",
+  "invoices.partlyPaid": "{{paid}} paid, {{left}} left"
 }

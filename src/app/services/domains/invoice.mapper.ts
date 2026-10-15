@@ -31,6 +31,7 @@ export interface InvoiceResponse {
   vatNumber?: string;
   lines?: Invoice['lines'];
   scheduledPaymentDate?: string | null;
+  amountPaid?: number | string | null;
 }
 
 const TYPE_FROM_API: Record<string, 'Customer' | 'Vendor'> = {
@@ -43,9 +44,9 @@ const TYPE_TO_API: Record<'Customer' | 'Vendor', string> = {
   Vendor: 'VENDOR',
 };
 
-// The backend's PARTIALLY_PAID has no frontend equivalent and collapses into 'Pending';
-// round-tripping such an invoice through the UI without changing its status will re-send it
-// as SENT rather than PARTIALLY_PAID.
+// The backend's PARTIALLY_PAID has no frontend equivalent: it shows as 'Pending', or 'Overdue'
+// once past its due date (the daily job only flips SENT invoices to OVERDUE). `apiStatus`
+// keeps the original so saving such an invoice sends PARTIALLY_PAID back.
 const STATUS_FROM_API: Record<string, InvoiceStatus> = {
   DRAFT: 'Draft',
   SENT: 'Pending',
@@ -61,6 +62,22 @@ const STATUS_TO_API: Record<InvoiceStatus, string> = {
   Overdue: 'OVERDUE',
 };
 
+function statusFromApi(dto: InvoiceResponse): InvoiceStatus {
+  if (dto.status === 'PARTIALLY_PAID' && dto.dueDate && dto.dueDate < localToday()) return 'Overdue';
+  return STATUS_FROM_API[dto.status] ?? (dto.status as InvoiceStatus);
+}
+
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** What is still owed on an invoice: its total minus what has been paid against it. */
+export function remainingAmount(invoice: Invoice): number {
+  if (invoice.status === 'Paid') return 0;
+  return Math.max(0, (invoice.amount || 0) - (invoice.amountPaid || 0));
+}
+
 /** Maps an `InvoiceResponse` from the API into the frontend `Invoice` model. */
 export function invoiceFromApi(dto: InvoiceResponse): Invoice {
   return {
@@ -68,7 +85,9 @@ export function invoiceFromApi(dto: InvoiceResponse): Invoice {
     type: TYPE_FROM_API[dto.type] ?? dto.type,
     partnerId: dto.partnerId,
     amount: Number(dto.total ?? 0),
-    status: STATUS_FROM_API[dto.status] ?? dto.status,
+    status: statusFromApi(dto),
+    apiStatus: dto.status,
+    amountPaid: dto.amountPaid !== undefined && dto.amountPaid !== null ? Number(dto.amountPaid) : 0,
     dueDate: dto.dueDate ?? '',
     dealId: dto.dealId ?? undefined,
     purchaseOrderId: dto.purchaseOrderId ?? undefined,
@@ -101,7 +120,10 @@ export function invoiceToApi(invoice: Partial<Invoice>): Record<string, unknown>
   // The form's line sum is tax-exclusive; the backend derives VAT and the total from it.
   if (invoice.subtotal !== undefined) payload['subtotal'] = invoice.subtotal;
   else if (invoice.amount !== undefined) payload['total'] = invoice.amount;
-  if (invoice.status !== undefined) payload['status'] = STATUS_TO_API[invoice.status];
+  if (invoice.status !== undefined) {
+    const stillPartial = invoice.apiStatus === 'PARTIALLY_PAID' && (invoice.status === 'Pending' || invoice.status === 'Overdue');
+    payload['status'] = stillPartial ? 'PARTIALLY_PAID' : STATUS_TO_API[invoice.status];
+  }
   if (invoice.dueDate !== undefined) payload['dueDate'] = invoice.dueDate;
   if (invoice.dealId !== undefined) payload['dealId'] = invoice.dealId;
   if (invoice.purchaseOrderId !== undefined) payload['purchaseOrderId'] = invoice.purchaseOrderId;

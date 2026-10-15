@@ -152,7 +152,7 @@ export class FinanceAgingComponent implements OnInit {
       next: r => { this.report.set(r); this.loading.set(false); },
       error: e => {
         this.loading.set(false);
-        this.toast.show((e as { detail?: string })?.detail || this.i18n.t('aging.error'), { type: 'error' });
+        this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.i18n.t('aging.error'), { type: 'error' });
       },
     });
   }
@@ -171,7 +171,7 @@ export class FinanceAgingComponent implements OnInit {
   }
 
   protected money(amount?: number | null): string {
-    return new Intl.NumberFormat(this.i18n.currentLang(), { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })
       .format(Number(amount) || 0);
   }
 

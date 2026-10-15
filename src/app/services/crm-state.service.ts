@@ -891,6 +891,10 @@ export interface Invoice {
   tax?: number;
   /** Supplier bills: the day the organization plans to pay it. */
   scheduledPaymentDate?: string;
+  /** Sum of payments recorded against the invoice (partial payments included). */
+  amountPaid?: number;
+  /** The backend status as sent, kept so a partially paid invoice is not re-saved as unpaid. */
+  apiStatus?: string;
   // Customer administrative information
   customerAccount?: string;   // Unique account code / ERP ID
   customerName?: string;      // Official corporate name
