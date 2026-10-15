@@ -403,7 +403,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               @for (po of paginatedPOs(); track po.id) {
                 <tr>
                   <td class="whitespace-nowrap">
-                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View PO #' + po.id">#{{ po.id.slice(0, 8) }}</button>
+                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View PO ' + poRef(po)">{{ poRef(po) }}</button>
                     @if (po.sentVia) {
                       <span class="text-meta text-ink-3 font-medium">Sent: {{po.sentVia}}</span>
                     }
@@ -436,7 +436,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <button (click)="$event.stopPropagation(); downloadPOPdf(po)" class="btn-icon btn-sm" title="Download PO PDF">
   <mat-icon class="icon-sm">picture_as_pdf</mat-icon>
 </button>
-                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="btn-secondary btn-sm ml-auto" title="Assign Task">
+                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO ' + poRef(po))" class="btn-secondary btn-sm ml-auto" title="Assign Task">
                       <mat-icon class="icon-xs">assignment</mat-icon> Assign
                     </button>
                     @if (canBill(po)) {
@@ -1131,7 +1131,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <mat-icon class="icon-sm">close</mat-icon>
             </button>
           </div>
-          <p class="text-sm text-ink-2">{{ 'bills.createHint' | translate: { po: po.orderNumber || ('#' + po.id.slice(0, 8)), amount: formatCurrency(po.amount) } }}</p>
+          <p class="text-sm text-ink-2">{{ 'bills.createHint' | translate: { po: poRef(po), amount: formatCurrency(po.amount) } }}</p>
           <div class="space-y-3 mt-3">
             <label class="block">
               <span class="field-label">{{ 'bills.supplierNumber' | translate }}</span>
@@ -1751,7 +1751,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           <div class="w-screen max-w-2xl bg-surface shadow-2xl flex flex-col h-full duration-300">
             <div class="px-6 py-5 bg-subtle border-b border-line flex justify-between items-center shrink-0">
               <div>
-                <h2 class="section-title" id="po-drawer-title">PO #{{ po.id.slice(0, 8) }}</h2>
+                <h2 class="section-title" id="po-drawer-title">PO {{ poRef(po) }}</h2>
                 <p class="text-xs text-ink-3 mt-0.5">Vendor: {{getPartnerName(po.vendorId)}} · Deal: {{getDealTitle(po.dealId)}}</p>
               </div>
               <div class="flex items-center gap-3">
@@ -1769,7 +1769,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-subtle p-4 rounded-xl border border-line-soft text-xs">
                 <div>
                   <span class="eyebrow block mb-1">PO Reference</span>
-                  <span class="text-ink font-semibold text-sm">#{{ po.id.slice(0, 8) }}</span>
+                  <span class="text-ink font-semibold text-sm">{{ poRef(po) }}</span>
                 </div>
                 <div>
                   <span class="eyebrow block mb-1">Delivery Date</span>
@@ -1820,7 +1820,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <span class="text-xs text-ink-3">{{ po.lines.length }} item(s)</span>
               <div class="flex gap-2">
                 @if (canCreateTask()) {
-                  <button (click)="openAssignTaskModal('po', po.id, 'PO #' + po.id); closePODrawer()" class="btn-secondary btn-sm">
+                  <button (click)="openAssignTaskModal('po', po.id, 'PO ' + poRef(po)); closePODrawer()" class="btn-secondary btn-sm">
                     <mat-icon class="icon-sm">assignment</mat-icon> Assign Task
                   </button>
                 }
@@ -2853,7 +2853,7 @@ export class SalesComponent {
   }
 
   async deletePurchaseOrder(po: PurchaseOrder) {
-    if (await this.confirmDialog.ask({ title: 'Delete purchase order?', message: `PO #${po.id.slice(0, 8)} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete PO', danger: true })) {
+    if (await this.confirmDialog.ask({ title: 'Delete purchase order?', message: `PO ${this.poRef(po)} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete PO', danger: true })) {
       this.purchaseOrdersService.deletePurchaseOrder(po.id);
       this.closePODrawer();
     }
@@ -2923,6 +2923,11 @@ export class SalesComponent {
       case 'PO Sent': return 'badge-violet';
       default: return 'badge-neutral';
     }
+  }
+
+  /** Human reference for a purchase order: its order number (e.g. BC-4027), else a short id. */
+  poRef(po: { id: string; orderNumber?: string }): string {
+    return po.orderNumber || '#' + po.id.slice(0, 8);
   }
 
   formatCurrency(value: number) {
