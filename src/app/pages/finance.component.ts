@@ -14,6 +14,7 @@ import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { remainingAmount } from '../services/domains/invoice.mapper';
+import { PaymentLink, PaymentsApi } from '../services/domains/payments.service';
 import { TranslationService } from '../services/translation.service';
 import { ApiService } from '../services/api.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
@@ -148,6 +149,11 @@ interface InvoiceLine {
                       <button (click)="openInvoiceAttachments(invoice)" title="Attachments" aria-label="Attachments" class="btn-icon btn-sm">
                         <mat-icon class="icon-sm">attach_file</mat-icon>
                       </button>
+                      @if (invoice.type === 'Customer' && invoice.status !== 'Paid' && invoice.status !== 'Draft' && canWrite()) {
+                        <button (click)="openPayLink(invoice)" class="btn-ghost btn-sm">
+                          <mat-icon class="icon-sm">link</mat-icon>{{ 'payLink.button' | translate }}
+                        </button>
+                      }
                       @if (invoice.type === 'Vendor' && invoice.status !== 'Paid' && canWrite()) {
                         <button (click)="openSchedule(invoice)" class="btn-ghost btn-sm">{{ 'bills.schedule' | translate }}</button>
                       }
@@ -183,6 +189,41 @@ interface InvoiceLine {
                     </button>
                   </div>
                   <app-attachments ownerEntityType="INVOICE" [ownerEntityId]="invoiceForAttachments.id" [canWrite]="canWrite()" />
+                </div>
+              </div>
+            }
+            @if (payLinkFor(); as inv) {
+              <div class="modal-backdrop">
+                <div class="modal modal-md">
+                  <div class="modal-header">
+                    <h3 class="modal-title">{{ 'payLink.title' | translate: { number: inv.invoiceNumber || inv.id.slice(0, 8) } }}</h3>
+                    <button (click)="payLinkFor.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+                      <mat-icon class="icon-sm">close</mat-icon>
+                    </button>
+                  </div>
+                  @if (payLinkError(); as err) {
+                    <div class="alert alert-warning text-sm">{{ err }}</div>
+                    @if (state.hasAuthority('ADMIN_ACCESS')) {
+                      <a routerLink="/settings/payments" class="btn-secondary btn-sm mt-3" (click)="payLinkFor.set(null)">{{ 'payLink.openSettings' | translate }}</a>
+                    }
+                  } @else if (payLink(); as link) {
+                    <p class="text-sm text-ink-2">{{ 'payLink.hint' | translate: { amount: formatCurrency(remaining(inv)) } }}</p>
+                    <div class="flex gap-2 mt-3">
+                      <input class="input-field flex-1 min-w-0" readonly [value]="link.url" [attr.aria-label]="'payLink.title' | translate: { number: '' }" (focus)="$any($event.target).select()" />
+                      <button class="btn-primary shrink-0" (click)="copyPayLink(link.url)">
+                        <mat-icon class="icon-sm">content_copy</mat-icon>{{ 'payLink.copy' | translate }}
+                      </button>
+                    </div>
+                    <div class="modal-footer">
+                      <button class="btn-ghost" (click)="cancelPayLink(inv)">{{ 'payLink.deactivate' | translate }}</button>
+                      <a class="btn-secondary" [href]="whatsAppShare(inv, link.url)" target="_blank" rel="noopener">
+                        <mat-icon class="icon-sm">chat</mat-icon>{{ 'payLink.whatsapp' | translate }}
+                      </a>
+                      <a class="btn-secondary" [href]="link.url" target="_blank" rel="noopener">{{ 'payLink.open' | translate }}</a>
+                    </div>
+                  } @else {
+                    <div class="py-6 text-center"><div class="w-6 h-6 mx-auto border-2 border-line border-t-accent rounded-full animate-spin"></div></div>
+                  }
                 </div>
               </div>
             }
@@ -715,6 +756,47 @@ export class FinanceComponent {
   private toast = inject(ToastService);
   scheduling = signal<Invoice | null>(null);
   scheduleDate = signal('');
+  private payments = inject(PaymentsApi);
+  payLinkFor = signal<Invoice | null>(null);
+  payLink = signal<PaymentLink | null>(null);
+  payLinkError = signal<string | null>(null);
+
+  openPayLink(invoice: Invoice): void {
+    this.payLinkFor.set(invoice);
+    this.payLink.set(null);
+    this.payLinkError.set(null);
+    this.payments.link(invoice.id).subscribe({
+      next: link => this.payLink.set(link),
+      error: e => this.payLinkError.set((e as { error?: { detail?: string } })?.error?.detail || this.translation.t('payLink.error')),
+    });
+  }
+
+  copyPayLink(url: string): void {
+    navigator.clipboard?.writeText(url).then(
+      () => this.toast.show(this.translation.t('payLink.copied'), { type: 'success' }),
+      () => this.toast.show(this.translation.t('payLink.copyFailed'), { type: 'error' }),
+    );
+  }
+
+  whatsAppShare(invoice: Invoice, url: string): string {
+    // wa.me wants the international number without "+"; Moroccan numbers are often saved as 06…
+    const digits = (this.getPartnerPhone(invoice.partnerId) || '').replace(/[^\d]/g, '');
+    const phone = digits.startsWith('00') ? digits.slice(2) : digits.startsWith('0') ? '212' + digits.slice(1) : digits;
+    const text = this.translation.t('payLink.whatsappText', {
+      number: invoice.invoiceNumber || '', amount: this.formatCurrency(this.remaining(invoice)), url,
+    });
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  }
+
+  cancelPayLink(invoice: Invoice): void {
+    this.payments.cancelLink(invoice.id).subscribe({
+      next: () => {
+        this.payLinkFor.set(null);
+        this.toast.show(this.translation.t('payLink.deactivated'), { type: 'success' });
+      },
+      error: () => this.toast.show(this.translation.t('payLink.error'), { type: 'error' }),
+    });
+  }
 
   isInvoiceTab(): boolean {
     return this.activeTab() === 'Customer' || this.activeTab() === 'Vendor';

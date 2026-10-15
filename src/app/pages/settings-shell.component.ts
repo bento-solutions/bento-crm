@@ -48,6 +48,10 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <mat-icon>receipt_long</mat-icon>
           Invoices
         </a>
+        <a routerLink="/settings/payments" routerLinkActive="is-active" class="tab">
+          <mat-icon>credit_card</mat-icon>
+          Payments
+        </a>
         @if (state.hasAuthority('API_TOKENS_MANAGE')) {
           <a routerLink="/settings/api-tokens" routerLinkActive="is-active" class="tab">
             <mat-icon>key</mat-icon>

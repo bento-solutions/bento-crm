@@ -825,7 +825,10 @@ function readSidebarCollapsed(): boolean {
 
   `],
   template: `
-    @if (state.isAuthenticated()) {
+    <!-- Pay-by-Link pages are for customers: always bare, even when a signed-in user opens one. -->
+    @if (activeRoute().startsWith('/pay/')) {
+      <router-outlet></router-outlet>
+    } @else if (state.isAuthenticated()) {
       <div class="app-layout search-container">
 
         <!-- Mobile overlay -->
