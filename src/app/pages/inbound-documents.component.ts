@@ -381,12 +381,18 @@ export class InboundDocumentsComponent implements OnInit {
     return d.status === 'NEEDS_REVIEW' && d.kind === 'VENDOR_INVOICE';
   }
 
+  /** Setting a document aside or reading it again changes it: write rights for its kind. */
+  canChange(d: InboundDocument): boolean {
+    const authority = d.kind === 'VENDOR_INVOICE' ? 'INVOICES_WRITE' : d.kind === 'BANK_STATEMENT' ? 'PAYMENTS_WRITE' : 'FILES_WRITE';
+    return this.state.hasAuthority(authority);
+  }
+
   canIgnore(d: InboundDocument): boolean {
-    return d.status === 'NEEDS_REVIEW' || d.status === 'FAILED' || d.status === 'QUEUED';
+    return this.canChange(d) && (d.status === 'NEEDS_REVIEW' || d.status === 'FAILED' || d.status === 'QUEUED');
   }
 
   canRetry(d: InboundDocument): boolean {
-    return d.status === 'NEEDS_REVIEW' || d.status === 'FAILED' || d.status === 'IGNORED';
+    return this.canChange(d) && (d.status === 'NEEDS_REVIEW' || d.status === 'FAILED' || d.status === 'IGNORED');
   }
 
   open(d: InboundDocument): void {
