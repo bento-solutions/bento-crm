@@ -1197,6 +1197,13 @@ export class CrmStateService {
     };
   });
 
+  /**
+   * Whether the signed-in user's role is known yet: 'pending' until /auth/me (or login)
+   * answers. Until then hasAuthority() falls back to viewer rights, so route guards wait
+   * on this instead of bouncing a page opened by URL.
+   */
+  currentUserStatus = signal<'pending' | 'loaded' | 'failed'>('pending');
+
   currentUserAuthorities = computed(() => {
     const user = this.users().find(u => u.id === this.currentUserId());
     return AUTHORITIES_BY_ROLE[user?.roleId ?? 'viewer'] ?? AUTHORITIES_BY_ROLE['viewer'];
@@ -2401,6 +2408,7 @@ export class CrmStateService {
       this.api.getMe().subscribe({
         next: (user) => this.adoptCurrentUser(user),
         error: (err) => {
+          this.currentUserStatus.set('failed');
           console.error('Failed to sync current user from API:', err);
         }
       });
@@ -2460,10 +2468,12 @@ export class CrmStateService {
       }
       return [...users, crmUser];
     });
+    this.currentUserStatus.set('loaded');
   }
 
   logout(): void {
     this.isAuthenticated.set(false);
+    this.currentUserStatus.set('pending');
     this.currentUserId.set('usr_rachid');
     this.saveAuthState(false);
     if (typeof localStorage !== 'undefined') {

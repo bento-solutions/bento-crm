@@ -14,8 +14,18 @@ export interface TaskProposalParams {
   priority?: string | null;
 }
 
+/** An invoice the server checked is this organization's and still owed. */
+export interface ReminderInvoice {
+  id: string;
+  invoice_number?: string | null;
+  customer_name?: string | null;
+  due_date?: string | null;
+  owed?: number | null;
+}
+
 export interface ReminderProposalParams {
   invoice_ids?: string[];
+  invoices?: ReminderInvoice[];
   channel?: string | null;
 }
 

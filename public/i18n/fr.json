@@ -1221,5 +1221,9 @@
   "assistant.thinking": "Réflexion…",
   "assistant.placeholder": "Posez une question…",
   "assistant.send": "Envoyer",
-  "assistant.error": "L'assistant n'a pas pu répondre. Veuillez réessayer."
+  "assistant.error": "L'assistant n'a pas pu répondre. Veuillez réessayer.",
+  "drive.openNewTab": "Ouvrir dans un nouvel onglet",
+  "assistant.remindersMore": "et {{n}} autre(s)",
+  "assistant.remindersNothing": "Aucune de ces factures n'est une facture client impayée : rien à envoyer.",
+  "assistant.remindersNoneSent": "Aucune relance envoyée : vérifiez l'e-mail ou le WhatsApp des clients."
 }

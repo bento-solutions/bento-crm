@@ -79,11 +79,11 @@ function num(v: unknown): number | null {
         <table class="data-table">
           <thead><tr>
             <th>{{ 'inboundDocs.file' | translate }}</th>
-            <th>{{ 'inboundDocs.channel' | translate }}</th>
-            <th>{{ 'inboundDocs.sender' | translate }}</th>
-            <th>{{ 'inboundDocs.received' | translate }}</th>
-            <th>{{ 'inboundDocs.supplier' | translate }}</th>
-            <th class="col-num">{{ 'inboundDocs.total' | translate }}</th>
+            <th class="hidden md:table-cell">{{ 'inboundDocs.channel' | translate }}</th>
+            <th class="hidden lg:table-cell">{{ 'inboundDocs.sender' | translate }}</th>
+            <th class="hidden md:table-cell">{{ 'inboundDocs.received' | translate }}</th>
+            <th class="hidden lg:table-cell">{{ 'inboundDocs.supplier' | translate }}</th>
+            <th class="col-num hidden sm:table-cell">{{ 'inboundDocs.total' | translate }}</th>
             <th>{{ 'inboundDocs.statusLabel' | translate }}</th>
             <th>{{ 'inboundDocs.reason' | translate }}</th>
             <th class="col-actions"></th>
@@ -91,20 +91,21 @@ function num(v: unknown): number | null {
           <tbody>
             @for (d of docs(); track d.id) {
               <tr>
-                <td class="max-w-64">
+                <td class="max-w-40 sm:max-w-64">
                   <button class="text-start min-w-0 block w-full" (click)="open(d)">
                     <span class="cell-title truncate block hover:underline">{{ d.fileName || '—' }}</span>
                   </button>
                   <div class="cell-sub truncate">{{ ('inboundDocs.kind.' + d.kind) | translate }}@if (d.subject) { · {{ d.subject }} }</div>
+                  <div class="cell-sub truncate lg:hidden">@if (d.partnerName || d.extraction?.supplierName) { {{ d.partnerName || d.extraction?.supplierName }} · }<span class="md:hidden">{{ dateTime(d.receivedAt) }}</span>@if (has(d.extraction?.total)) { <span class="sm:hidden num"> · {{ money(d.extraction?.total, d.extraction?.currency) }}</span> }</div>
                 </td>
-                <td class="whitespace-nowrap"><span class="badge badge-neutral"><mat-icon class="icon-xs">{{ channelIcon(d.channel) }}</mat-icon>{{ channelLabel(d.channel) }}</span></td>
-                <td class="cell-muted max-w-48 truncate">{{ d.sender || '—' }}</td>
-                <td class="cell-muted whitespace-nowrap">{{ dateTime(d.receivedAt) }}</td>
-                <td class="max-w-48 truncate">{{ d.partnerName || d.extraction?.supplierName || '—' }}</td>
-                <td class="col-num num whitespace-nowrap">{{ has(d.extraction?.total) ? money(d.extraction?.total, d.extraction?.currency) : '—' }}</td>
+                <td class="whitespace-nowrap hidden md:table-cell"><span class="badge badge-neutral"><mat-icon class="icon-xs">{{ channelIcon(d.channel) }}</mat-icon>{{ channelLabel(d.channel) }}</span></td>
+                <td class="cell-muted max-w-48 truncate hidden lg:table-cell">{{ d.sender || '—' }}</td>
+                <td class="cell-muted whitespace-nowrap hidden md:table-cell">{{ dateTime(d.receivedAt) }}</td>
+                <td class="max-w-48 truncate hidden lg:table-cell">{{ d.partnerName || d.extraction?.supplierName || '—' }}</td>
+                <td class="col-num num whitespace-nowrap hidden sm:table-cell">{{ has(d.extraction?.total) ? money(d.extraction?.total, d.extraction?.currency) : '—' }}</td>
                 <td><span class="badge" [class]="statusBadge(d.status)">{{ ('inboundDocs.status.' + d.status) | translate }}</span>
                   @if (d.status === 'BOOKED' && d.invoiceNumber) { <div class="cell-sub">{{ d.invoiceNumber }}</div> }</td>
-                <td class="cell-muted text-xs max-w-64">{{ d.reviewReason || d.error || '' }}</td>
+                <td class="cell-muted text-xs max-w-64 min-w-32">{{ d.reviewReason || d.error || '' }}</td>
                 <td class="col-actions">
                   @if (isReviewable(d)) {
                     <button class="btn-secondary btn-sm" (click)="open(d)">{{ 'inboundDocs.review' | translate }}</button>

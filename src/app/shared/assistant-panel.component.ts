@@ -6,7 +6,7 @@ import { TranslationService } from '../services/translation.service';
 import { ToastService } from '../services/toast.service';
 import { CrmStateService } from '../services/crm-state.service';
 import {
-  AssistantApi, AssistantProposal, ChatMessage, ReminderProposalParams, TaskProposalParams,
+  AssistantApi, AssistantProposal, ChatMessage, ReminderInvoice, ReminderProposalParams, TaskProposalParams,
 } from '../services/domains/assistant.service';
 
 type ProposalState = 'pending' | 'busy' | 'done' | 'dismissed';
@@ -84,13 +84,26 @@ const STARTERS = ['assistant.starter.owed', 'assistant.starter.supplierBills', '
                         </p>
                       } @else {
                         <div class="flex items-center gap-2 text-sm font-medium text-ink"><mat-icon class="icon-sm text-ink-3">notifications_active</mat-icon>{{ 'assistant.proposeReminders' | translate }}</div>
-                        <p class="text-sm text-ink">{{ 'assistant.remindersText' | translate: { n: reminderParams(c).invoice_ids?.length ?? 0, channel: reminderParams(c).channel || 'email' } }}</p>
+                        <p class="text-sm text-ink">{{ 'assistant.remindersText' | translate: { n: reminderInvoices(c).length, channel: reminderParams(c).channel || 'email' } }}</p>
+                        <ul class="space-y-1">
+                          @for (i of reminderInvoices(c).slice(0, 5); track i.id) {
+                            <li class="flex items-baseline justify-between gap-2 text-xs">
+                              <span class="min-w-0 truncate text-ink">{{ i.invoice_number || '—' }} · {{ i.customer_name || '—' }}</span>
+                              <span class="num text-ink-2 whitespace-nowrap">{{ amount(i.owed) }}@if (i.due_date) { · {{ shortDate(i.due_date) }} }</span>
+                            </li>
+                          }
+                        </ul>
+                        @if (reminderInvoices(c).length > 5) {
+                          <p class="text-xs text-ink-3">{{ 'assistant.remindersMore' | translate: { n: reminderInvoices(c).length - 5 } }}</p>
+                        }
                       }
                       @switch (c.state) {
                         @case ('done') { <span class="badge badge-success">{{ 'assistant.done' | translate }}</span> }
                         @case ('dismissed') { <span class="badge badge-neutral">{{ 'assistant.dismissed' | translate }}</span> }
                         @default {
-                          @if (allowed(c)) {
+                          @if (c.proposal.kind === 'invoice_reminders' && !reminderInvoices(c).length) {
+                            <p class="text-xs text-ink-3">{{ 'assistant.remindersNothing' | translate }}</p>
+                          } @else if (allowed(c)) {
                             <div class="flex gap-2">
                               <button class="btn-primary btn-sm" [disabled]="c.state === 'busy'" (click)="confirmProposal(c)">{{ 'assistant.confirm' | translate }}</button>
                               <button class="btn-ghost btn-sm" [disabled]="c.state === 'busy'" (click)="dismiss(c)">{{ 'assistant.dismiss' | translate }}</button>
@@ -229,6 +242,15 @@ export class AssistantPanelComponent {
     return c.proposal.params as ReminderProposalParams;
   }
 
+  /** Only invoices the server checked: a proposal without that list names nothing to send. */
+  reminderInvoices(c: ProposalCard): ReminderInvoice[] {
+    return this.reminderParams(c).invoices ?? [];
+  }
+
+  amount(v?: number | null): string {
+    return v == null ? '—' : Number(v).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MAD';
+  }
+
   taskPriority(c: ProposalCard): string {
     const p = (this.taskParams(c).priority ?? 'MEDIUM').toUpperCase();
     return ['URGENT', 'MEDIUM', 'LOW'].includes(p) ? p : 'MEDIUM';
@@ -272,8 +294,21 @@ export class AssistantPanelComponent {
       this.api.createTask(body).subscribe({ next: () => done('assistant.taskCreated'), error: fail });
     } else {
       const p = this.reminderParams(c);
-      this.api.sendReminders(p.invoice_ids ?? [], p.channel).subscribe({
-        next: r => done('assistant.remindersSent', { n: r?.sent ?? p.invoice_ids?.length ?? 0 }),
+      const ids = this.reminderInvoices(c).map(i => i.id);
+      if (!ids.length) {
+        this.setState(c, 'pending');
+        return;
+      }
+      this.api.sendReminders(ids, p.channel).subscribe({
+        next: r => {
+          const sent = r?.sent ?? 0;
+          if (sent > 0) {
+            done('assistant.remindersSent', { n: sent });
+          } else {
+            this.setState(c, 'pending');
+            this.toast.show(this.i18n.t('assistant.remindersNoneSent'), { type: 'error' });
+          }
+        },
         error: fail,
       });
     }

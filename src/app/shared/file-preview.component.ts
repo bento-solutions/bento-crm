@@ -1,5 +1,5 @@
 import { Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { DriveApi } from '../services/domains/drive.service';
@@ -28,7 +28,17 @@ import { previewKind } from './documents.util';
         <div class="w-8 h-8 border-2 border-line border-t-accent rounded-full animate-spin"></div>
       </div>
     } @else if (kind() === 'pdf') {
-      <iframe class="w-full h-full min-h-96 rounded-lg border border-line bg-surface" [src]="safeUrl()" [title]="fileName()"></iframe>
+      <!-- The browser's PDF toolbar would title the document with the blob URL's id, so it is hidden
+           and the file's own name heads the preview instead. -->
+      <div class="h-full min-h-96 flex flex-col rounded-lg border border-line bg-surface overflow-hidden">
+        <div class="flex items-center gap-2 px-3 py-2 border-b border-line min-w-0">
+          <mat-icon class="icon-sm text-ink-3">picture_as_pdf</mat-icon>
+          <span class="text-sm text-ink truncate flex-1 min-w-0">{{ fileName() }}</span>
+          <a class="btn-icon btn-sm" [href]="safeDownloadUrl()" [attr.download]="fileName() || 'document.pdf'" [attr.aria-label]="'drive.download' | translate"><mat-icon class="icon-sm">download</mat-icon></a>
+          <a class="btn-icon btn-sm" [href]="safeDownloadUrl()" target="_blank" rel="noopener" [attr.aria-label]="'drive.openNewTab' | translate"><mat-icon class="icon-sm">open_in_new</mat-icon></a>
+        </div>
+        <iframe class="w-full flex-1 min-h-0" [src]="safeUrl()" [title]="fileName()"></iframe>
+      </div>
     } @else {
       <div class="h-full flex items-center justify-center bg-subtle rounded-lg overflow-auto">
         <img [src]="objectUrl()" [alt]="fileName()" class="max-w-full max-h-full object-contain" />
@@ -48,6 +58,7 @@ export class FilePreviewComponent {
   kind = signal<'pdf' | 'image' | null>(null);
   objectUrl = signal<string | null>(null);
   safeUrl = signal<SafeResourceUrl | null>(null);
+  safeDownloadUrl = signal<SafeUrl | null>(null);
   failed = signal(false);
 
   constructor() {
@@ -64,7 +75,8 @@ export class FilePreviewComponent {
             if (this.fileId() !== id) return;
             const url = URL.createObjectURL(blob);
             this.objectUrl.set(url);
-            this.safeUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+            this.safeUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(kind === 'pdf' ? url + '#toolbar=0&navpanes=0' : url));
+            this.safeDownloadUrl.set(this.sanitizer.bypassSecurityTrustUrl(url));
           },
           error: () => this.failed.set(true),
         });
@@ -78,5 +90,6 @@ export class FilePreviewComponent {
     if (url) URL.revokeObjectURL(url);
     this.objectUrl.set(null);
     this.safeUrl.set(null);
+    this.safeDownloadUrl.set(null);
   }
 }

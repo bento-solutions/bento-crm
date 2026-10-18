@@ -1221,5 +1221,9 @@
   "assistant.thinking": "جارٍ التفكير…",
   "assistant.placeholder": "اطرح سؤالًا…",
   "assistant.send": "إرسال",
-  "assistant.error": "تعذر على المساعد الإجابة. يرجى المحاولة مرة أخرى."
+  "assistant.error": "تعذر على المساعد الإجابة. يرجى المحاولة مرة أخرى.",
+  "drive.openNewTab": "فتح في علامة تبويب جديدة",
+  "assistant.remindersMore": "و{{n}} أخرى",
+  "assistant.remindersNothing": "لا توجد بينها فاتورة عميل غير مدفوعة، فلا شيء لإرساله.",
+  "assistant.remindersNoneSent": "لم يُرسل أي تذكير: تحقق من بريد العملاء أو واتساب."
 }

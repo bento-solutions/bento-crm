@@ -1221,5 +1221,9 @@
   "assistant.thinking": "Thinking…",
   "assistant.placeholder": "Ask a question…",
   "assistant.send": "Send",
-  "assistant.error": "The assistant could not answer. Please try again."
+  "assistant.error": "The assistant could not answer. Please try again.",
+  "drive.openNewTab": "Open in a new tab",
+  "assistant.remindersMore": "and {{n}} more",
+  "assistant.remindersNothing": "None of these is an unpaid customer invoice, so there is nothing to send.",
+  "assistant.remindersNoneSent": "No reminder was sent: check the customers' email or WhatsApp."
 }
