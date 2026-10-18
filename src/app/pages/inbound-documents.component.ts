@@ -51,6 +51,7 @@ function num(v: unknown): number | null {
  */
 @Component({
   selector: 'app-inbound-documents',
+  host: { '(document:keydown.escape)': 'onEscape()' },
   imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, PageHeaderComponent, EmptyStateComponent, FilePreviewComponent],
   template: `
     <div class="page">
@@ -85,18 +86,19 @@ function num(v: unknown): number | null {
             <th class="hidden lg:table-cell">{{ 'inboundDocs.supplier' | translate }}</th>
             <th class="col-num hidden sm:table-cell">{{ 'inboundDocs.total' | translate }}</th>
             <th>{{ 'inboundDocs.statusLabel' | translate }}</th>
-            <th>{{ 'inboundDocs.reason' | translate }}</th>
-            <th class="col-actions"></th>
+            <th class="hidden sm:table-cell">{{ 'inboundDocs.reason' | translate }}</th>
+            <th class="col-actions hidden sm:table-cell"></th>
           </tr></thead>
           <tbody>
             @for (d of docs(); track d.id) {
               <tr>
-                <td class="max-w-40 sm:max-w-64">
+                <td class="max-w-44 sm:max-w-64">
                   <button class="text-start min-w-0 block w-full" (click)="open(d)">
                     <span class="cell-title truncate block hover:underline">{{ d.fileName || '—' }}</span>
                   </button>
                   <div class="cell-sub truncate">{{ ('inboundDocs.kind.' + d.kind) | translate }}@if (d.subject) { · {{ d.subject }} }</div>
                   <div class="cell-sub truncate lg:hidden">@if (d.partnerName || d.extraction?.supplierName) { {{ d.partnerName || d.extraction?.supplierName }} · }<span class="md:hidden">{{ dateTime(d.receivedAt) }}</span>@if (has(d.extraction?.total)) { <span class="sm:hidden num"> · {{ money(d.extraction?.total, d.extraction?.currency) }}</span> }</div>
+                  @if (d.reviewReason || d.error) { <div class="sm:hidden text-xs text-ink-3 whitespace-normal break-words mt-1">{{ d.reviewReason || d.error }}</div> }
                 </td>
                 <td class="whitespace-nowrap hidden md:table-cell"><span class="badge badge-neutral"><mat-icon class="icon-xs">{{ channelIcon(d.channel) }}</mat-icon>{{ channelLabel(d.channel) }}</span></td>
                 <td class="cell-muted max-w-48 truncate hidden lg:table-cell">{{ d.sender || '—' }}</td>
@@ -105,8 +107,8 @@ function num(v: unknown): number | null {
                 <td class="col-num num whitespace-nowrap hidden sm:table-cell">{{ has(d.extraction?.total) ? money(d.extraction?.total, d.extraction?.currency) : '—' }}</td>
                 <td><span class="badge" [class]="statusBadge(d.status)">{{ ('inboundDocs.status.' + d.status) | translate }}</span>
                   @if (d.status === 'BOOKED' && d.invoiceNumber) { <div class="cell-sub">{{ d.invoiceNumber }}</div> }</td>
-                <td class="cell-muted text-xs max-w-64 min-w-32">{{ d.reviewReason || d.error || '' }}</td>
-                <td class="col-actions">
+                <td class="cell-muted text-xs max-w-64 min-w-32 hidden sm:table-cell">{{ d.reviewReason || d.error || '' }}</td>
+                <td class="col-actions hidden sm:table-cell">
                   @if (isReviewable(d)) {
                     <button class="btn-secondary btn-sm" (click)="open(d)">{{ 'inboundDocs.review' | translate }}</button>
                   } @else {
@@ -404,6 +406,13 @@ export class InboundDocumentsComponent implements OnInit {
   close(): void {
     this.selected.set(null);
     this.form.set(null);
+  }
+
+  /** Escape closes whichever dialog is open, unless a request is running. */
+  onEscape(): void {
+    if (this.busy()) return;
+    if (this.uploadOpen()) this.closeUpload();
+    else if (this.selected()) this.close();
   }
 
   private formFrom(d: InboundDocument): ReviewForm {
