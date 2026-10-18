@@ -47,6 +47,17 @@ export interface Extraction {
   total?: number | null;
   lines?: ExtractionLine[] | null;
   confidence?: number | null;
+  // Bank statements (BankStatementHandler): what was read, and what the import did.
+  bank?: string | null;
+  accountNumber?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  rows?: number | null;
+  importId?: string | null;
+  bankAccountId?: string | null;
+  rowsImported?: number | null;
+  rowsSkipped?: number | null;
+  balanceMismatch?: boolean | null;
 }
 
 export interface InboundDocument {

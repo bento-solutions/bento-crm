@@ -11,6 +11,8 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { FilePreviewComponent } from '../shared/file-preview.component';
 import { formatBytes, totalsMismatch } from '../shared/documents.util';
 import { ContactOption, DriveApi } from '../services/domains/drive.service';
+import { BankAccount, BankApi } from '../services/domains/bank.service';
+import { maskAccountNumber } from '../shared/bank.util';
 import {
   BookRequest, InboundApi, InboundDocument, InboundKind, InboundStatus,
 } from '../services/domains/inbound.service';
@@ -109,7 +111,7 @@ function num(v: unknown): number | null {
                   @if (d.status === 'BOOKED' && d.invoiceNumber) { <div class="cell-sub">{{ d.invoiceNumber }}</div> }</td>
                 <td class="cell-muted text-xs max-w-64 min-w-32 hidden sm:table-cell">{{ d.reviewReason || d.error || '' }}</td>
                 <td class="col-actions hidden sm:table-cell">
-                  @if (isReviewable(d)) {
+                  @if (isReviewable(d) || isStatementReview(d)) {
                     <button class="btn-secondary btn-sm" (click)="open(d)">{{ 'inboundDocs.review' | translate }}</button>
                   } @else {
                     <button class="btn-ghost btn-sm" (click)="open(d)">{{ 'inboundDocs.view' | translate }}</button>
@@ -253,6 +255,45 @@ function num(v: unknown): number | null {
                 @if (!canBook()) {
                   <p class="text-xs text-ink-3">{{ 'inboundDocs.noBookRight' | translate }}</p>
                 }
+              } @else if (d.kind === 'BANK_STATEMENT') {
+                @let x = d.extraction ?? {};
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <dt class="text-ink-3">{{ 'inboundDocs.stmt.bank' | translate }}</dt><dd class="text-ink">{{ x.bank ? bankName(x.bank) : '—' }}</dd>
+                  <dt class="text-ink-3">{{ 'inboundDocs.stmt.accountNumber' | translate }}</dt><dd class="text-ink num break-all">{{ x.accountNumber || '—' }}</dd>
+                  <dt class="text-ink-3">{{ 'inboundDocs.stmt.period' | translate }}</dt><dd class="text-ink">{{ shortDate(x.periodStart) }} → {{ shortDate(x.periodEnd) }}</dd>
+                  @if (has(x.rows)) {
+                    <dt class="text-ink-3">{{ 'inboundDocs.stmt.rows' | translate }}</dt><dd class="text-ink num">{{ x.rows }}</dd>
+                  }
+                  @if (has(x.rowsImported)) {
+                    <dt class="text-ink-3">{{ 'inboundDocs.stmt.imported' | translate }}</dt><dd class="text-ink num">{{ x.rowsImported }}</dd>
+                    <dt class="text-ink-3">{{ 'inboundDocs.stmt.skipped' | translate }}</dt><dd class="text-ink num">{{ x.rowsSkipped ?? 0 }}</dd>
+                  }
+                </dl>
+                @if (d.status === 'FILED' && x.balanceMismatch) {
+                  <div class="alert alert-warning text-sm">{{ 'inboundDocs.stmt.mismatch' | translate }}</div>
+                }
+                @if (d.status === 'FILED') {
+                  <a routerLink="/bank" [queryParams]="{ tab: 'transactions' }" class="btn-link text-sm">{{ 'inboundDocs.stmt.openBank' | translate }}</a>
+                }
+                @if (isStatementReview(d)) {
+                  @if (canImportStatement()) {
+                    <fieldset class="space-y-2" [disabled]="busy()">
+                      <label class="block"><span class="field-label">{{ 'inboundDocs.stmt.account' | translate }}</span>
+                        <select class="input-field" [ngModel]="statementAccount()" (ngModelChange)="statementAccount.set($event)">
+                          <option [ngValue]="null">{{ 'inboundDocs.stmt.pickAccount' | translate }}</option>
+                          @for (a of bankAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }} · {{ mask(a.accountNumber) }}</option> }
+                        </select></label>
+                    </fieldset>
+                    @if (!bankAccounts().length) {
+                      <p class="text-xs text-ink-3">{{ 'inboundDocs.stmt.noAccounts' | translate }}</p>
+                    }
+                  } @else {
+                    <p class="text-xs text-ink-3">{{ 'inboundDocs.stmt.noImportRight' | translate }}</p>
+                  }
+                  @if (canSeeBank()) {
+                    <a routerLink="/bank" [queryParams]="{ tab: 'accounts' }" class="btn-link text-sm">{{ 'inboundDocs.stmt.createAccount' | translate }}</a>
+                  }
+                }
               } @else if (d.extraction; as x) {
                 <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   <dt class="text-ink-3">{{ 'inboundDocs.supplier' | translate }}</dt><dd class="text-ink">{{ d.partnerName || x.supplierName || '—' }}</dd>
@@ -277,6 +318,9 @@ function num(v: unknown): number | null {
             @if (canRetry(d)) {
               <button class="btn-secondary" [disabled]="busy()" (click)="retry(d)"><mat-icon>auto_awesome</mat-icon>{{ 'inboundDocs.retry' | translate }}</button>
             }
+            @if (isStatementReview(d) && canImportStatement()) {
+              <button class="btn-primary" [disabled]="busy() || !statementAccount()" (click)="importStatement(d)">{{ (busy() ? 'inboundDocs.reading' : 'inboundDocs.stmt.import') | translate }}</button>
+            }
             @if (form() && canBook()) {
               <button class="btn-primary" [disabled]="busy() || !bookable()" (click)="book(d)">{{ 'inboundDocs.book' | translate }}</button>
             }
@@ -289,6 +333,7 @@ function num(v: unknown): number | null {
 export class InboundDocumentsComponent implements OnInit {
   private api = inject(InboundApi);
   private drive = inject(DriveApi);
+  private bank = inject(BankApi);
   private toast = inject(ToastService);
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
@@ -310,6 +355,9 @@ export class InboundDocumentsComponent implements OnInit {
   uploadFile = signal<File | null>(null);
 
   selected = signal<InboundDocument | null>(null);
+  bankAccounts = signal<BankAccount[]>([]);
+  statementAccount = signal<string | null>(null);
+  private bankAccountsLoaded = false;
   form = signal<ReviewForm | null>(null);
 
   totalPages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
@@ -373,13 +421,26 @@ export class InboundDocumentsComponent implements OnInit {
         this.status.set(d.status);
         this.page.set(0);
         this.reload();
-        if (this.isReviewable(d)) this.open(d);
+        if (this.isReviewable(d) || this.isStatementReview(d)) this.open(d);
       },
       error: e => this.fail(e),
     });
   }
 
   // Review
+  /** A statement for an account the reader could not find: a person picks the account. */
+  isStatementReview(d: InboundDocument): boolean {
+    return d.status === 'NEEDS_REVIEW' && d.kind === 'BANK_STATEMENT';
+  }
+
+  canImportStatement(): boolean {
+    return this.state.hasAuthority('PAYMENTS_WRITE');
+  }
+
+  canSeeBank(): boolean {
+    return this.state.hasAuthority('PAYMENTS_READ');
+  }
+
   isReviewable(d: InboundDocument): boolean {
     return d.status === 'NEEDS_REVIEW' && d.kind === 'VENDOR_INVOICE';
   }
@@ -401,11 +462,67 @@ export class InboundDocumentsComponent implements OnInit {
   open(d: InboundDocument): void {
     this.selected.set(d);
     this.form.set(this.isReviewable(d) ? this.formFrom(d) : null);
+    if (this.isStatementReview(d)) this.prepareStatement(d);
   }
 
   close(): void {
     this.selected.set(null);
     this.form.set(null);
+    this.statementAccount.set(null);
+  }
+
+  /** Loads the bank accounts once, and preselects the one whose number the statement carries. */
+  private prepareStatement(d: InboundDocument): void {
+    this.statementAccount.set(null);
+    const pick = (accounts: BankAccount[]) => {
+      const read = (d.extraction?.accountNumber ?? '').replace(/\s+/g, '');
+      const hit = read.length >= 8
+        ? accounts.find(a => { const n = a.accountNumber.replace(/\s+/g, ''); return n.includes(read) || read.includes(n); })
+        : accounts.length === 1 ? accounts[0] : undefined;
+      if (this.selected()?.id === d.id) this.statementAccount.set(hit?.id ?? null);
+    };
+    if (this.bankAccountsLoaded) { pick(this.bankAccounts()); return; }
+    if (!this.canSeeBank()) return;
+    this.bank.accounts().subscribe({
+      next: a => {
+        this.bankAccountsLoaded = true;
+        this.bankAccounts.set((a ?? []).filter(x => x.active !== false));
+        pick(this.bankAccounts());
+      },
+      error: () => { /* the account list stays empty; the link to /bank remains */ },
+    });
+  }
+
+  importStatement(d: InboundDocument): void {
+    const accountId = this.statementAccount();
+    if (!accountId) return;
+    this.busy.set(true);
+    this.bank.importDocument(d.id, accountId).subscribe({
+      next: r => {
+        this.busy.set(false);
+        const s = r.importSummary;
+        this.toast.show(this.i18n.t('inboundDocs.stmt.importedToast', { n: s.rowsImported, skipped: s.rowsSkipped, matched: r.autoMatched }), {
+          type: s.balanceMismatch ? 'warning' : 'success',
+        });
+        // Show it as filed, with what the import did.
+        this.selected.set({
+          ...d, status: 'FILED',
+          extraction: { ...(d.extraction ?? {}), rowsImported: s.rowsImported, rowsSkipped: s.rowsSkipped, balanceMismatch: s.balanceMismatch, bankAccountId: accountId },
+        });
+        this.reload();
+      },
+      error: e => this.fail(e),
+    });
+  }
+
+  bankName(b: string): string {
+    const key = `bank.bankName.${b}`;
+    const label = this.i18n.t(key);
+    return label === key ? b : label;
+  }
+
+  mask(n: string | null | undefined): string {
+    return maskAccountNumber(n);
   }
 
   /** Escape closes whichever dialog is open, unless a request is running. */

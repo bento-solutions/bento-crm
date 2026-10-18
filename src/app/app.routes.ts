@@ -27,6 +27,7 @@ export const routes: Routes = [
   { path: 'inventory', canActivate: [authGuard], loadComponent: () => import('./pages/inventory.component').then(m => m.InventoryComponent) },
   { path: 'drive', canActivate: [authGuard, authorityGuard('FILES_READ')], loadComponent: () => import('./pages/drive.component').then(m => m.DriveComponent) },
   { path: 'inbox-documents', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/inbound-documents.component').then(m => m.InboundDocumentsComponent) },
+  { path: 'bank', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/bank.component').then(m => m.BankComponent) },
   { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
   { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },
