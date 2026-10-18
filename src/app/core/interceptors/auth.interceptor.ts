@@ -10,6 +10,7 @@ import { Observable, defer, firstValueFrom, throwError } from 'rxjs';
 import { catchError, finalize, shareReplay, switchMap, take } from 'rxjs/operators';
 import { CrmStateService } from '../../services/crm-state.service';
 import { AuthApiService, LoginResponse } from '../services/auth-api.service';
+import { PortalSessionStore, isPortalApiUrl, isPortalAuthUrl } from '../../portal/portal-session';
 
 /** Name of the Web Lock that serialises token refreshes across every tab of the app. */
 const REFRESH_LOCK = 'bento-auth-refresh';
@@ -18,6 +19,7 @@ const REFRESH_LOCK = 'bento-auth-refresh';
 export class AuthInterceptor implements HttpInterceptor {
   private state = inject(CrmStateService);
   private authApi = inject(AuthApiService);
+  private portal = inject(PortalSessionStore);
 
   // Coordinates concurrent 401s so only one /auth/refresh call is in flight per
   // tab. Every request that 401s while a refresh is running subscribes to this
@@ -28,6 +30,12 @@ export class AuthInterceptor implements HttpInterceptor {
   private refresh$: Observable<string> | null = null;
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    // The client portal has its own session: its calls never carry the staff token, and a
+    // 401 there ends the portal session instead of refreshing (or logging out) the staff one.
+    if (isPortalApiUrl(request.url)) {
+      return this.interceptPortal(request, next);
+    }
+
     const isAuthEndpoint = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
     const isSignup = request.method === 'POST' && /\/organizations\/?$/.test(request.url.split('?')[0]);
     // A login or signup must never carry a leftover token: the backend scopes the request to
@@ -47,6 +55,22 @@ export class AuthInterceptor implements HttpInterceptor {
         // an infinite reload loop for anyone who wasn't logged in yet.
         if (error.status === 401 && token && !isAuthEndpoint) {
           return this.handleUnauthorized(request, next, token);
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+
+  private interceptPortal(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    const token = isPortalAuthUrl(request.url) ? null : this.portal.token();
+    let portalRequest = token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
+    if (!(request.body instanceof FormData) && request.body !== null) {
+      portalRequest = portalRequest.clone({ setHeaders: { 'Content-Type': 'application/json' } });
+    }
+    return next.handle(portalRequest).pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401 && token) {
+          this.portal.expire();
         }
         return throwError(() => error);
       })

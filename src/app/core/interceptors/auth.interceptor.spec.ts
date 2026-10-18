@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { AuthInterceptor } from './auth.interceptor';
 import { CrmStateService } from '../../services/crm-state.service';
 import { API_CONFIG } from '../config/api-config';
+import { PortalSessionStore } from '../../portal/portal-session';
 
 const REFRESH_URL = `${API_CONFIG.baseUrl}/auth/refresh`;
 const user = { id: 'u1', organization_id: 'o1', email: 'a@b.c', display_name: 'A B', initials: 'AB', avatar_color: '', role: 'ADMIN', team_id: null, is_active: true, phone: null, job_title: null, language: 'en', last_active_at: null };
@@ -128,5 +129,45 @@ describe('AuthInterceptor token refresh', () => {
     await settle();
 
     expect(logout).not.toHaveBeenCalled();
+  });
+
+  describe('client portal calls', () => {
+    const PORTAL_HOME = `${API_CONFIG.baseUrl}/portal/home`;
+    const PORTAL_LOGIN = `${API_CONFIG.baseUrl}/portal/auth/login`;
+
+    it('sends the portal token, never the staff one', () => {
+      localStorage.setItem('bento_portal_token', 'portal-1');
+      TestBed.inject(PortalSessionStore).start({ token: 'portal-1', expiresInSeconds: 3600, me: { id: 'p', email: 'c@d.e', partnerId: 'x', organizationId: 'o1' } });
+      http.get(PORTAL_HOME).subscribe();
+      const req = backend.expectOne(PORTAL_HOME);
+      expect(req.request.headers.get('Authorization')).toBe('Bearer portal-1');
+      req.flush({});
+    });
+
+    it('sends the portal sign-in without any token', () => {
+      TestBed.inject(PortalSessionStore).start({ token: 'portal-1', expiresInSeconds: 3600, me: { id: 'p', email: 'c@d.e', partnerId: 'x', organizationId: 'o1' } });
+      http.post(PORTAL_LOGIN, { email: 'c@d.e', password: 'x' }).subscribe();
+      const req = backend.expectOne(PORTAL_LOGIN);
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush({});
+    });
+
+    it('ends the portal session on a 401 without refreshing or logging out the staff session', async () => {
+      const store = TestBed.inject(PortalSessionStore);
+      store.start({ token: 'portal-1', expiresInSeconds: 3600, me: { id: 'p', email: 'c@d.e', partnerId: 'x', organizationId: 'o1' } });
+      const expire = vi.spyOn(store, 'expire').mockImplementation(() => store.clear());
+      let failed = false;
+      http.get(PORTAL_HOME).subscribe({ error: () => (failed = true) });
+      backend.expectOne(PORTAL_HOME).flush(null, { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      backend.expectNone(REFRESH_URL);
+      expect(failed).toBe(true);
+      expect(expire).toHaveBeenCalledTimes(1);
+      expect(store.signedIn()).toBe(false);
+      expect(localStorage.getItem('bento_portal_token')).toBeNull();
+      expect(localStorage.getItem('accessToken')).toBe('access-1');
+      expect(logout).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
@@ -13,6 +13,7 @@ import { formatBytes, totalsMismatch } from '../shared/documents.util';
 import { ContactOption, DriveApi } from '../services/domains/drive.service';
 import { BankAccount, BankApi } from '../services/domains/bank.service';
 import { maskAccountNumber } from '../shared/bank.util';
+import { NativeService } from '../core/services/native.service';
 import {
   BookRequest, InboundApi, InboundDocument, InboundKind, InboundStatus,
 } from '../services/domains/inbound.service';
@@ -62,6 +63,10 @@ function num(v: unknown): number | null {
           <button class="btn-secondary" (click)="reload()"><mat-icon>refresh</mat-icon>{{ 'inboundDocs.refresh' | translate }}</button>
           @if (canSeeSettings()) {
             <a routerLink="/settings/inboxes" class="btn-secondary"><mat-icon>alternate_email</mat-icon>{{ 'inboundDocs.addresses' | translate }}</a>
+          }
+          @if (canUpload() && canTakePhoto) {
+            <button class="btn-secondary" [disabled]="busy()" (click)="takePhoto()"><mat-icon>photo_camera</mat-icon>{{ (busy() && photoUploading() ? 'inboundDocs.reading' : 'inboundDocs.takePhoto') | translate }}</button>
+            <input #photoInput type="file" class="hidden" accept="image/*" capture="environment" (change)="onPhotoPick($event)" />
           }
           @if (canUpload()) {
             <button class="btn-primary" (click)="uploadOpen.set(true)"><mat-icon>upload</mat-icon>{{ 'inboundDocs.upload' | translate }}</button>
@@ -338,6 +343,13 @@ export class InboundDocumentsComponent implements OnInit {
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
   private router = inject(Router);
+  private native = inject(NativeService);
+  private photoInput = viewChild<ElementRef<HTMLInputElement>>('photoInput');
+
+  /** The mobile app, or a browser on a touch phone, can take a photo of an invoice. */
+  readonly canTakePhoto = this.native.isNative()
+    || (typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches);
+  photoUploading = signal(false);
 
   readonly statuses = STATUSES;
   readonly uploadKinds: InboundKind[] = ['VENDOR_INVOICE', 'BANK_STATEMENT'];
@@ -409,13 +421,13 @@ export class InboundDocumentsComponent implements OnInit {
     this.uploadFile.set(null);
   }
 
-  upload(): void {
-    const file = this.uploadFile();
+  upload(file: File | null = this.uploadFile(), kind: InboundKind = this.uploadKind()): void {
     if (!file) return;
     this.busy.set(true);
-    this.api.upload(file, this.uploadKind()).subscribe({
+    this.api.upload(file, kind).subscribe({
       next: d => {
         this.busy.set(false);
+        this.photoUploading.set(false);
         this.closeUpload();
         this.toast.show(this.i18n.t('inboundDocs.uploaded'), { type: 'success' });
         this.status.set(d.status);
@@ -425,6 +437,31 @@ export class InboundDocumentsComponent implements OnInit {
       },
       error: e => this.fail(e),
     });
+  }
+
+  // Photo of a supplier invoice (phones): the camera in the mobile app, the browser's camera
+  // picker on a phone's browser. The photo goes through the same upload as a picked file, so the
+  // reader extracts it and it lands in the review list.
+  takePhoto(): void {
+    if (this.busy()) return;
+    if (this.native.isNative()) {
+      void this.native.takePhoto().then(file => { if (file) this.uploadPhoto(file); });
+      return;
+    }
+    const input = this.photoInput()?.nativeElement;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  onPhotoPick(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) this.uploadPhoto(file);
+  }
+
+  private uploadPhoto(file: File): void {
+    this.photoUploading.set(true);
+    this.upload(file, 'VENDOR_INVOICE');
   }
 
   // Review
@@ -670,6 +707,7 @@ export class InboundDocumentsComponent implements OnInit {
 
   private fail(e: unknown): void {
     this.busy.set(false);
+    this.photoUploading.set(false);
     const err = e as { error?: { detail?: string } };
     this.toast.show(err?.error?.detail || this.i18n.t('inboundDocs.error'), { type: 'error' });
   }

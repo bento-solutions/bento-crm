@@ -12,6 +12,8 @@ export const routes: Routes = [
   { path: 'pay/:token', loadComponent: () => import('./pages/pay.component').then(m => m.PayComponent) },
   // Drive share links: public, for whoever was sent the link; the token is the credential.
   { path: 'f/:token', loadComponent: () => import('./pages/shared-file.component').then(m => m.SharedFileComponent) },
+  // Client portal: its own session and guard, and no staff shell (see App).
+  { path: 'portal', loadChildren: () => import('./portal/portal.routes').then(m => m.PORTAL_ROUTES) },
   { path: 'invite/accept', loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent) },
   { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'analytics', canActivate: [authGuard], loadComponent: () => import('./pages/analytics.component').then(m => m.AnalyticsComponent) },
@@ -29,6 +31,7 @@ export const routes: Routes = [
   { path: 'inbox-documents', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/inbound-documents.component').then(m => m.InboundDocumentsComponent) },
   { path: 'bank', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/bank.component').then(m => m.BankComponent) },
   { path: 'tax-calendar', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/tax-calendar.component').then(m => m.TaxCalendarComponent) },
+  { path: 'checklists', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/checklists.component').then(m => m.ChecklistsComponent) },
   { path: 'missions', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/missions.component').then(m => m.MissionsComponent) },
   { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },

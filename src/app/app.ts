@@ -20,6 +20,7 @@ import { TicketsService } from './services/domains/tickets.service';
 import { WhatsAppInboxStore } from './services/domains/whatsapp-inbox.service';
 import { AssistantPanelComponent } from './shared/assistant-panel.component';
 import { TranslatePipe } from './pipes/translate.pipe';
+import { NativeService } from './core/services/native.service';
 
 interface NavItem {
   label: string;
@@ -74,6 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
       { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
+      { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
       { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
       { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
@@ -156,6 +158,7 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', action: 'Bank accounts, statement import, reconciliation and cash forecast', keywords: 'bank cash accounts statements reconciliation forecast treasury' },
   { mainMenu: 'Tax calendar', mainIcon: 'event_note', mainRoute: '/tax-calendar', action: 'TVA, IS, IR and CNSS deadlines for the company and its clients', keywords: 'tax calendar deadlines tva vat is ir cnss declarations impots fiscal' },
+  { mainMenu: 'Document checklists', mainIcon: 'checklist', mainRoute: '/checklists', action: 'Documents to collect from clients, with reminders', keywords: 'documents checklist pieces a fournir collect reminders relance clients portal' },
   { mainMenu: 'Missions', mainIcon: 'work', mainRoute: '/missions', action: 'Client missions, deliverables and rebillable costs (débours)', keywords: 'missions deliverables costs debours disbursements rebill clients engagements' },
   { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
   { mainMenu: 'Documents', mainIcon: 'folder_open', mainRoute: '/drive', action: 'Browse, upload and share files in the document drive', keywords: 'documents drive files folders upload share' },
@@ -847,6 +850,10 @@ function readSidebarCollapsed(): boolean {
     <!-- Pay-by-Link and shared-file pages are for outsiders: always bare, even when a signed-in user opens one. -->
     @if (activeRoute().startsWith('/pay/') || activeRoute().startsWith('/f/')) {
       <router-outlet></router-outlet>
+    } @else if (isPortalRoute()) {
+      <!-- The client portal has its own frame and session, whoever else is signed in. -->
+      <router-outlet></router-outlet>
+      <app-toast-container></app-toast-container>
     } @else if (state.isAuthenticated()) {
       <div class="app-layout search-container">
 
@@ -1156,6 +1163,14 @@ export class App implements OnInit, OnDestroy {
   private partnersService = inject(PartnersService);
   private invoicesService = inject(InvoicesService);
   private ticketsService = inject(TicketsService);
+  private native = inject(NativeService);
+
+  /** In the mobile app, a signed-in user's phone registers for push notifications (no-op on the web). */
+  private readonly pushRegistration = effect(() => {
+    if (this.state.isAuthenticated() && this.state.currentUserStatus() === 'loaded') {
+      void this.native.registerPush();
+    }
+  });
 
   /** Queried by name: a class-based query would pull the lazily loaded modal into the initial bundle. */
   private readonly supportModal = viewChild<SupportModalComponent>('supportModal');
@@ -1234,9 +1249,11 @@ export class App implements OnInit, OnDestroy {
     this.profileMenuOpen.set(false);
   }
 
-  onLogout() {
+  async onLogout() {
     this.profileMenuOpen.set(false);
     this.mobileMenuOpen.set(false);
+    // The phone's push token is removed while the session can still authenticate the call.
+    await this.native.unregisterPush();
     this.state.logout();
     this.router.navigate(['/']);
   }
@@ -1548,6 +1565,12 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+
+  /** The client portal (/portal, /portal/...): never inside the staff shell. */
+  isPortalRoute(): boolean {
+    const r = this.activeRoute();
+    return r === '/portal' || r.startsWith('/portal/');
+  }
 
   badgeCount(item: NavItem): number {
     return item.badge === 'whatsappUnread' ? this.inbox.unread().conversations : 0;
