@@ -48,7 +48,8 @@ import { errorDetail } from '../bank/bank-labels';
       <div class="divide-y divide-line">
         @for (a of accounts(); track a.id) {
           <div class="py-2 flex flex-wrap items-center gap-2">
-            <div class="min-w-0 flex-1">
+            <!-- Full width on phones so the name and email stay readable; status and actions go below. -->
+            <div class="min-w-0 w-full sm:w-auto sm:flex-1">
               @if (renaming()?.id === a.id) {
                 <div class="flex items-center gap-2">
                   <input class="input-field input-sm flex-1 min-w-0" maxlength="120" [(ngModel)]="renameValue" (keyup.enter)="saveRename(a)" [attr.aria-label]="'portalAccess.displayName' | translate" />
