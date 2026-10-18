@@ -385,7 +385,7 @@ export class ChecklistDetailComponent {
 
   channelLabel(c: string): string { return this.i18n.t(`checklists.channel.${c}`); }
   badge(x: ChecklistItem): string { return itemBadge(x.status); }
-  contentType(x: ChecklistItem): string | null { return contentTypeFromName(x.fileName); }
+  contentType(x: ChecklistItem): string | null { return x.contentType || contentTypeFromName(x.fileName); }
   progress(): number { return checklistProgress(this.detail().request); }
   date(iso: string | null | undefined): string { return shortDate(iso); }
 

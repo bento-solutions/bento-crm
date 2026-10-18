@@ -36,6 +36,7 @@ export interface ChecklistItem {
   status: ChecklistItemStatus;
   fileId?: string | null;
   fileName?: string | null;
+  contentType?: string | null;
   receivedAt?: string | null;
   reviewNote?: string | null;
   sortOrder: number;
