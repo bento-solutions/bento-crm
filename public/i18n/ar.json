@@ -1434,5 +1434,7 @@
   "drive.openNewTab": "فتح في علامة تبويب جديدة",
   "assistant.remindersMore": "و{{n}} أخرى",
   "assistant.remindersNothing": "لا توجد بينها فاتورة عميل غير مدفوعة، فلا شيء لإرساله.",
-  "assistant.remindersNoneSent": "لم يُرسل أي تذكير: تحقق من بريد العملاء أو واتساب."
+  "assistant.remindersNoneSent": "لم يُرسل أي تذكير: تحقق من بريد العملاء أو واتساب.",
+  "bank.tx.findInvoice": "ابحث عن فاتورة بالرقم أو الاسم",
+  "bank.tx.noInvoiceFound": "لا توجد فاتورة مفتوحة مطابقة، أو كل واحدة مستحقها أقل من هذا السطر."
 }

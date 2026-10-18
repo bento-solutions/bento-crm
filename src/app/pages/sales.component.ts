@@ -26,6 +26,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
+import { csvCell } from '../shared/csv.util';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
@@ -2575,7 +2576,7 @@ export class SalesComponent {
     const ids = this.selectedDealIds();
     const rows = this.dealsService.allDeals().filter(d => ids.has(d.id));
     const header = ['Deal', 'Client', 'Amount', 'Stage', 'Created By'];
-    const csvRows = rows.map(d => [d.title, d.partnerId, d.amount, d.stage, d.createdBy || ''].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    const csvRows = rows.map(d => [d.title, d.partnerId, d.amount, d.stage, d.createdBy || ''].map(csvCell).join(','));
     const csv = [header.join(','), ...csvRows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

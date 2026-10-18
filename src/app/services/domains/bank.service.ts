@@ -192,8 +192,9 @@ export class BankApi extends BaseApiService {
     return this.get('/bank/transactions', params);
   }
 
-  candidates(id: string): Observable<MatchCandidate[]> {
-    return this.get(`/bank/transactions/${id}/candidates`);
+  /** Suggestions, or with `q` open invoices found by number or name for matching by hand. */
+  candidates(id: string, q?: string): Observable<MatchCandidate[]> {
+    return this.get(`/bank/transactions/${id}/candidates`, q ? { q } : undefined);
   }
 
   match(id: string, kind: CandidateKind, targetId: string): Observable<BankTransaction> {

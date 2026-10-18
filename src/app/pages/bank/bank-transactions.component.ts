@@ -180,6 +180,30 @@ interface CategoryForm {
                 }
               }
               @if (canWrite()) {
+                <!-- Match by hand when the right invoice is not suggested. -->
+                <form class="flex gap-2 pt-1" (submit)="$event.preventDefault(); searchInvoices(t)">
+                  <input class="input-field flex-1 min-w-0" type="search" name="invoiceQuery" [ngModel]="invoiceQuery()"
+                         (ngModelChange)="invoiceQuery.set($event)" [placeholder]="'bank.tx.findInvoice' | translate"
+                         [attr.aria-label]="'bank.tx.findInvoice' | translate" />
+                  <button class="btn-secondary btn-sm" type="submit" [disabled]="searching() || invoiceQuery().trim().length < 2">
+                    <mat-icon>search</mat-icon>{{ 'bank.tx.search' | translate }}</button>
+                </form>
+                @if (searched()) {
+                  @for (c of searchResults(); track c.id) {
+                    <div class="card p-3 flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="text-sm font-medium text-ink break-words">{{ c.label || '—' }}</div>
+                        <div class="text-xs text-ink-3">{{ c.partnerName || '—' }} · {{ date(c.date) }}</div>
+                        @if (c.outstanding !== null && c.outstanding !== undefined) {
+                          <div class="text-meta text-ink-3">{{ 'bank.tx.outstanding' | translate: { amount: money(c.outstanding) } }}</div>
+                        }
+                      </div>
+                      <button class="btn-primary btn-sm shrink-0" [disabled]="busy()" (click)="match(t, c)">{{ 'bank.tx.match' | translate }}</button>
+                    </div>
+                  } @empty {
+                    <p class="text-sm text-ink-3">{{ 'bank.tx.noInvoiceFound' | translate }}</p>
+                  }
+                }
                 <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="ignore(t)"><mat-icon>visibility_off</mat-icon>{{ 'bank.tx.ignore' | translate }}</button>
               }
             </section>
@@ -269,6 +293,10 @@ export class BankTransactionsComponent implements OnInit {
   selected = signal<BankTransaction | null>(null);
   candidates = signal<MatchCandidate[]>([]);
   candidatesLoading = signal(false);
+  invoiceQuery = signal('');
+  searchResults = signal<MatchCandidate[]>([]);
+  searching = signal(false);
+  searched = signal(false);
   catForm = signal<CategoryForm | null>(null);
 
   canWrite(): boolean { return this.state.hasAuthority('PAYMENTS_WRITE'); }
@@ -327,13 +355,31 @@ export class BankTransactionsComponent implements OnInit {
     this.selected.set(t);
     this.catForm.set({ category: t.category ?? '', remember: false, containsText: t.description ?? '' });
     this.candidates.set([]);
+    this.resetSearch();
     if (t.status === 'UNMATCHED') this.loadCandidates(t);
+  }
+
+  private resetSearch(): void {
+    this.invoiceQuery.set('');
+    this.searchResults.set([]);
+    this.searched.set(false);
+  }
+
+  searchInvoices(t: BankTransaction): void {
+    const q = this.invoiceQuery().trim();
+    if (q.length < 2) return;
+    this.searching.set(true);
+    this.api.candidates(t.id, q).subscribe({
+      next: c => { this.searchResults.set(c ?? []); this.searching.set(false); this.searched.set(true); },
+      error: e => { this.searching.set(false); this.fail(e); },
+    });
   }
 
   close(): void {
     this.selected.set(null);
     this.catForm.set(null);
     this.candidates.set([]);
+    this.resetSearch();
   }
 
   private loadCandidates(t: BankTransaction): void {

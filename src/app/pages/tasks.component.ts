@@ -22,6 +22,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
 import { TASK_ASSIGNEE_FILTER_KEY } from '../shared/assignee-filter-keys';
 import { CategoryPillComponent } from '../shared/ui/category-pill.component';
 import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
+import { csvCell } from '../shared/csv.util';
 
 type TaskScope = 'open' | 'overdue' | 'completed' | 'all';
 type TaskSort = 'smart' | 'due' | 'priority' | 'newest';
@@ -1281,7 +1282,7 @@ export class TasksComponent {
   }
 
   bulkExport() {
-    const escapeCsv = (val: string) => `"${(val ?? '').replace(/"/g, '""')}"`;
+    const escapeCsv = csvCell;
     const rows = this.selectedTasks().map(t => [
       t.title, this.categories.get(t.categoryId)?.name || '', t.priority || '', t.status, this.getAssigneeName(t.assignedToUserId), t.dueDate?.slice(0, 10) || '', this.getRelatedLabel(t)
     ].map(escapeCsv).join(','));

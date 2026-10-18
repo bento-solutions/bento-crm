@@ -15,6 +15,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
+import { csvCell } from '../shared/csv.util';
 
 @Component({
   selector: 'app-partners',
@@ -1295,7 +1296,7 @@ export class PartnersComponent {
     const csvRows = [header.join(',')];
     for (const l of rows) {
       const cells = [l.name, l.companyName, l.status, String(l.score), l.assignedSalesperson || ''];
-      csvRows.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','));
+      csvRows.push(cells.map(csvCell).join(','));
     }
     const csv = csvRows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1463,7 +1464,7 @@ export class PartnersComponent {
     const csvRows = [header.join(',')];
     for (const p of rows) {
       const cells = [p.name, p.type, p.status || '', p.email || '', p.phone || ''];
-      csvRows.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','));
+      csvRows.push(cells.map(csvCell).join(','));
     }
     const csv = csvRows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

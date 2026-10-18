@@ -1434,5 +1434,7 @@
   "drive.openNewTab": "Open in a new tab",
   "assistant.remindersMore": "and {{n}} more",
   "assistant.remindersNothing": "None of these is an unpaid customer invoice, so there is nothing to send.",
-  "assistant.remindersNoneSent": "No reminder was sent: check the customers' email or WhatsApp."
+  "assistant.remindersNoneSent": "No reminder was sent: check the customers' email or WhatsApp.",
+  "bank.tx.findInvoice": "Find an invoice by number or name",
+  "bank.tx.noInvoiceFound": "No open invoice matches, or each one owes less than this line."
 }

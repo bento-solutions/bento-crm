@@ -1282,7 +1282,7 @@
   "bank.tx.bothDirections": "Entrées et sorties",
   "bank.tx.from": "Du",
   "bank.tx.to": "Au",
-  "bank.tx.search": "Recherche",
+  "bank.tx.search": "Chercher",
   "bank.tx.searchHint": "Libellé ou référence",
   "bank.tx.clear": "Effacer les filtres",
   "bank.tx.categorizeAll": "Catégoriser les lignes sans catégorie",
@@ -1434,5 +1434,7 @@
   "drive.openNewTab": "Ouvrir dans un nouvel onglet",
   "assistant.remindersMore": "et {{n}} autre(s)",
   "assistant.remindersNothing": "Aucune de ces factures n'est une facture client impayée : rien à envoyer.",
-  "assistant.remindersNoneSent": "Aucune relance envoyée : vérifiez l'e-mail ou le WhatsApp des clients."
+  "assistant.remindersNoneSent": "Aucune relance envoyée : vérifiez l'e-mail ou le WhatsApp des clients.",
+  "bank.tx.findInvoice": "Chercher une facture par numéro ou nom",
+  "bank.tx.noInvoiceFound": "Aucune facture ouverte ne correspond, ou chacune doit moins que cette ligne."
 }
