@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { CrmStateService } from '../services/crm-state.service';
@@ -60,8 +61,18 @@ export class BankComponent implements OnInit {
 
   ngOnInit(): void {
     this.state.breadcrumbLabel.set(this.i18n.t('bank.title'));
-    const t = this.route.snapshot.queryParamMap.get('tab') as Tab | null;
-    if (t && TABS.includes(t)) this.tab.set(t);
+  }
+
+  constructor() {
+    // The sidebar opens tabs through ?tab=, also while this page is already open.
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const q = params.get('tab') as Tab | null;
+      const t = q && TABS.includes(q) ? q : 'cash';
+      if (t !== this.tab()) {
+        this.txFilter.set(null);
+        this.tab.set(t);
+      }
+    });
   }
 
   setTab(t: Tab): void {

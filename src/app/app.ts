@@ -30,11 +30,17 @@ interface NavItem {
   authority?: string | string[];
   /** Live count shown next to the label. */
   badge?: 'whatsappUnread';
+  /** A tab of the page, passed as ?tab=; the item is active only on that tab. */
+  tab?: string;
+  /** This tab is the page's default, so the page without ?tab= counts as it. */
+  defaultTab?: boolean;
 }
 
 interface NavSection {
   label: string;
   items: NavItem[];
+  /** A finance module: a heading that opens and closes its pages. CRM sections stay open. */
+  module?: { key: string; icon: string };
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -71,17 +77,55 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners' },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
-      { label: 'Finance', icon: 'account_balance', route: '/finance' },
-      { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
-      { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
       { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
       { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
       { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
       { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
+    ]
+  },
+  {
+    label: 'Account Receivables',
+    module: { key: 'ar', icon: 'call_received' },
+    items: [
+      { label: 'Customer invoices', icon: 'receipt', route: '/finance', tab: 'Customer', defaultTab: true },
+      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring' },
+      { label: 'Recovery', icon: 'notifications_active', route: '/finance', tab: 'Recovery' },
+      { label: 'Aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
+    ]
+  },
+  {
+    label: 'Account Payables',
+    module: { key: 'ap', icon: 'call_made' },
+    items: [
+      { label: 'Supplier bills', icon: 'request_quote', route: '/finance', tab: 'Vendor' },
+      { label: 'Expenses', icon: 'payments', route: '/finance', tab: 'Expenses', authority: 'PAYMENTS_READ' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
+    ]
+  },
+  {
+    label: 'Cash and Bank',
+    module: { key: 'bank', icon: 'savings' },
+    items: [
+      { label: 'Cash position', icon: 'savings', route: '/bank', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
+      { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', tab: 'transactions', authority: 'PAYMENTS_READ' },
+      { label: 'Bank accounts', icon: 'account_balance', route: '/bank', tab: 'accounts', authority: 'PAYMENTS_READ' },
+      { label: 'Matching rules', icon: 'rule', route: '/bank', tab: 'rules', authority: 'PAYMENTS_READ' },
+    ]
+  },
+  {
+    label: 'General Ledger',
+    module: { key: 'gl', icon: 'menu_book' },
+    items: [
+      { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   }
 ];
+
+const OPEN_MODULES_KEY = 'bento_open_nav_modules';
+
+function readOpenModules(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(OPEN_MODULES_KEY) ?? '[]')); } catch { return new Set(); }
+}
 
 interface SearchItem {
   mainMenu: string;
@@ -325,6 +369,17 @@ function readSidebarCollapsed(): boolean {
     .sidebar-section-title:first-child {
       padding-top: 4px;
     }
+
+    /* Finance modules: a heading that opens its pages, which sit indented under it. */
+    .sidebar-module { width: 100%; margin-top: 4px; background: none; border: 0; cursor: pointer; text-align: start; }
+    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 600; }
+    .sidebar-module .nav-chevron { margin-inline-start: auto; font-size: 18px; width: 18px; height: 18px; }
+    /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
+    .sidebar-link.sidebar-module { height: auto; min-height: 40px; padding-block: 6px; }
+    .sidebar-link.sidebar-module .nav-label { white-space: normal; line-height: 1.25; }
+    .sidebar-link.sidebar-sublink { padding-inline-start: 22px; height: 36px; font-size: 13px; }
+    .app-sidebar.collapsed .sidebar-module { display: none; }
+    .app-sidebar.collapsed .sidebar-link.sidebar-sublink { padding: 0; height: 40px; }
 
     .app-sidebar.collapsed .sidebar-section-title + .sidebar-link,
     .app-sidebar.collapsed .sidebar-section-title:not(:first-child) {
@@ -890,12 +945,25 @@ function readSidebarCollapsed(): boolean {
           <!-- Navigation -->
           <nav class="sidebar-nav">
             @for (section of navSections; track section.label) {
-              <div class="sidebar-section-title">{{ section.label }}</div>
-              @for (item of section.items; track item.route) {
-                @if (canSee(item)) {
+              @if (section.module; as mod) {
+                @if (sectionVisible(section)) {
+                  <button type="button" class="sidebar-link sidebar-module" [class.has-active]="sectionActive(section)"
+                          [title]="section.label" [attr.aria-expanded]="moduleOpen(mod.key)" (click)="toggleModule(mod.key)">
+                    <mat-icon>{{ mod.icon }}</mat-icon>
+                    <span class="nav-label">{{ section.label }}</span>
+                    <mat-icon class="nav-chevron">{{ moduleOpen(mod.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                }
+              } @else {
+                <div class="sidebar-section-title">{{ section.label }}</div>
+              }
+              @for (item of section.items; track item.label) {
+                @if (canSee(item) && (!section.module || moduleOpen(section.module.key) || sidebarCollapsed())) {
                   <a
                     [routerLink]="item.route"
+                    [queryParams]="item.tab && !item.defaultTab ? { tab: item.tab } : null"
                     class="sidebar-link"
+                    [class.sidebar-sublink]="!!section.module"
                     [class.active]="isNavActive(item)"
                     [title]="item.label"
                     (click)="mobileMenuOpen.set(false)"
@@ -1536,18 +1604,53 @@ export class App implements OnInit, OnDestroy {
 
   /** Tracks which primary route is currently active */
   activeRoute = signal<string>('/');
+  /** The ?tab= of the current page, so a module's page that is a tab can light up. */
+  activeTab = signal<string | null>(null);
+  private openModules = signal<Set<string>>(readOpenModules());
+
+  moduleOpen(key: string): boolean {
+    return this.openModules().has(key);
+  }
+
+  toggleModule(key: string): void {
+    const next = new Set(this.openModules());
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.openModules.set(next);
+    try { localStorage.setItem(OPEN_MODULES_KEY, JSON.stringify([...next])); } catch { /* private mode */ }
+  }
+
+  sectionVisible(section: NavSection): boolean {
+    return section.items.some(i => this.canSee(i));
+  }
+
+  sectionActive(section: NavSection): boolean {
+    return section.items.some(i => this.isNavActive(i));
+  }
+
+  /** Opening a page of a closed module (a link, a search result) opens the module too. */
+  private revealActiveModule(): void {
+    for (const s of this.navSections) {
+      if (s.module && !this.moduleOpen(s.module.key) && this.sectionActive(s)) this.toggleModule(s.module.key);
+    }
+  }
+
+  private trackUrl(url: string): void {
+    const [path, query] = url.split('?');
+    this.activeRoute.set(path);
+    this.activeTab.set(new URLSearchParams(query ?? '').get('tab'));
+    this.revealActiveModule();
+  }
 
   private routerSub: Subscription | null = null;
   private notifPollSub: Subscription | null = null;
 
   ngOnInit() {
-    this.activeRoute.set(this.router.url.split('?')[0]);
+    this.trackUrl(this.router.url);
 
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: NavigationEnd) => {
-        const newRoute = e.urlAfterRedirects.split('?')[0];
-        this.activeRoute.set(newRoute);
+        this.trackUrl(e.urlAfterRedirects);
         this.state.breadcrumbLabel.set(null);
       });
 
@@ -1579,6 +1682,10 @@ export class App implements OnInit, OnDestroy {
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();
     if (item.route === '/') return route === '/';
+    if (item.tab) {
+      const tab = this.activeTab();
+      return route === item.route && (tab === item.tab || (!tab && !!item.defaultTab));
+    }
     // Whole path segments only: '/inbox' must not light up on '/inbox-documents'.
     return route === item.route || route.startsWith(item.route + '/') || route.startsWith(item.route + '?');
   }

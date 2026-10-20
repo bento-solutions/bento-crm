@@ -1,10 +1,12 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FinanceAgingComponent } from './finance-aging.component';
 import { FinanceExpensesComponent } from './finance-expenses.component';
 
 type FinanceTab = 'Customer' | 'Vendor' | 'Recovery' | 'Aging' | 'Expenses';
+const FINANCE_TABS: FinanceTab[] = ['Customer', 'Vendor', 'Recovery', 'Aging', 'Expenses'];
 import { PayablesApi } from '../services/domains/payables.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CrmStateService, Invoice } from '../services/crm-state.service';
@@ -768,6 +770,10 @@ export class FinanceComponent {
   activeTab = signal<FinanceTab>('Customer');
   private payables = inject(PayablesApi);
   private toast = inject(ToastService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  /** The tab we just wrote to the URL, so the stale query emission before it lands is ignored. */
+  private pendingUrlTab: FinanceTab | null | undefined;
   scheduling = signal<Invoice | null>(null);
   scheduleDate = signal('');
   private payments = inject(PaymentsApi);
@@ -832,7 +838,12 @@ export class FinanceComponent {
     });
   }
 
-  setFinanceTab(tab: FinanceTab): void {
+  /** Shows a tab and mirrors it in ?tab= so the sidebar entry for it lights up. */
+  setFinanceTab(tab: FinanceTab, syncUrl = true): void {
+    if (syncUrl && this.activeTab() !== tab) {
+      this.pendingUrlTab = tab;
+      this.router.navigate([], { relativeTo: this.route, queryParams: { tab: tab === 'Customer' ? null : tab }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
     this.activeTab.set(tab);
     const labelMap: Record<string, string> = {
       'Customer': 'finance.customerInvoices',
@@ -960,11 +971,23 @@ export class FinanceComponent {
   constructor() {
     this.invoicesService.load();
     this.state.loadPartners();
-    const tab = this.state.navigateTab();
+    const tab = this.state.navigateTab() as FinanceTab | null;
     if (tab) {
       this.state.navigateTab.set(null);
     }
-    this.setFinanceTab((['Customer', 'Vendor', 'Recovery', 'Aging', 'Expenses'] as FinanceTab[]).includes(tab as FinanceTab) ? tab as FinanceTab : 'Customer');
+    if (tab && FINANCE_TABS.includes(tab)) this.setFinanceTab(tab);
+    // The sidebar opens tabs through ?tab=, also while this page is already open.
+    let first = true;
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const q = params.get('tab') as FinanceTab | null;
+      const urlTab = q && FINANCE_TABS.includes(q) ? q : 'Customer';
+      if (this.pendingUrlTab !== undefined) {
+        if (urlTab !== this.pendingUrlTab) return;
+        this.pendingUrlTab = undefined;
+      }
+      if (urlTab !== this.activeTab() || first) this.setFinanceTab(urlTab, false);
+      first = false;
+    });
     this.updateReminderTemplate();
     // When switching back to Manual, clear deal-bound locked fields and lines
     effect(() => {
