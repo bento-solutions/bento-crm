@@ -90,7 +90,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', tab: 'Customer', defaultTab: true },
       { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring' },
       { label: 'Recovery', icon: 'notifications_active', route: '/finance', tab: 'Recovery' },
-      { label: 'Aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
+      { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
     ]
   },
   {
@@ -99,6 +99,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Supplier bills', icon: 'request_quote', route: '/finance', tab: 'Vendor' },
       { label: 'Expenses', icon: 'payments', route: '/finance', tab: 'Expenses', authority: 'PAYMENTS_READ' },
+      { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'SupplierAging' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   },

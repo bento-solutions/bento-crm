@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
@@ -30,6 +30,7 @@ const BUCKET_COLOURS: Record<AgingBucketKey, string> = {
   template: `
     <div class="space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
+        @if (!side()) {
         <div class="segmented" role="group" [attr.aria-label]="'aging.side' | translate">
           <button type="button" class="segmented__item" [attr.aria-pressed]="type() === 'CUSTOMER'" (click)="select('CUSTOMER')">
             {{ 'aging.receivables' | translate }}
@@ -38,6 +39,7 @@ const BUCKET_COLOURS: Record<AgingBucketKey, string> = {
             {{ 'aging.payables' | translate }}
           </button>
         </div>
+        }
         @if (report(); as r) {
           <span class="text-xs text-ink-3">{{ 'aging.asOf' | translate: { date: date(r.asOf) } }}</span>
         }
@@ -130,12 +132,16 @@ export class FinanceAgingComponent implements OnInit {
   private i18n = inject(TranslationService);
   private toast = inject(ToastService);
 
+  /** Set when the page already belongs to one side (Receivables or Payables): no side switch then. */
+  side = input<'CUSTOMER' | 'VENDOR' | null>(null);
   protected type = signal<'CUSTOMER' | 'VENDOR'>('CUSTOMER');
   protected report = signal<AgingReport | null>(null);
   protected loading = signal(false);
   private outstanding = computed(() => (this.report()?.buckets ?? []).reduce((s, b) => s + Number(b.amount), 0));
 
   ngOnInit(): void {
+    const side = this.side();
+    if (side) this.type.set(side);
     this.load();
   }
 
