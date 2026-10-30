@@ -40,6 +40,28 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
             WhatsApp
           </a>
         }
+        <a routerLink="/settings/billing" routerLinkActive="is-active" class="tab">
+          <mat-icon>notifications_active</mat-icon>
+          Billing
+        </a>
+        <a routerLink="/settings/invoice-template" routerLinkActive="is-active" class="tab">
+          <mat-icon>receipt_long</mat-icon>
+          Invoices
+        </a>
+        <a routerLink="/settings/stock" routerLinkActive="is-active" class="tab">
+          <mat-icon>inventory_2</mat-icon>
+          Stock
+        </a>
+        <a routerLink="/settings/payments" routerLinkActive="is-active" class="tab">
+          <mat-icon>credit_card</mat-icon>
+          Payments
+        </a>
+        @if (state.hasAuthority('INVOICES_READ') || state.hasAuthority('PAYMENTS_READ') || state.hasAuthority('ADMIN_ACCESS')) {
+          <a routerLink="/settings/inboxes" routerLinkActive="is-active" class="tab">
+            <mat-icon>alternate_email</mat-icon>
+            Inboxes
+          </a>
+        }
         @if (state.hasAuthority('API_TOKENS_MANAGE')) {
           <a routerLink="/settings/api-tokens" routerLinkActive="is-active" class="tab">
             <mat-icon>key</mat-icon>

@@ -4,6 +4,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { ApiService } from '../services/api.service';
+import { ClientChecklistsComponent } from './checklists/client-checklists.component';
+import { ClientPortalAccessComponent } from './checklists/client-portal-access.component';
 import {
   CrmStateService,
   CustomerCard,
@@ -24,7 +27,7 @@ const JOB_TITLES = [
 
 @Component({
   selector: 'app-customer-card',
-  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent],
   template: `
     <div class="page max-w-7xl mx-auto pb-12">
 
@@ -324,6 +327,12 @@ const JOB_TITLES = [
           </table>
         </div>
       </section>
+
+      <!-- Practice: documents asked from this client, and who can sign in to the client portal. -->
+      @if (clientId() && (isExisting() || isCustomer()) && state.hasAuthority('PARTNERS_READ')) {
+        <app-client-checklists [partnerId]="clientId()" />
+        <app-client-portal-access [partnerId]="clientId()" />
+      }
     </div>
   `
 })
@@ -331,12 +340,15 @@ export class CustomerCardComponent implements OnInit {
   state = inject(CrmStateService);
   route = inject(ActivatedRoute);
   router = inject(Router);
+  private api = inject(ApiService);
 
   cities = MOROCCAN_CITIES;
   jobTitles = JOB_TITLES;
   vatOptions: VatStatus[] = ['Standard', 'No VAT', 'Export Trade'];
 
   partnerId = '';
+  /** The client shown, as a signal for the checklist and portal-access sections. */
+  clientId = signal('');
   isExisting = signal(false);
 
   form = signal<CustomerCard>(this.emptyCard());
@@ -344,6 +356,9 @@ export class CustomerCardComponent implements OnInit {
   iceError = signal<string | null>(null);
 
   partner = computed(() => this.state.partners().find(p => p.id === this.partnerId));
+  /** Fetched by id: after a reload the shared partner list only holds leads. */
+  private fetchedType = signal<string | null>(null);
+  isCustomer = computed(() => (this.fetchedType() ?? this.partner()?.type ?? '').toString().toUpperCase() === 'CUSTOMER');
 
   existingCards = computed(() => this.state.customerCards());
 
@@ -363,6 +378,14 @@ export class CustomerCardComponent implements OnInit {
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
       this.partnerId = params.get('id') || '';
+      this.clientId.set(this.partnerId);
+      this.fetchedType.set(null);
+      if (this.partnerId) {
+        this.api.getPartner(this.partnerId).subscribe({
+          next: p => this.fetchedType.set(String(p?.type ?? '')),
+          error: () => this.fetchedType.set(null),
+        });
+      }
       this.state.loadCustomerCard(this.partnerId);
       const existing = this.state.getCustomerCard(this.partnerId);
       if (existing) {

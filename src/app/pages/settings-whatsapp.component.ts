@@ -350,7 +350,7 @@ export class SettingsWhatsAppComponent implements OnInit, OnDestroy {
     try {
       await action();
     } catch (e) {
-      const detail = (e as { detail?: string })?.detail;
+      const detail = ((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail);
       this.toast.show(detail || this.i18n.t('waSettings.error'), { type: 'error' });
     } finally {
       this.busy.set(false);

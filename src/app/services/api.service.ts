@@ -101,7 +101,10 @@ function fromBackendPurchaseOrder(po: PurchaseOrder): PurchaseOrder {
   return {
     ...po,
     status: (PO_STATUS_FROM_BACKEND[status] ?? status) as PurchaseOrder['status'],
-    vendorId: (dto['vendorPartnerId'] ?? dto['vendorId']) as string
+    vendorId: (dto['vendorPartnerId'] ?? dto['vendorId']) as string,
+    // The backend sends `total` (subtotal + 20% VAT), never `amount`. Older rows saved without a
+    // total fall back to their lines plus the same default VAT, which is what their bill will carry.
+    amount: Number(dto['total'] ?? dto['amount'] ?? (po.lines || []).reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0) * 1.2) || 0
   };
 }
 
@@ -430,7 +433,9 @@ export class ApiService extends BaseApiService {
       description: dto.description,
       colorHex: dto.color_hex,
       isDefault: dto.is_default,
-      isActive: dto.is_active
+      isActive: dto.is_active,
+      invoiceLogoFileId: dto.invoice_logo_file_id ?? null,
+      invoiceFooter: dto.invoice_footer ?? null
     };
   }
 

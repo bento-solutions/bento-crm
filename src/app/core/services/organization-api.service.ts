@@ -9,6 +9,8 @@ export interface CreateOrganizationRequest {
   industry?: string;
   timezone?: string;
   default_currency?: string;
+  /** When sold goods leave the stock; the server picks one from the industry when absent. */
+  stock_issue_trigger?: 'DEAL_WON' | 'INVOICE_SENT' | 'MANUAL';
   admin_email: string;
   admin_name: string;
   admin_password: string;

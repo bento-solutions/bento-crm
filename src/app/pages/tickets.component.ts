@@ -14,6 +14,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { TICKET_ASSIGNEE_FILTER_KEY } from '../shared/assignee-filter-keys';
 import { CategoryPillComponent } from '../shared/ui/category-pill.component';
 import { CategoryPickerComponent } from '../shared/ui/category-picker.component';
+import { csvCell } from '../shared/csv.util';
 
 @Component({
   selector: 'app-tickets',
@@ -478,7 +479,7 @@ export class TicketsComponent {
     const ids = this.selectedTicketIds();
     const tickets = this.ticketsService.allTickets().filter(t => ids.has(t.id));
     const header = ['Title', 'Category', 'Type', 'Priority', 'Status', 'Assignee'];
-    const escapeCsv = (val: string) => `"${(val ?? '').replace(/"/g, '""')}"`;
+    const escapeCsv = csvCell;
     const rows = tickets.map(t => [
       escapeCsv(t.title),
       escapeCsv(this.categories.get(t.categoryId)?.name || ''),

@@ -574,6 +574,6 @@ function newClientRef(): string {
 }
 
 function errorText(e: unknown, fallback: string): string {
-  const detail = (e as { detail?: string })?.detail;
+  const detail = ((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail);
   return detail || fallback;
 }

@@ -1,5 +1,12 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
+import { FinanceAgingComponent } from './finance-aging.component';
+import { FinanceExpensesComponent } from './finance-expenses.component';
+
+type FinanceTab = 'Customer' | 'Vendor' | 'Recovery' | 'Aging' | 'Expenses' | 'SupplierAging';
+const FINANCE_TABS: FinanceTab[] = ['Customer', 'Vendor', 'Recovery', 'Aging', 'Expenses', 'SupplierAging'];
+import { PayablesApi } from '../services/domains/payables.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CrmStateService, Invoice } from '../services/crm-state.service';
 import { InvoicesService } from '../services/domains/invoices.service';
@@ -10,12 +17,15 @@ import { DataStatusBannerComponent } from '../shared/data-status-banner.componen
 import { PaginatorComponent } from '../shared/paginator.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { TranslatePipe } from '../pipes/translate.pipe';
+import { remainingAmount } from '../services/domains/invoice.mapper';
+import { PaymentLink, PaymentsApi } from '../services/domains/payments.service';
 import { TranslationService } from '../services/translation.service';
 import { ApiService } from '../services/api.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
+import { ToastService } from '../services/toast.service';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -28,11 +38,11 @@ interface InvoiceLine {
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
   template: `
     <div class="page">
       <app-page-header title="Finance" subtitle="Invoices, payables and late-payment recovery">
-        @if (canCreate() && activeTab() !== 'Recovery') {
+        @if (canCreate() && isInvoiceTab()) {
           <button actions class="btn-primary" (click)="openCreateInvoiceModal()">
             <mat-icon>add</mat-icon>
             New Invoice
@@ -40,7 +50,7 @@ interface InvoiceLine {
         }
       </app-page-header>
 
-      @if (activeTab() !== 'Recovery') {
+      @if (isInvoiceTab()) {
         <div class="stat-grid">
           <app-stat-card label="Outstanding" [value]="money0(outstandingTotal())" icon="account_balance_wallet" tone="slate"
                          [hint]="unpaidCount() + ' unpaid invoice' + (unpaidCount() === 1 ? '' : 's')" />
@@ -72,10 +82,43 @@ interface InvoiceLine {
             <span class="count-pill">{{ overdueInvoices().length }}</span>
           }
         </button>
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'Aging'" [attr.aria-selected]="activeTab() === 'Aging'"
+                (click)="setFinanceTab('Aging')">
+          <mat-icon>stacked_bar_chart</mat-icon>
+          {{ 'aging.tab' | translate }}
+        </button>
+        <button role="tab" class="tab" [class.is-active]="activeTab() === 'SupplierAging'" [attr.aria-selected]="activeTab() === 'SupplierAging'"
+                (click)="setFinanceTab('SupplierAging')">
+          <mat-icon>stacked_bar_chart</mat-icon>
+          {{ 'aging.supplierTab' | translate }}
+        </button>
+        @if (state.hasAuthority('PAYMENTS_READ')) {
+          <button role="tab" class="tab" [class.is-active]="activeTab() === 'Expenses'" [attr.aria-selected]="activeTab() === 'Expenses'"
+                  (click)="setFinanceTab('Expenses')">
+            <mat-icon>payments</mat-icon>
+            {{ 'expenses.tab' | translate }}
+          </button>
+        }
+        <a routerLink="/finance/recurring" class="tab">
+          <mat-icon>autorenew</mat-icon>
+          {{ 'recurring.tab' | translate }}
+        </a>
       </div>
 
+        @if (activeTab() === 'Aging') {
+          <app-finance-aging side="CUSTOMER" />
+        }
+
+        @if (activeTab() === 'SupplierAging') {
+          <app-finance-aging side="VENDOR" />
+        }
+
+        @if (activeTab() === 'Expenses') {
+          <app-finance-expenses />
+        }
+
         <!-- Invoices View -->
-        @if (activeTab() !== 'Recovery') {
+        @if (isInvoiceTab()) {
           <div class="card overflow-x-auto">
           @if (invoicesService.isLoading$()) {
             <app-data-status-banner [loading]="true" [variant]="'rows'" [columns]="7" [rows]="8" />
@@ -96,7 +139,7 @@ interface InvoiceLine {
                 @for (invoice of paginatedInvoices(); track invoice.id) {
                   <tr>
                     <td class="whitespace-nowrap text-ink">
-                      #{{ invoice.id.slice(0, 8) }}
+                      {{ invoice.invoiceNumber || '#' + invoice.id.slice(0, 8) }}
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm font-medium text-ink">{{getPartnerName(invoice.partnerId)}}</div>
@@ -104,9 +147,15 @@ interface InvoiceLine {
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm text-ink font-semibold">{{formatCurrency(invoice.amount)}}</div>
+                      @if (invoice.status !== 'Paid' && (invoice.amountPaid || 0) > 0) {
+                        <div class="cell-sub">{{ 'invoices.partlyPaid' | translate: { paid: formatCurrency(invoice.amountPaid || 0), left: formatCurrency(remaining(invoice)) } }}</div>
+                      }
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm text-ink-3">{{invoice.dueDate}}</div>
+                      @if (invoice.type === 'Vendor' && invoice.scheduledPaymentDate && invoice.status !== 'Paid') {
+                        <div class="text-xs text-ink-2">{{ 'bills.payOn' | translate: { date: invoice.scheduledPaymentDate } }}</div>
+                      }
                     </td>
                     <td class="whitespace-nowrap">
                       <app-created-by-badge [createdBy]="invoice.createdBy" [createdAt]="invoice.createdAt" />
@@ -124,6 +173,14 @@ interface InvoiceLine {
                       <button (click)="openInvoiceAttachments(invoice)" title="Attachments" aria-label="Attachments" class="btn-icon btn-sm">
                         <mat-icon class="icon-sm">attach_file</mat-icon>
                       </button>
+                      @if (invoice.type === 'Customer' && invoice.status !== 'Paid' && invoice.status !== 'Draft' && canWrite()) {
+                        <button (click)="openPayLink(invoice)" class="btn-ghost btn-sm">
+                          <mat-icon class="icon-sm">link</mat-icon>{{ 'payLink.button' | translate }}
+                        </button>
+                      }
+                      @if (invoice.type === 'Vendor' && invoice.status !== 'Paid' && canWrite()) {
+                        <button (click)="openSchedule(invoice)" class="btn-ghost btn-sm">{{ 'bills.schedule' | translate }}</button>
+                      }
                       @if (invoice.status !== 'Paid' && canWrite()) {
                         <button (click)="markInvoicePaid(invoice)" class="btn-secondary btn-sm">Mark Paid</button>
                       }
@@ -156,6 +213,65 @@ interface InvoiceLine {
                     </button>
                   </div>
                   <app-attachments ownerEntityType="INVOICE" [ownerEntityId]="invoiceForAttachments.id" [canWrite]="canWrite()" />
+                </div>
+              </div>
+            }
+            @if (payLinkFor(); as inv) {
+              <div class="modal-backdrop">
+                <div class="modal modal-md">
+                  <div class="modal-header">
+                    <h3 class="modal-title">{{ 'payLink.title' | translate: { number: inv.invoiceNumber || inv.id.slice(0, 8) } }}</h3>
+                    <button (click)="payLinkFor.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+                      <mat-icon class="icon-sm">close</mat-icon>
+                    </button>
+                  </div>
+                  @if (payLinkError(); as err) {
+                    <div class="alert alert-warning text-sm">{{ err }}</div>
+                    @if (state.hasAuthority('ADMIN_ACCESS')) {
+                      <a routerLink="/settings/payments" class="btn-secondary btn-sm mt-3" (click)="payLinkFor.set(null)">{{ 'payLink.openSettings' | translate }}</a>
+                    }
+                  } @else if (payLink(); as link) {
+                    <p class="text-sm text-ink-2">{{ 'payLink.hint' | translate: { amount: formatCurrency(remaining(inv)) } }}</p>
+                    <div class="flex gap-2 mt-3">
+                      <input class="input-field flex-1 min-w-0" readonly [value]="link.url" [attr.aria-label]="'payLink.title' | translate: { number: '' }" (focus)="$any($event.target).select()" />
+                      <button class="btn-primary shrink-0" (click)="copyPayLink(link.url)">
+                        <mat-icon class="icon-sm">content_copy</mat-icon>{{ 'payLink.copy' | translate }}
+                      </button>
+                    </div>
+                    <div class="modal-footer">
+                      <button class="btn-ghost" (click)="cancelPayLink(inv)">{{ 'payLink.deactivate' | translate }}</button>
+                      <a class="btn-secondary" [href]="whatsAppShare(inv, link.url)" target="_blank" rel="noopener">
+                        <mat-icon class="icon-sm">chat</mat-icon>{{ 'payLink.whatsapp' | translate }}
+                      </a>
+                      <a class="btn-secondary" [href]="link.url" target="_blank" rel="noopener">{{ 'payLink.open' | translate }}</a>
+                    </div>
+                  } @else {
+                    <div class="py-6 text-center"><div class="w-6 h-6 mx-auto border-2 border-line border-t-accent rounded-full animate-spin"></div></div>
+                  }
+                </div>
+              </div>
+            }
+            @if (scheduling(); as bill) {
+              <div class="modal-backdrop">
+                <div class="modal modal-sm">
+                  <div class="modal-header">
+                    <h3 class="modal-title">{{ 'bills.scheduleTitle' | translate }}</h3>
+                    <button (click)="scheduling.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+                      <mat-icon class="icon-sm">close</mat-icon>
+                    </button>
+                  </div>
+                  <p class="text-sm text-ink-2">{{ 'bills.scheduleHint' | translate: { number: bill.invoiceNumber || bill.id.slice(0, 8), due: bill.dueDate || '—' } }}</p>
+                  <label class="block mt-3">
+                    <span class="field-label">{{ 'bills.payOnLabel' | translate }}</span>
+                    <input type="date" class="input-field" [value]="scheduleDate()" (input)="scheduleDate.set($any($event.target).value)" />
+                  </label>
+                  <div class="modal-footer">
+                    @if (bill.scheduledPaymentDate) {
+                      <button class="btn-ghost" (click)="saveSchedule(bill, null)">{{ 'bills.clear' | translate }}</button>
+                    }
+                    <button class="btn-secondary" (click)="scheduling.set(null)">{{ 'inbox.cancel' | translate }}</button>
+                    <button class="btn-primary" [disabled]="!scheduleDate()" (click)="saveSchedule(bill, scheduleDate())">{{ 'bills.save' | translate }}</button>
+                  </div>
                 </div>
               </div>
             }
@@ -200,7 +316,7 @@ interface InvoiceLine {
                         <h4 class="font-semibold text-ink">{{getPartnerName(invoice.partnerId)}}</h4>
                         <p class="text-xs text-ink-3 mt-0.5">City: {{getPartnerCity(invoice.partnerId)}} &bull; Phone: {{getPartnerPhone(invoice.partnerId)}}</p>
                         <p class="text-xs text-ink-2 flex items-center gap-2 mt-1.5">
-                          <span class="font-semibold text-ink">{{formatCurrency(invoice.amount)}}</span>
+                          <span class="font-semibold text-ink">{{formatCurrency(remaining(invoice))}}</span>
                           <span>&bull;</span>
                           <span class="text-ink font-semibold">Due Date: {{invoice.dueDate}}</span>
                         </p>
@@ -659,14 +775,82 @@ export class FinanceComponent {
   invoicesService = inject(InvoicesService);
   translation = inject(TranslationService);
   private api = inject(ApiService);
-  activeTab = signal<'Customer' | 'Vendor' | 'Recovery'>('Customer');
+  activeTab = signal<FinanceTab>('Customer');
+  private payables = inject(PayablesApi);
+  private toast = inject(ToastService);
+  scheduling = signal<Invoice | null>(null);
+  scheduleDate = signal('');
+  private payments = inject(PaymentsApi);
+  payLinkFor = signal<Invoice | null>(null);
+  payLink = signal<PaymentLink | null>(null);
+  payLinkError = signal<string | null>(null);
 
-  setFinanceTab(tab: 'Customer' | 'Vendor' | 'Recovery'): void {
+  openPayLink(invoice: Invoice): void {
+    this.payLinkFor.set(invoice);
+    this.payLink.set(null);
+    this.payLinkError.set(null);
+    this.payments.link(invoice.id).subscribe({
+      next: link => this.payLink.set(link),
+      error: e => this.payLinkError.set((e as { error?: { detail?: string } })?.error?.detail || this.translation.t('payLink.error')),
+    });
+  }
+
+  copyPayLink(url: string): void {
+    navigator.clipboard?.writeText(url).then(
+      () => this.toast.show(this.translation.t('payLink.copied'), { type: 'success' }),
+      () => this.toast.show(this.translation.t('payLink.copyFailed'), { type: 'error' }),
+    );
+  }
+
+  whatsAppShare(invoice: Invoice, url: string): string {
+    // wa.me wants the international number without "+"; Moroccan numbers are often saved as 06…
+    const digits = (this.getPartnerPhone(invoice.partnerId) || '').replace(/[^\d]/g, '');
+    const phone = digits.startsWith('00') ? digits.slice(2) : digits.startsWith('0') ? '212' + digits.slice(1) : digits;
+    const text = this.translation.t('payLink.whatsappText', {
+      number: invoice.invoiceNumber || '', amount: this.formatCurrency(this.remaining(invoice)), url,
+    });
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  }
+
+  cancelPayLink(invoice: Invoice): void {
+    this.payments.cancelLink(invoice.id).subscribe({
+      next: () => {
+        this.payLinkFor.set(null);
+        this.toast.show(this.translation.t('payLink.deactivated'), { type: 'success' });
+      },
+      error: () => this.toast.show(this.translation.t('payLink.error'), { type: 'error' }),
+    });
+  }
+
+  isInvoiceTab(): boolean {
+    return this.activeTab() === 'Customer' || this.activeTab() === 'Vendor';
+  }
+
+  openSchedule(bill: Invoice): void {
+    this.scheduling.set(bill);
+    this.scheduleDate.set(bill.scheduledPaymentDate || bill.dueDate || '');
+  }
+
+  saveSchedule(bill: Invoice, date: string | null): void {
+    this.payables.schedulePayment(bill.id, date).subscribe({
+      next: () => {
+        this.invoicesService.invoices.update(list => list.map(i => i.id === bill.id ? { ...i, scheduledPaymentDate: date ?? undefined } : i));
+        this.scheduling.set(null);
+        this.toast.show(this.translation.t(date ? 'bills.scheduled' : 'bills.unscheduled'), { type: 'success' });
+      },
+      error: e => this.toast.show(((e as { error?: { detail?: string } })?.error?.detail ?? (e as { detail?: string })?.detail) || this.translation.t('bills.error'), { type: 'error' }),
+    });
+  }
+
+  setFinanceTab(tab: FinanceTab): void {
     this.activeTab.set(tab);
     const labelMap: Record<string, string> = {
       'Customer': 'finance.customerInvoices',
       'Vendor': 'finance.vendorInvoices',
-      'Recovery': 'finance.recovery'
+      'Recovery': 'finance.recovery',
+      'Aging': 'aging.tab',
+      'Expenses': 'expenses.tab',
+      'SupplierAging': 'aging.supplierTab'
     };
     this.state.breadcrumbLabel.set(this.translation.t(labelMap[tab]));
   }
@@ -743,20 +927,23 @@ export class FinanceComponent {
 
   /** The invoices behind the active tab — the stat cards summarise exactly what the table lists. */
   private activeInvoices = computed(() => (this.activeTab() === 'Vendor' ? this.vendorInvoices() : this.customerInvoices()));
-  private sum = (list: Invoice[]) => list.reduce((total, inv) => total + (inv.amount || 0), 0);
+  /** Sums what is still owed, so partial payments count the way the Aging view counts them. */
+  private sum = (list: Invoice[]) => list.reduce((total, inv) => total + remainingAmount(inv), 0);
+  remaining = remainingAmount;
   private unpaid = computed(() => this.activeInvoices().filter(i => i.status !== 'Paid'));
   private overdue = computed(() => this.activeInvoices().filter(i => i.status === 'Overdue'));
   private paid = computed(() => this.activeInvoices().filter(i => i.status === 'Paid'));
   outstandingTotal = computed(() => this.sum(this.unpaid()));
   overdueTotal = computed(() => this.sum(this.overdue()));
-  paidTotal = computed(() => this.sum(this.paid()));
+  paidTotal = computed(() => this.activeInvoices().reduce(
+    (total, inv) => total + (inv.status === 'Paid' ? (inv.amount || 0) : (inv.amountPaid || 0)), 0));
   unpaidCount = computed(() => this.unpaid().length);
   overdueCount = computed(() => this.overdue().length);
   paidCount = computed(() => this.paid().length);
 
   /** Overdue invoices (status === 'Overdue') */
   overdueInvoices = computed(() =>
-    (this.invoicesService.allInvoices() || []).filter((inv: Invoice) => inv.status === 'Overdue')
+    this.customerInvoices().filter((inv: Invoice) => inv.status === 'Overdue')
   );
 
   // ── Eligible Customers (Prospects blocked) ────────────────────────────────
@@ -784,13 +971,11 @@ export class FinanceComponent {
   constructor() {
     this.invoicesService.load();
     this.state.loadPartners();
-    const tab = this.state.navigateTab();
+    const tab = this.state.navigateTab() as FinanceTab | null;
     if (tab) {
-      this.activeTab.set(tab as 'Customer' | 'Vendor' | 'Recovery');
       this.state.navigateTab.set(null);
     }
-    const label = this.activeTab() === 'Customer' ? 'Customer Invoices' : this.activeTab() === 'Vendor' ? 'Vendor Invoices' : 'Recovery';
-    this.state.breadcrumbLabel.set(label);
+    this.setFinanceTab(tab && FINANCE_TABS.includes(tab) ? tab : 'Customer');
     this.updateReminderTemplate();
     // When switching back to Manual, clear deal-bound locked fields and lines
     effect(() => {

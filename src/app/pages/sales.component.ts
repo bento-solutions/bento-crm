@@ -12,6 +12,8 @@ import { SalesPipelineBoardComponent } from './sales-pipeline-board.component';
 import { DealsService } from '../services/domains/deals.service';
 import { ProposalsService } from '../services/domains/proposals.service';
 import { PurchaseOrdersService } from '../services/domains/purchase-orders.service';
+import { PayablesApi } from '../services/domains/payables.service';
+import { InvoicesService } from '../services/domains/invoices.service';
 import { PartnersService } from '../services/domains/partners.service';
 import { TasksService } from '../services/domains/tasks.service';
 import { CrmStateService } from '../services/crm-state.service';
@@ -24,6 +26,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
+import { csvCell } from '../shared/csv.util';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
@@ -401,7 +404,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               @for (po of paginatedPOs(); track po.id) {
                 <tr>
                   <td class="whitespace-nowrap">
-                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View PO #' + po.id">#{{ po.id.slice(0, 8) }}</button>
+                    <button (click)="openPODrawer(po)" class="table-name-link text-sm font-semibold text-ink text-left" [title]="'View PO ' + poRef(po)">{{ poRef(po) }}</button>
                     @if (po.sentVia) {
                       <span class="text-meta text-ink-3 font-medium">Sent: {{po.sentVia}}</span>
                     }
@@ -434,9 +437,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                     <button (click)="$event.stopPropagation(); downloadPOPdf(po)" class="btn-icon btn-sm" title="Download PO PDF">
   <mat-icon class="icon-sm">picture_as_pdf</mat-icon>
 </button>
-                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO #' + po.id)" class="btn-secondary btn-sm ml-auto" title="Assign Task">
+                    <button (click)="$event.stopPropagation(); openAssignTaskModal('po', po.id, 'PO ' + poRef(po))" class="btn-secondary btn-sm ml-auto" title="Assign Task">
                       <mat-icon class="icon-xs">assignment</mat-icon> Assign
                     </button>
+                    @if (canBill(po)) {
+                      <button (click)="$event.stopPropagation(); openBill(po)" class="btn-primary btn-sm">{{ 'bills.createBill' | translate }}</button>
+                    }
                     @if (po.status === 'Sent' && canWritePO()) {
                       <button (click)="$event.stopPropagation(); openSetDeliveryDatePOModal(po)" class="btn-secondary btn-sm">Set Del. Date</button>
                       <button (click)="$event.stopPropagation(); purchaseOrdersService.updateStatus(po.id, 'Delivered')" class="btn-primary btn-sm">Receive Goods</button>
@@ -1116,6 +1122,43 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       </div>
     }
 
+    <!-- Supplier bill from a purchase order -->
+    @if (billingPO(); as po) {
+      <div class="modal-backdrop">
+        <div class="modal modal-sm">
+          <div class="modal-header">
+            <h3 class="modal-title">{{ 'bills.createTitle' | translate }}</h3>
+            <button (click)="billingPO.set(null)" class="btn-icon btn-sm" [attr.aria-label]="'inbox.cancel' | translate">
+              <mat-icon class="icon-sm">close</mat-icon>
+            </button>
+          </div>
+          <p class="text-sm text-ink-2">{{ 'bills.createHint' | translate: { po: poRef(po), amount: formatCurrency(po.amount) } }}</p>
+          <div class="space-y-3 mt-3">
+            <label class="block">
+              <span class="field-label">{{ 'bills.supplierNumber' | translate }}</span>
+              <input class="input-field" maxlength="100" [placeholder]="'bills.supplierNumberPlaceholder' | translate"
+                     [value]="billForm().supplierInvoiceNumber" (input)="patchBill({ supplierInvoiceNumber: $any($event.target).value })" />
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ 'bills.invoiceDate' | translate }}</span>
+                <input type="date" class="input-field" [value]="billForm().invoiceDate" (input)="patchBill({ invoiceDate: $any($event.target).value })" />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ 'bills.terms' | translate }}</span>
+                <input type="number" min="0" max="365" class="input-field" [value]="billForm().paymentTermsDays"
+                       (input)="patchBill({ paymentTermsDays: +$any($event.target).value || 0 })" />
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" (click)="billingPO.set(null)">{{ 'inbox.cancel' | translate }}</button>
+            <button class="btn-primary" [disabled]="billBusy()" (click)="createBill(po)">{{ 'bills.createBill' | translate }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Set Delivery Date PO Modal -->
     @if (setDeliveryDateModalOpen()) {
       <div class="modal-backdrop">
@@ -1709,7 +1752,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
           <div class="w-screen max-w-2xl bg-surface shadow-2xl flex flex-col h-full duration-300">
             <div class="px-6 py-5 bg-subtle border-b border-line flex justify-between items-center shrink-0">
               <div>
-                <h2 class="section-title" id="po-drawer-title">PO #{{ po.id.slice(0, 8) }}</h2>
+                <h2 class="section-title" id="po-drawer-title">PO {{ poRef(po) }}</h2>
                 <p class="text-xs text-ink-3 mt-0.5">Vendor: {{getPartnerName(po.vendorId)}} · Deal: {{getDealTitle(po.dealId)}}</p>
               </div>
               <div class="flex items-center gap-3">
@@ -1727,7 +1770,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-subtle p-4 rounded-xl border border-line-soft text-xs">
                 <div>
                   <span class="eyebrow block mb-1">PO Reference</span>
-                  <span class="text-ink font-semibold text-sm">#{{ po.id.slice(0, 8) }}</span>
+                  <span class="text-ink font-semibold text-sm">{{ poRef(po) }}</span>
                 </div>
                 <div>
                   <span class="eyebrow block mb-1">Delivery Date</span>
@@ -1778,9 +1821,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <span class="text-xs text-ink-3">{{ po.lines.length }} item(s)</span>
               <div class="flex gap-2">
                 @if (canCreateTask()) {
-                  <button (click)="openAssignTaskModal('po', po.id, 'PO #' + po.id); closePODrawer()" class="btn-secondary btn-sm">
+                  <button (click)="openAssignTaskModal('po', po.id, 'PO ' + poRef(po)); closePODrawer()" class="btn-secondary btn-sm">
                     <mat-icon class="icon-sm">assignment</mat-icon> Assign Task
                   </button>
+                }
+                @if (canBill(po)) {
+                  <button (click)="openBill(po); closePODrawer()" class="btn-primary btn-sm">{{ 'bills.createBill' | translate }}</button>
                 }
                 @if (po.status === 'Sent' && canWritePO()) {
                   <button (click)="openSetDeliveryDatePOModal(po); closePODrawer()" class="btn-secondary btn-sm">Set Del. Date</button>
@@ -2402,6 +2448,50 @@ export class SalesComponent {
   }
   canCreatePO(): boolean { return this.state.hasAuthority('PURCHASE_ORDERS_CREATE'); }
   canWritePO(): boolean { return this.state.hasAuthority('PURCHASE_ORDERS_WRITE'); }
+
+  private payables = inject(PayablesApi);
+  private invoicesService = inject(InvoicesService);
+  billingPO = signal<PurchaseOrder | null>(null);
+  billBusy = signal(false);
+  billForm = signal({ supplierInvoiceNumber: '', invoiceDate: new Date().toISOString().slice(0, 10), paymentTermsDays: 30 });
+
+  /** A confirmed or delivered order that has not been billed yet can become the supplier's bill. */
+  canBill(po: PurchaseOrder): boolean {
+    return (po.status === 'Confirmed' || po.status === 'Delivered' || po.status === 'Sent')
+      && this.state.hasAuthority('INVOICES_CREATE');
+  }
+
+  openBill(po: PurchaseOrder): void {
+    this.billForm.set({ supplierInvoiceNumber: '', invoiceDate: new Date().toISOString().slice(0, 10), paymentTermsDays: 30 });
+    this.billingPO.set(po);
+  }
+
+  patchBill(change: Partial<{ supplierInvoiceNumber: string; invoiceDate: string; paymentTermsDays: number }>): void {
+    this.billForm.update(f => ({ ...f, ...change }));
+  }
+
+  createBill(po: PurchaseOrder): void {
+    const f = this.billForm();
+    this.billBusy.set(true);
+    this.payables.billPurchaseOrder(po.id, {
+      supplierInvoiceNumber: f.supplierInvoiceNumber.trim() || null,
+      invoiceDate: f.invoiceDate || null,
+      paymentTermsDays: f.paymentTermsDays,
+    }).subscribe({
+      next: bill => {
+        this.billBusy.set(false);
+        this.billingPO.set(null);
+        this.purchaseOrdersService.purchaseOrders.update(list => list.map(p => p.id === po.id ? { ...p, status: 'Invoiced' } : p));
+        this.invoicesService.load(undefined, true);
+        this.notify.show(this.translation.t('bills.created', { number: bill.invoiceNumber ?? '' }), { type: 'success' });
+      },
+      error: e => {
+        this.billBusy.set(false);
+        const err = e as { error?: { detail?: string }; detail?: string };
+        this.notify.show(err?.error?.detail || err?.detail || this.translation.t('bills.error'), { type: 'error' });
+      },
+    });
+  }
   canCreateTask(): boolean { return this.state.hasAuthority('TASKS_CREATE'); }
   canWriteDealActivity(): boolean { return this.state.hasAuthority('DEAL_ACTIVITIES_WRITE'); }
   canCreateDealActivity(): boolean { return this.state.hasAuthority('DEAL_ACTIVITIES_CREATE'); }
@@ -2486,7 +2576,7 @@ export class SalesComponent {
     const ids = this.selectedDealIds();
     const rows = this.dealsService.allDeals().filter(d => ids.has(d.id));
     const header = ['Deal', 'Client', 'Amount', 'Stage', 'Created By'];
-    const csvRows = rows.map(d => [d.title, d.partnerId, d.amount, d.stage, d.createdBy || ''].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    const csvRows = rows.map(d => [d.title, d.partnerId, d.amount, d.stage, d.createdBy || ''].map(csvCell).join(','));
     const csv = [header.join(','), ...csvRows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -2765,7 +2855,7 @@ export class SalesComponent {
   }
 
   async deletePurchaseOrder(po: PurchaseOrder) {
-    if (await this.confirmDialog.ask({ title: 'Delete purchase order?', message: `PO #${po.id.slice(0, 8)} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete PO', danger: true })) {
+    if (await this.confirmDialog.ask({ title: 'Delete purchase order?', message: `PO ${this.poRef(po)} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete PO', danger: true })) {
       this.purchaseOrdersService.deletePurchaseOrder(po.id);
       this.closePODrawer();
     }
@@ -2835,6 +2925,11 @@ export class SalesComponent {
       case 'PO Sent': return 'badge-violet';
       default: return 'badge-neutral';
     }
+  }
+
+  /** Human reference for a purchase order: its order number (e.g. BC-4027), else a short id. */
+  poRef(po: { id: string; orderNumber?: string }): string {
+    return po.orderNumber || '#' + po.id.slice(0, 8);
   }
 
   formatCurrency(value: number) {

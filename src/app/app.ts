@@ -18,13 +18,16 @@ import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
 import { TicketsService } from './services/domains/tickets.service';
 import { WhatsAppInboxStore } from './services/domains/whatsapp-inbox.service';
+import { AssistantPanelComponent } from './shared/assistant-panel.component';
+import { TranslatePipe } from './pipes/translate.pipe';
+import { NativeService } from './core/services/native.service';
 
 interface NavItem {
   label: string;
   icon: string;
   route: string;
-  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE). */
-  authority?: string;
+  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE); with a list, any one of them. */
+  authority?: string | string[];
   /** Live count shown next to the label. */
   badge?: 'whatsappUnread';
 }
@@ -55,6 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Tasks', icon: 'task_alt', route: '/tasks' },
       { label: 'Tickets', icon: 'support_agent', route: '/tickets' },
       { label: 'Automation', icon: 'smart_toy', route: '/automation' },
+      { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
     ]
   },
   {
@@ -68,7 +72,13 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners' },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
+      { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
+      { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
+      { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
       { label: 'Finance', icon: 'account_balance', route: '/finance' },
+      { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
+      { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
+      { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   }
 ];
@@ -151,11 +161,19 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/users', submenu: 'Users', subIcon: 'people', action: 'Manage user accounts and permissions', keywords: 'settings users accounts permissions roles' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/teams', submenu: 'Teams', subIcon: 'groups', action: 'Configure teams, departments, and assignments', keywords: 'settings teams departments groups' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/groups', submenu: 'Groups', subIcon: 'forum', action: 'Manage collaboration group settings', keywords: 'settings groups collaboration' },
+  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
+  { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', action: 'Bank accounts, statement import, reconciliation and cash forecast', keywords: 'bank cash accounts statements reconciliation forecast treasury' },
+  { mainMenu: 'Tax calendar', mainIcon: 'event_note', mainRoute: '/tax-calendar', action: 'TVA, IS, IR and CNSS deadlines for the company and its clients', keywords: 'tax calendar deadlines tva vat is ir cnss declarations impots fiscal' },
+  { mainMenu: 'Document checklists', mainIcon: 'checklist', mainRoute: '/checklists', action: 'Documents to collect from clients, with reminders', keywords: 'documents checklist pieces a fournir collect reminders relance clients portal' },
+  { mainMenu: 'Missions', mainIcon: 'work', mainRoute: '/missions', action: 'Client missions, deliverables and rebillable costs (débours)', keywords: 'missions deliverables costs debours disbursements rebill clients engagements' },
+  { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
+  { mainMenu: 'Documents', mainIcon: 'folder_open', mainRoute: '/drive', action: 'Browse, upload and share files in the document drive', keywords: 'documents drive files folders upload share' },
+  { mainMenu: 'Documents inbox', mainIcon: 'move_to_inbox', mainRoute: '/inbox-documents', action: 'Check supplier invoices and bank statements received by email or WhatsApp', keywords: 'documents inbox supplier invoices bank statements review ocr' },
 ];
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent],
+  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -841,7 +859,14 @@ const SEARCH_ITEMS: SearchItem[] = [
 
   `],
   template: `
-    @if (state.isAuthenticated()) {
+    <!-- Pay-by-Link and shared-file pages are for outsiders: always bare, even when a signed-in user opens one. -->
+    @if (activeRoute().startsWith('/pay/') || activeRoute().startsWith('/f/')) {
+      <router-outlet></router-outlet>
+    } @else if (isPortalRoute()) {
+      <!-- The client portal has its own frame and session, whoever else is signed in. -->
+      <router-outlet></router-outlet>
+      <app-toast-container></app-toast-container>
+    } @else if (state.isAuthenticated()) {
       <div class="app-layout search-container">
 
         <!-- Mobile overlay -->
@@ -876,7 +901,7 @@ const SEARCH_ITEMS: SearchItem[] = [
             @for (section of navSections; track section.label) {
               <div class="sidebar-section-title">{{ section.label }}</div>
               @for (item of section.items; track item.route) {
-                @if (!item.authority || state.hasAuthority(item.authority)) {
+                @if (canSee(item)) {
                   <a
                     [routerLink]="item.route"
                     class="sidebar-link"
@@ -1046,6 +1071,15 @@ const SEARCH_ITEMS: SearchItem[] = [
 
               <button
                 class="topbar-icon-btn"
+                (click)="assistantOpen.set(!assistantOpen())"
+                [title]="'assistant.title' | translate"
+                [attr.aria-label]="'assistant.title' | translate"
+                [attr.aria-expanded]="assistantOpen()"
+              >
+                <mat-icon>auto_awesome</mat-icon>
+              </button>
+              <button
+                class="topbar-icon-btn"
                 (click)="openInbox()"
                 title="Messages"
                 aria-label="Messages"
@@ -1099,6 +1133,10 @@ const SEARCH_ITEMS: SearchItem[] = [
         ></app-notification-inbox-drawer>
       }
 
+      @defer (when assistantOpen()) {
+        <app-assistant-panel [open]="assistantOpen()" (closed)="assistantOpen.set(false)" />
+      }
+
       <app-toast-container></app-toast-container>
       <app-confirm-dialog />
     } @else {
@@ -1133,6 +1171,14 @@ export class App implements OnInit, OnDestroy {
   private partnersService = inject(PartnersService);
   private invoicesService = inject(InvoicesService);
   private ticketsService = inject(TicketsService);
+  private native = inject(NativeService);
+
+  /** In the mobile app, a signed-in user's phone registers for push notifications (no-op on the web). */
+  private readonly pushRegistration = effect(() => {
+    if (this.state.isAuthenticated() && this.state.currentUserStatus() === 'loaded') {
+      void this.native.registerPush();
+    }
+  });
 
   /** Queried by name: a class-based query would pull the lazily loaded modal into the initial bundle. */
   private readonly supportModal = viewChild<SupportModalComponent>('supportModal');
@@ -1151,6 +1197,15 @@ export class App implements OnInit, OnDestroy {
 
   // Mobile menu
   mobileMenuOpen = signal(false);
+
+  /** The AI assistant side panel; once opened it stays loaded, so the conversation survives closing it. */
+  assistantOpen = signal(false);
+
+  canSee(item: NavItem): boolean {
+    if (!item.authority) return true;
+    const needed = Array.isArray(item.authority) ? item.authority : [item.authority];
+    return needed.some(a => this.state.hasAuthority(a));
+  }
 
   // Sidebar collapse
   sidebarCollapsed = signal(false);
@@ -1200,9 +1255,11 @@ export class App implements OnInit, OnDestroy {
     this.profileMenuOpen.set(false);
   }
 
-  onLogout() {
+  async onLogout() {
     this.profileMenuOpen.set(false);
     this.mobileMenuOpen.set(false);
+    // The phone's push token is removed while the session can still authenticate the call.
+    await this.native.unregisterPush();
     this.state.logout();
     this.router.navigate(['/']);
   }
@@ -1515,6 +1572,12 @@ export class App implements OnInit, OnDestroy {
   }
 
 
+  /** The client portal (/portal, /portal/...): never inside the staff shell. */
+  isPortalRoute(): boolean {
+    const r = this.activeRoute();
+    return r === '/portal' || r.startsWith('/portal/');
+  }
+
   badgeCount(item: NavItem): number {
     return item.badge === 'whatsappUnread' ? this.inbox.unread().conversations : 0;
   }
@@ -1522,7 +1585,8 @@ export class App implements OnInit, OnDestroy {
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();
     if (item.route === '/') return route === '/';
-    return route.startsWith(item.route);
+    // A whole path segment, so /inbox does not also light up for /inbox-documents.
+    return route === item.route || route.startsWith(item.route + '/');
   }
 
   onNotificationOpened() {

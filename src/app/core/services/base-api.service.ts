@@ -120,6 +120,14 @@ export class BaseApiService {
     );
   }
 
+  protected put<T>(endpoint: string, body: unknown): Observable<T> {
+    const url = this.buildUrl(endpoint);
+    return this.http.put<T>(url, body).pipe(
+      timeout(HTTP_CONFIG.timeout),
+      catchError(error => this.handleError(error))
+    );
+  }
+
   protected delete<T>(endpoint: string): Observable<T> {
     const url = this.buildUrl(endpoint);
     return this.http.delete<T>(url).pipe(

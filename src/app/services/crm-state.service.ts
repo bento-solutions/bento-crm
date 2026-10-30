@@ -659,6 +659,9 @@ export interface Brand {
   colorHex?: string;
   isDefault?: boolean;
   isActive?: boolean;
+  /** Logo and footer this brand's customers see on invoices, instead of the organization's. */
+  invoiceLogoFileId?: string | null;
+  invoiceFooter?: string | null;
 }
 
 /** Structured referential for a partner's line of business. */
@@ -886,6 +889,12 @@ export interface Invoice {
   /** Tax-exclusive line sum; `amount` is the tax-inclusive total from the backend. */
   subtotal?: number;
   tax?: number;
+  /** Supplier bills: the day the organization plans to pay it. */
+  scheduledPaymentDate?: string;
+  /** Sum of payments recorded against the invoice (partial payments included). */
+  amountPaid?: number;
+  /** The backend status as sent, kept so a partially paid invoice is not re-saved as unpaid. */
+  apiStatus?: string;
   // Customer administrative information
   customerAccount?: string;   // Unique account code / ERP ID
   customerName?: string;      // Official corporate name
@@ -1187,6 +1196,13 @@ export class CrmStateService {
       canScheduleMeetings: false
     };
   });
+
+  /**
+   * Whether the signed-in user's role is known yet: 'pending' until /auth/me (or login)
+   * answers. Until then hasAuthority() falls back to viewer rights, so route guards wait
+   * on this instead of bouncing a page opened by URL.
+   */
+  currentUserStatus = signal<'pending' | 'loaded' | 'failed'>('pending');
 
   currentUserAuthorities = computed(() => {
     const user = this.users().find(u => u.id === this.currentUserId());
@@ -2392,6 +2408,7 @@ export class CrmStateService {
       this.api.getMe().subscribe({
         next: (user) => this.adoptCurrentUser(user),
         error: (err) => {
+          this.currentUserStatus.set('failed');
           console.error('Failed to sync current user from API:', err);
         }
       });
@@ -2451,10 +2468,12 @@ export class CrmStateService {
       }
       return [...users, crmUser];
     });
+    this.currentUserStatus.set('loaded');
   }
 
   logout(): void {
     this.isAuthenticated.set(false);
+    this.currentUserStatus.set('pending');
     this.currentUserId.set('usr_rachid');
     this.saveAuthState(false);
     if (typeof localStorage !== 'undefined') {
