@@ -207,6 +207,7 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'ANALYTICS_READ',
     'WHATSAPP_READ', 'WHATSAPP_READ_ALL', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT', 'WHATSAPP_ADMIN',
     'API_TOKENS_MANAGE',
+    'LEDGER_READ', 'LEDGER_WRITE', 'LEDGER_CLOSE',
     'ADMIN_ACCESS'
   ]),
   manager: new Set([
@@ -226,7 +227,8 @@ export const AUTHORITIES_BY_ROLE: Record<RoleId, ReadonlySet<string>> = {
     'FILES_READ', 'FILES_WRITE',
     'ANALYTICS_READ',
     'WHATSAPP_READ', 'WHATSAPP_READ_ALL', 'WHATSAPP_SEND', 'WHATSAPP_DRAFT',
-    'API_TOKENS_MANAGE'
+    'API_TOKENS_MANAGE',
+    'LEDGER_READ', 'LEDGER_WRITE'
   ]),
   salesperson: new Set([
     'PARTNERS_READ', 'PARTNERS_CREATE', 'PARTNERS_WRITE',
@@ -1882,6 +1884,7 @@ export class CrmStateService {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped API JSON boundary
   normalizeOrganization(raw: any): Organization {
     if (!raw) return this.organization();
     const current = this.organization();
