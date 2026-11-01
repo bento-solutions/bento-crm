@@ -337,10 +337,11 @@ export class LedgerEntriesComponent implements OnInit {
   partnerOptions = computed<PickerOption[]>(() =>
     this.state.partners().map(p => ({ id: p.id, label: p.name, hint: p.type })).sort((a, b) => a.label.localeCompare(b.label)));
   totals = computed(() => entryTotals(this.lines()));
-  canSave = computed(() => {
+  /** A method, not a computed: the form's fields are edited in place through ngModel, which a computed would not see. */
+  canSave(): boolean {
     const f = this.form();
     return !!f && !!f.entryDate && !!f.description.trim() && canPostEntry(this.lines());
-  });
+  }
 
   canWrite(): boolean { return this.state.hasAuthority('LEDGER_WRITE'); }
 
