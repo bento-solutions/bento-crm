@@ -25,7 +25,7 @@ import { InboundApi, InboundMailbox, InboundSettings } from '../services/domains
       @if (settings(); as s) {
         @if (s.aiEnabled) {
           <div class="alert alert-success text-sm flex items-center gap-2">
-            <mat-icon class="icon-sm">auto_awesome</mat-icon>
+            <mat-icon class="icon-sm">document_scanner</mat-icon>
             <span>{{ 'inboxes.aiOn' | translate: { model: s.documentModel || '—' } }}</span>
           </div>
         } @else {

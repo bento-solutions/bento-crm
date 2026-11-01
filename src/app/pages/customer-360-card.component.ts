@@ -22,26 +22,26 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
           <h2 class="section-title">{{ view().partner.name }}</h2>
           <p class="text-sm font-semibold text-ink-3 mt-1 relative z-10">{{ jobTitle() }}</p>
           <div class="flex items-center gap-4 mt-8 relative z-10">
-            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition-all cursor-pointer shadow-sm">
+            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition cursor-pointer shadow-sm">
               <mat-icon>edit</mat-icon>
             </button>
-            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition-all cursor-pointer shadow-sm">
+            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition cursor-pointer shadow-sm">
               <mat-icon>mail</mat-icon>
             </button>
-            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition-all cursor-pointer shadow-sm">
+            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition cursor-pointer shadow-sm">
               <mat-icon>call</mat-icon>
             </button>
-            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition-all cursor-pointer shadow-sm">
+            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition cursor-pointer shadow-sm">
               <mat-icon>add</mat-icon>
             </button>
-            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition-all cursor-pointer shadow-sm">
+            <button class="w-12 h-12 rounded-full bg-muted text-ink-2 hover:bg-muted-strong hover:text-ink flex items-center justify-center transition cursor-pointer shadow-sm">
               <mat-icon>calendar_today</mat-icon>
             </button>
           </div>
         </div>
 
         <!-- Detailed Information Card -->
-        <div class="card p-8 space-y-6 transition-all">
+        <div class="card p-8 space-y-6 transition">
           <h3 class="card-title flex items-center justify-between">
             Detailed Information
             <button class="w-8 h-8 rounded-full bg-muted hover:bg-muted-strong flex items-center justify-center transition-colors">
@@ -105,7 +105,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
       <div class="col-span-12 lg:col-span-7 space-y-6">
 
         <!-- Interaction History Card -->
-        <div class="card p-8 transition-all">
+        <div class="card p-8 transition">
           <div class="flex items-center justify-between mb-6">
             <h3 class="modal-title">Interaction History</h3>
             <button class="w-8 h-8 rounded-full bg-muted hover:bg-muted-strong flex items-center justify-center transition-colors">
@@ -147,7 +147,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
         <!-- Bottom Row: Task Schedule + Stage Funnel -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <!-- Task Schedule Card -->
-          <div class="card p-8 transition-all">
+          <div class="card p-8 transition">
             <div class="flex items-center justify-between mb-6">
               <h3 class="modal-title">Tasks Schedule</h3>
               <button class="w-8 h-8 rounded-full bg-muted hover:bg-muted-strong flex items-center justify-center transition-colors">
@@ -173,7 +173,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
           </div>
 
           <!-- Stage Funnel Card -->
-          <div class="card p-8 transition-all">
+          <div class="card p-8 transition">
             <div class="flex items-center justify-between mb-6">
               <h3 class="modal-title">Stage Funnel</h3>
               <button class="w-8 h-8 rounded-full bg-muted hover:bg-muted-strong flex items-center justify-center transition-colors">

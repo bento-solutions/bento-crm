@@ -18,7 +18,7 @@ import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
       max-height: 0;
       overflow: hidden;
       opacity: 0;
-      transition: max-height 0.25s ease, opacity 0.25s ease;
+      transition: max-height var(--transition-fast), opacity var(--transition-fast);
     }
     .panel.open {
       max-height: 800px;
@@ -93,7 +93,7 @@ import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
                     [style.background-color]="c"
                     [class.ring-2]="selectedColor() === c"
                     [attr.aria-label]="'Select color ' + c"
-                    class="w-6 h-6 rounded-full cursor-pointer ring-offset-2 ring-ink-2 transition-all"
+                    class="w-6 h-6 rounded-full cursor-pointer ring-offset-2 ring-ink-2 transition"
                   ></button>
                 }
               </div>
@@ -144,7 +144,7 @@ import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
                   <span
                     [style.background-color]="team.color + '15'"
                     [style.color]="team.color"
-                    class="inline-flex px-2 py-0.5 rounded-full text-meta font-semibold border border-transparent tracking-wide uppercase mt-1"
+                    class="inline-flex px-2 py-0.5 rounded-full text-meta font-semibold border border-transparent mt-1"
                   >
                     {{ team.department }}
                   </span>

@@ -76,7 +76,7 @@ interface CalendarDay {
       border-radius: var(--r-card); padding: var(--tile-padding);
     }
     .cal__heading {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      font-size: 11px; font-weight: 600; letter-spacing: 0;
       color: var(--color-text-secondary); margin-bottom: 8px;
     }
     .cal__nav { display: flex; align-items: center; gap: 2px; margin-bottom: 6px; }
@@ -84,7 +84,7 @@ interface CalendarDay {
       width: 24px; height: 24px; border-radius: var(--r-sm); border: none; cursor: pointer;
       background: transparent; color: var(--color-text-tertiary);
       display: inline-flex; align-items: center; justify-content: center;
-      transition: all var(--transition-fast);
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
     .cal__nav-btn:hover { background: var(--color-surface-active); color: var(--color-text-primary); }
     .cal__nav-btn .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
@@ -93,14 +93,13 @@ interface CalendarDay {
       margin-inline-start: auto; font-size: 11px; font-weight: 500; padding: 4px 10px;
       border-radius: 999px; cursor: pointer;
       border: 1px solid var(--color-border); background: var(--color-surface);
-      color: var(--color-text-secondary); transition: all var(--transition-fast);
+      color: var(--color-text-secondary); transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
     .cal__today:hover { border-color: var(--color-text-tertiary); color: var(--color-text-primary); }
 
     .cal__dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-bottom: 3px; }
     .cal__dow span {
-      text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
-      text-transform: uppercase; color: var(--color-text-tertiary);
+      text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0; color: var(--color-text-tertiary);
     }
 
     /* 1fr rows make the weeks divide whatever height the tile gives us — no dead strip. */

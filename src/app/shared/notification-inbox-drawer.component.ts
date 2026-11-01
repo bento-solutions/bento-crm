@@ -18,7 +18,7 @@ import { CrmStateService } from '../services/crm-state.service';
             <div class="absolute -left-10 top-6 z-20 flex flex-col gap-1.5">
               <button
                 (click)="switchTo('notifications')"
-                class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border-2 transition-all duration-200 relative"
+                class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border-2 transition duration-200 relative"
                 [class]="drawerType() === 'notifications' 
                   ? 'bg-primary text-on-primary border-primary shadow-lg' 
                   : 'bg-surface text-ink-3 border-line hover:text-ink-2 hover:border-line-strong hover:shadow-xl'"
@@ -33,7 +33,7 @@ import { CrmStateService } from '../services/crm-state.service';
               </button>
               <button
                 (click)="switchTo('inbox')"
-                class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border-2 transition-all duration-200 relative"
+                class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border-2 transition duration-200 relative"
                 [class]="drawerType() === 'inbox' 
                   ? 'bg-primary text-on-primary border-primary shadow-lg' 
                   : 'bg-surface text-ink-3 border-line hover:text-ink-2 hover:border-line-strong hover:shadow-xl'"

@@ -37,7 +37,7 @@ const STARTERS = ['assistant.starter.owed', 'assistant.starter.supplierBills', '
       <aside class="drawer-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title">
         <header class="flex items-center justify-between gap-2 px-5 py-4 border-b border-line shrink-0">
           <h2 id="assistant-title" class="section-title flex items-center gap-2">
-            <mat-icon class="icon-md text-ink-3">auto_awesome</mat-icon>{{ 'assistant.title' | translate }}
+            <mat-icon class="icon-md text-ink-3">chat_bubble_outline</mat-icon>{{ 'assistant.title' | translate }}
           </h2>
           <div class="flex items-center gap-1">
             @if (turns().length) {

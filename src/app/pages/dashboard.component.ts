@@ -99,25 +99,25 @@ interface Slice {
  * sliver nothing else can fit into.
  */
 const CATALOG: TileDef[] = [
-  { id: 'today', kind: 'today', title: 'Focus Today', icon: 'bolt', tone: ENTITY_TONE.focus, w: 4, h: 4 },
-  { id: 'pipeline', kind: 'pipeline', title: 'Pipeline Value', icon: 'trending_up', tone: ENTITY_TONE.pipeline, w: 4, h: 4 },
-  { id: 'tasks-queue', kind: 'queue', title: 'Pending Tasks', icon: 'checklist', tone: ENTITY_TONE.tasks, w: 4, h: 4, hSm: 5 },
-  { id: 'schedule', kind: 'schedule', title: 'Partner Schedule', icon: 'calendar_month', tone: ENTITY_TONE.partners, w: 4, h: 4, hSm: 6 },
-  { id: 'tickets-queue', kind: 'queue', title: 'Pending Tickets', icon: 'support_agent', tone: ENTITY_TONE.tickets, w: 4, h: 4, hSm: 5 },
-  { id: 'partner-mix', kind: 'donut', title: 'Partner Mix', icon: 'groups', tone: ENTITY_TONE.partners, w: 2, h: 4 },
-  { id: 'task-status', kind: 'donut', title: 'Task Status', icon: 'donut_small', tone: ENTITY_TONE.tasks, w: 2, h: 4 },
-  { id: 'late-payers', kind: 'late', title: 'Late Payers', icon: 'running_with_errors', tone: ENTITY_TONE.late, w: 2, h: 2 },
-  { id: 'kpi:totalDeals', kind: 'kpi', title: 'Deal Value', icon: 'payments', tone: ENTITY_TONE.deals, w: 2, h: 2 },
-  { id: 'kpi:newDeals', kind: 'kpi', title: 'New Deals', icon: 'handshake', tone: ENTITY_TONE.deals, w: 2, h: 2 },
+  { id: 'today', kind: 'today', title: 'Focus today', icon: 'bolt', tone: ENTITY_TONE.focus, w: 4, h: 4 },
+  { id: 'pipeline', kind: 'pipeline', title: 'Pipeline value', icon: 'trending_up', tone: ENTITY_TONE.pipeline, w: 8, h: 4, hSm: 7 },
+  { id: 'tasks-queue', kind: 'queue', title: 'Pending tasks', icon: 'checklist', tone: ENTITY_TONE.tasks, w: 4, h: 4, hSm: 5 },
+  { id: 'schedule', kind: 'schedule', title: 'Partner schedule', icon: 'calendar_month', tone: ENTITY_TONE.partners, w: 12, h: 4, hSm: 6 },
+  { id: 'tickets-queue', kind: 'queue', title: 'Pending tickets', icon: 'support_agent', tone: ENTITY_TONE.tickets, w: 4, h: 4, hSm: 5 },
+  { id: 'partner-mix', kind: 'donut', title: 'Partner mix', icon: 'groups', tone: ENTITY_TONE.partners, w: 2, h: 4 },
+  { id: 'task-status', kind: 'donut', title: 'Task status', icon: 'donut_small', tone: ENTITY_TONE.tasks, w: 2, h: 4 },
+  { id: 'late-payers', kind: 'late', title: 'Late payers', icon: 'running_with_errors', tone: ENTITY_TONE.late, w: 2, h: 2 },
+  { id: 'kpi:totalDeals', kind: 'kpi', title: 'Deal value', icon: 'payments', tone: ENTITY_TONE.deals, w: 2, h: 2 },
+  { id: 'kpi:newDeals', kind: 'kpi', title: 'New deals', icon: 'handshake', tone: ENTITY_TONE.deals, w: 2, h: 2 },
   { id: 'kpi:totalProspects', kind: 'kpi', title: 'Prospects', icon: 'person_search', tone: ENTITY_TONE.partners, w: 2, h: 2 },
-  { id: 'kpi:openTickets', kind: 'kpi', title: 'Open Tickets', icon: 'confirmation_number', tone: ENTITY_TONE.tickets, w: 2, h: 2 },
+  { id: 'kpi:openTickets', kind: 'kpi', title: 'Open tickets', icon: 'confirmation_number', tone: ENTITY_TONE.tickets, w: 2, h: 2 },
   { id: 'kpi:activeCampaigns', kind: 'kpi', title: 'Campaigns', icon: 'campaign', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
   { id: 'kpi:marketingSpend', kind: 'kpi', title: 'Reach', icon: 'send', tone: ENTITY_TONE.campaigns, w: 2, h: 2 },
-  { id: 'kpi:newTasksWeek', kind: 'kpi', title: 'New Tasks', icon: 'assignment_add', tone: ENTITY_TONE.tasks, w: 2, h: 2 },
-  { id: 'kpi:newLeads', kind: 'kpi', title: 'New Leads', icon: 'person_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
-  { id: 'kpi:newProspects', kind: 'kpi', title: 'New Prospects', icon: 'group_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
-  { id: 'kpi:lostProspects', kind: 'kpi', title: 'Lost Deals', icon: 'trending_down', tone: ENTITY_TONE.late, w: 2, h: 2 },
-  { id: 'kpi:todaysDeal', kind: 'kpi', title: 'Best Today', icon: 'star', tone: ENTITY_TONE.deals, w: 2, h: 2 }
+  { id: 'kpi:newTasksWeek', kind: 'kpi', title: 'New tasks', icon: 'assignment_add', tone: ENTITY_TONE.tasks, w: 2, h: 2 },
+  { id: 'kpi:newLeads', kind: 'kpi', title: 'New leads', icon: 'person_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
+  { id: 'kpi:newProspects', kind: 'kpi', title: 'New prospects', icon: 'group_add', tone: ENTITY_TONE.partners, w: 2, h: 2 },
+  { id: 'kpi:lostProspects', kind: 'kpi', title: 'Lost deals', icon: 'trending_down', tone: ENTITY_TONE.late, w: 2, h: 2 },
+  { id: 'kpi:todaysDeal', kind: 'kpi', title: 'Best today', icon: 'star', tone: ENTITY_TONE.deals, w: 2, h: 2 }
 ];
 
 @Component({
@@ -126,22 +126,21 @@ const CATALOG: TileDef[] = [
   imports: [MatIconModule, MatTooltipModule, PartnerScheduleCalendarComponent, BentoGrid, BentoTile, CountUpDirective, PageHeaderComponent, RouterLink],
   template: `
     <div class="page dash">
-      <app-page-header [title]="greeting()">
+      <app-page-header [title]="today()">
         <p subtitle class="page-header__subtitle">
-          {{ today() }} ·
           @if (mine().tickets || mine().tasks) {
             @if (mine().tickets) {
-              <a routerLink="/tickets" (click)="showMine(ticketsKey)" class="font-semibold text-accent-ink hover:underline underline-offset-2"
+              <a routerLink="/tickets" (click)="showMine(ticketsKey)" class="font-medium text-accent-ink hover:underline underline-offset-2"
                  title="Open your tickets">{{ mine().tickets }} ticket{{ mine().tickets === 1 ? '' : 's' }}</a>
             }
             @if (mine().tickets && mine().tasks) { and }
             @if (mine().tasks) {
-              <a routerLink="/tasks" (click)="showMine(tasksKey)" class="font-semibold text-accent-ink hover:underline underline-offset-2"
+              <a routerLink="/tasks" (click)="showMine(tasksKey)" class="font-medium text-accent-ink hover:underline underline-offset-2"
                  title="Open your tasks">{{ mine().tasks }} task{{ mine().tasks === 1 ? '' : 's' }}</a>
             }
-            {{ mine().tickets + mine().tasks === 1 ? 'is' : 'are' }} for your attention
+            assigned to you {{ mine().tickets + mine().tasks === 1 ? 'needs' : 'need' }} attention
           } @else {
-            You are all caught up
+            Nothing assigned to you is open
           }
         </p>
         <button
@@ -160,7 +159,7 @@ const CATALOG: TileDef[] = [
         <div class="dash-tray">
           <div class="dash-tray__hint">
             <mat-icon class="dash-tray__hint-icon">drag_indicator</mat-icon>
-            <span>Drag any tile to rearrange. Tiles reflow to fill every gap.</span>
+            <span>Drag a tile to move it, the others reflow around it</span>
           </div>
           <div class="dash-tray__chips">
             @for (tile of hiddenTiles(); track tile.id) {
@@ -168,7 +167,7 @@ const CATALOG: TileDef[] = [
                 <mat-icon class="dash-chip__icon">add</mat-icon>{{ tile.title }}
               </button>
             } @empty {
-              <span class="dash-tray__empty">Every tile is on the board.</span>
+              <span class="dash-tray__empty">Every tile is on the board</span>
             }
           </div>
           <button class="dash-reset" (click)="reset()">
@@ -189,6 +188,7 @@ const CATALOG: TileDef[] = [
             appBentoTile
             [bentoTile]="tile.id"
             [attr.data-tone]="tile.tone"
+            [attr.data-kind]="tile.kind"
             [style]="varsFor(tile)"
             [attr.aria-label]="tile.title"
           >
@@ -200,7 +200,6 @@ const CATALOG: TileDef[] = [
 
             <!-- ── Shared tile header ── -->
             <header class="bento-tile__head">
-              <span class="bento-icon"><mat-icon>{{ tile.icon }}</mat-icon></span>
               @if (tile.kind === 'kpi') {
                 <h3 class="bento-tile__title bento-tile__title--help" [matTooltip]="kpi(tile.id).hint" matTooltipPosition="above">{{ tile.title }}</h3>
               } @else {
@@ -245,7 +244,7 @@ const CATALOG: TileDef[] = [
                       <div class="dash-empty">
                         <mat-icon class="dash-empty__icon">verified</mat-icon>
                         <div class="dash-empty__title">Nothing needs you right now</div>
-                        <div class="dash-empty__sub">No overdue tasks, stale deals or unassigned tickets.</div>
+                        <div class="dash-empty__sub">No overdue tasks, stale deals or unassigned tickets</div>
                       </div>
                     }
                   </div>
@@ -253,41 +252,49 @@ const CATALOG: TileDef[] = [
 
                 <!-- ── Pipeline ── -->
                 @case ('pipeline') {
+                  <div class="pipe">
+                  <div class="pipe__main">
                   <div class="dash-figure">
                     <span class="dash-value" [appCountUp]="pipelineValueNum()" [appCountUpFormat]="moneyFormat">0</span>
                     @if (pipelineDelta(); as d) {
                       <span class="dash-delta" [attr.data-dir]="dirOf(d)" [attr.title]="deltaTitle(d)">
-                        <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
+                        {{ pctLabel(d) }}
                       </span>
                     }
                   </div>
                   <div class="dash-caption">across {{ openDealCount() }} open deals</div>
 
-@if (pipelineSpark().line) {
-                                      <svg class="dash-area" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
+  @if (pipelineSpark().line) {
+                    <svg class="dash-area" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
                       <defs>
                         <linearGradient id="grad-pipeline" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="var(--tile)" stop-opacity="0.28" />
-                          <stop offset="100%" stop-color="var(--tile)" stop-opacity="0" />
+                          <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.14" />
+                          <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0" />
                         </linearGradient>
                       </defs>
+                      <line class="dash-area__grid" x1="0" x2="300" y1="20.5" y2="20.5" vector-effect="non-scaling-stroke" />
+                      <line class="dash-area__grid" x1="0" x2="300" y1="41.5" y2="41.5" vector-effect="non-scaling-stroke" />
                       <path class="dash-area__fill" [attr.d]="pipelineSpark().area" fill="url(#grad-pipeline)" />
-                      <path class="dash-area__line" [attr.d]="pipelineSpark().line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="2"
+                      <path class="dash-area__line" [attr.d]="pipelineSpark().line" fill="none" stroke="var(--color-accent)" stroke-width="1.75"
                             stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
                     </svg>
                   }
+                  </div>
 
-                  <div class="dash-sublabel">Top open deals</div>
-                  <div class="dash-stack">
-                    @for (deal of topDeals(); track deal.id; let i = $index) {
-                      <button class="deal-row" data-no-drag (click)="openDeal(deal.id)">
-                        <span class="deal-row__rank">{{ i + 1 }}</span>
-                        <span class="deal-row__name">{{ deal.partner }}</span>
-                        <span class="deal-row__amount">{{ deal.amount }}</span>
-                      </button>
-                    } @empty {
-                      <div class="dash-note">No open deals in the pipeline.</div>
-                    }
+                  <div class="pipe__deals">
+                    <div class="dash-sublabel">Top open deals</div>
+                    <div class="dash-stack">
+                      @for (deal of topDeals(); track deal.id; let i = $index) {
+                        <button class="deal-row" data-no-drag (click)="openDeal(deal.id)">
+                          <span class="deal-row__rank">{{ i + 1 }}</span>
+                          <span class="deal-row__name">{{ deal.partner }}</span>
+                          <span class="deal-row__amount">{{ deal.amount }}</span>
+                        </button>
+                      } @empty {
+                        <div class="dash-note">No open deals in the pipeline</div>
+                      }
+                    </div>
+                  </div>
                   </div>
                 }
 
@@ -297,7 +304,7 @@ const CATALOG: TileDef[] = [
                     <span class="dash-value" [appCountUp]="latePayers().count" [appCountUpFormat]="intFormat">0</span>
                     @if (latePayers().delta; as d) {
                       <span class="dash-delta" [attr.data-dir]="dirOf(d)" [attr.title]="deltaTitle(d)">
-                        <mat-icon class="dash-delta__icon">{{ arrow(d) }}</mat-icon>{{ pctLabel(d) }}
+                        {{ pctLabel(d) }}
                       </span>
                     }
                   </div>
@@ -317,8 +324,8 @@ const CATALOG: TileDef[] = [
                         <circle
                           class="donut__slice"
                           cx="18" cy="18" r="15.9155" fill="none"
-                          stroke="var(--tile)" stroke-width="4.2"
-                          [attr.stroke-opacity]="s.opacity"
+                          [attr.stroke]="$first ? 'var(--color-accent)' : 'var(--color-text-placeholder)'" stroke-width="4.2"
+                          [attr.stroke-opacity]="$first ? 1 : s.opacity"
                           [attr.stroke-dasharray]="s.dasharray"
                           [attr.stroke-dashoffset]="s.dashoffset"
                         />
@@ -332,13 +339,13 @@ const CATALOG: TileDef[] = [
                   <ul class="legend">
                     @for (s of d.slices; track s.label) {
                       <li class="legend__row">
-                        <span class="legend__dot" [style.opacity]="s.opacity"></span>
+                        <span class="legend__dot" [class.is-lead]="$first" [style.opacity]="$first ? 1 : s.opacity"></span>
                         <span class="legend__label">{{ s.label }}</span>
                         <span class="legend__pct">{{ s.pct }}%</span>
                         <span class="legend__count">{{ s.count }}</span>
                       </li>
                     } @empty {
-                      <li class="dash-note">Nothing to chart yet.</li>
+                      <li class="dash-note">Nothing to chart yet</li>
                     }
                   </ul>
                 }
@@ -385,16 +392,10 @@ const CATALOG: TileDef[] = [
                   <div class="kpi__foot">
                     @if (k.delta; as delta) {
                       <span class="dash-delta" [attr.data-dir]="dirOf(delta)" [attr.title]="deltaTitle(delta)">
-                        <mat-icon class="dash-delta__icon">{{ arrow(delta) }}</mat-icon>{{ pctLabel(delta) }}
+                        {{ pctLabel(delta) }}
                       </span>
                     } @else {
                       <span class="dash-caption dash-caption--tight">{{ k.hint }}</span>
-                    }
-                    @if (k.spark.line) {
-                      <svg class="kpi__spark" viewBox="0 0 90 26" preserveAspectRatio="none" aria-hidden="true">
-                        <path class="kpi__spark-line" [attr.d]="k.spark.line" pathLength="1" fill="none" stroke="var(--tile)" stroke-width="1.75"
-                              stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-                      </svg>
                     }
                   </div>
                 }
@@ -426,7 +427,7 @@ const CATALOG: TileDef[] = [
       height: 28px; font-size: 12px; font-weight: 500; padding: 0 12px 0 8px;
       border-radius: 999px; border: 1px solid var(--color-border);
       background: var(--color-surface); color: var(--color-text-secondary);
-      cursor: pointer; transition: all var(--transition-fast); white-space: nowrap;
+      cursor: pointer; transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast); white-space: nowrap;
     }
     .dash-chip:hover { border-color: var(--color-border-strong); color: var(--color-text-primary); background: var(--color-surface-hover); }
     .dash-reset { padding: 0 12px; }
@@ -434,69 +435,64 @@ const CATALOG: TileDef[] = [
 
     /* ── Shared atoms ── */
     .dash-count {
-      font-size: 11px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
-      padding: 3px 7px; border-radius: 999px;
-      background: var(--tile-soft); color: var(--tile);
+      font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums;
+      color: var(--color-text-tertiary);
     }
     .dash-stack { display: flex; flex-direction: column; gap: 4px; }
     .dash-figure { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .dash-value {
-      font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em;
+      font-size: 26px; font-weight: 500; line-height: 1.1; letter-spacing: -0.02em;
       color: var(--color-text-heading); font-variant-numeric: tabular-nums;
     }
-    .dash-value--kpi { font-size: 20px; }
+    .dash-value--kpi { font-size: 22px; }
+    @media (max-width: 639px) { .dash-value--kpi { font-size: 20px; } .dash-delta { white-space: normal; } }
     .dash-caption { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
     .dash-caption--tight { margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .dash-sublabel {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-      color: var(--color-text-tertiary); margin: 12px 0 6px;
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-tertiary); margin: 0 0 8px;
     }
     .dash-note { font-size: 12px; color: var(--color-text-tertiary); padding: 6px 0; }
 
     .dash-delta {
-      display: inline-flex; align-items: center; gap: 2px;
-      font-size: 11px; font-weight: 600; line-height: 1;
-      padding: 4px 8px 4px 5px; border-radius: 999px;
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 400; line-height: 1.3;
       font-variant-numeric: tabular-nums; white-space: nowrap; cursor: default;
+      color: var(--color-text-tertiary);
     }
-    .dash-delta[data-dir='good'] { background: var(--color-success-light); color: var(--color-success-text); }
-    .dash-delta[data-dir='bad']  { background: var(--color-danger-light);  color: var(--color-danger-text); }
-    .dash-delta[data-dir='flat'] { background: var(--color-surface-hover); color: var(--color-text-tertiary); padding: 4px 8px; }
+    .dash-delta[data-dir='good'] { color: var(--color-success-text); }
+    .dash-delta[data-dir='bad']  { color: var(--color-danger-text); }
     .dash-delta__icon { font-size: 12px; width: 12px; height: 12px; line-height: 12px; }
 
     .dash-empty {
       flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
       text-align: center; gap: 4px; padding: 12px 8px;
     }
-    .dash-empty__icon { font-size: 24px; width: 24px; height: 24px; line-height: 24px; color: var(--tile); opacity: 0.55; margin-bottom: 4px; }
-    .dash-empty__title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+    .dash-empty__icon { font-size: 24px; width: 24px; height: 24px; line-height: 24px; color: var(--color-text-placeholder); margin-bottom: 4px; }
+    .dash-empty__title { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
     .dash-empty__sub { font-size: 12px; color: var(--color-text-tertiary); max-width: 26ch; }
 
     /* Charts bleed to the tile edges — the bento look, and it buys chart width back. */
-    .dash-area { display: block; width: calc(100% + 2 * var(--tile-padding)); margin: 8px calc(-1 * var(--tile-padding)) 0; height: 58px; }
-    .dash-area--bleed { margin-top: auto; margin-bottom: calc(-1 * var(--tile-padding)); height: 34px; }
+    .dash-area { display: block; width: calc(100% + 2 * var(--tile-padding)); margin: 16px calc(-1 * var(--tile-padding)) 0; height: 58px; }
+    .dash-area__grid { stroke: var(--color-border-light); stroke-width: 1; }
 
-    /* ── Graph entrance animation ──
-       pathLength="1" normalises every path to a unit length, so the same
-       dash-based "draw" keyframe works regardless of the real path length. */
-    @keyframes spark-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-    @keyframes area-fade { from { opacity: 0; transform: scaleY(0.85); } to { opacity: 1; transform: scaleY(1); } }
-    .dash-area__line, .kpi__spark-line {
-      stroke-dasharray: 1; stroke-dashoffset: 1;
-      animation: spark-draw 900ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+    /* ── Pipeline: the board's main figure. Chart on the left, the deals behind it on the right. ── */
+    .pipe { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 24px; }
+    .pipe__main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .pipe__main .dash-value { font-size: 40px; letter-spacing: -0.03em; }
+    .pipe__main .dash-area { flex: 1; min-height: 96px; height: auto; margin-bottom: calc(-1 * var(--tile-padding)); margin-inline-end: 0; width: calc(100% + var(--tile-padding)); }
+    .pipe__deals { min-width: 0; padding-inline-start: 24px; border-inline-start: 1px solid var(--color-border-light); }
+    @media (max-width: 959px) {
+      .pipe { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+      .pipe__main .dash-area { margin-bottom: 0; min-height: 80px; }
+      .pipe__deals { padding-inline-start: 0; border-inline-start: 0; }
     }
-    .dash-area__fill {
-      opacity: 0; transform-origin: bottom; transform-box: fill-box;
-      animation: area-fade 700ms cubic-bezier(0.16, 0.84, 0.44, 1) 250ms forwards;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .dash-area__line, .kpi__spark-line, .dash-area__fill { animation: none; stroke-dashoffset: 0; opacity: 1; transform: none; }
-    }
+    .dash-area--bleed { margin-top: auto; margin-bottom: calc(-1 * var(--tile-padding)); height: 34px; }
 
     /* ── Focus rows ── */
     .focus-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 8px 10px; border-radius: var(--r-control);
+      padding: 8px 12px; border-radius: var(--r-control);
       background: var(--color-subtle); border: 1px solid var(--color-border-light);
     }
     .focus-row__icon {
@@ -510,38 +506,37 @@ const CATALOG: TileDef[] = [
     .focus-row[data-tone='sky'] .focus-row__icon { color: var(--color-info-text); }
     .focus-row__icon .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
     .focus-row__text { flex: 1; min-width: 0; }
-    .focus-row__title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .focus-row__title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .focus-row__meta { font-size: 12px; color: var(--color-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .focus-row__action {
       flex-shrink: 0; height: 28px; font-size: 12px; font-weight: 500; padding: 0 10px;
       border-radius: var(--r-control); cursor: pointer;
       background: var(--color-surface); color: var(--color-text-primary);
       border: 1px solid var(--color-border-strong);
-      transition: all var(--transition-fast);
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
-    .focus-row__action:hover { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); }
+    .focus-row__action:hover { background: var(--color-surface-hover); }
 
     /* ── Deal rows ── */
     .deal-row {
       display: flex; align-items: center; gap: 8px; width: 100%;
       padding: 6px 8px; border-radius: var(--r-control); cursor: pointer;
-      background: var(--color-subtle); border: 1px solid transparent;
-      text-align: start; transition: all var(--transition-fast);
+      background: none; border: 1px solid transparent;
+      text-align: start; transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
-    .deal-row:hover { border-color: var(--tile); background: var(--tile-soft); }
+    .deal-row:hover { background: var(--color-surface-hover); }
     .deal-row__rank {
-      width: 20px; height: 20px; border-radius: var(--r-sm); flex-shrink: 0;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 600; background: var(--tile-soft); color: var(--tile);
+      width: 16px; flex-shrink: 0;
+      font-family: var(--font-mono); font-size: 12px; color: var(--color-text-placeholder);
     }
-    .deal-row__name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .deal-row__amount { font-size: 13px; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .deal-row__name { flex: 1; min-width: 0; font-size: 14px; font-weight: 400; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .deal-row__amount { font-size: 14px; font-weight: 500; color: var(--color-text-primary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
     /* ── Facts (late payers) ── */
     .dash-facts { display: flex; gap: 8px; margin-top: 10px; }
     .dash-facts > div { flex: 1; min-width: 0; padding: 6px 10px; border-radius: var(--r-control); background: var(--color-subtle); border: 1px solid var(--color-border-light); }
-    .dash-facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-tertiary); }
-    .dash-facts dd { font-size: 13px; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dash-facts dt { font-size: 12px; font-weight: 400; color: var(--color-text-tertiary); }
+    .dash-facts dd { font-size: 14px; font-weight: 500; color: var(--color-text-primary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ── Donut ── */
     /* margin-block: auto centres the ring in whatever height is left above the legend. */
@@ -556,20 +551,21 @@ const CATALOG: TileDef[] = [
       .donut__slice { transition: none; }
     }
     .donut__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .donut__total { font-size: 20px; font-weight: 600; line-height: 1; color: var(--color-text-heading); font-variant-numeric: tabular-nums; }
-    .donut__unit { margin-top: 2px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-tertiary); }
+    .donut__total { font-size: 22px; font-weight: 500; line-height: 1; color: var(--color-text-heading); font-variant-numeric: tabular-nums; }
+    .donut__unit { margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--color-text-tertiary); }
     .legend { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
     .legend__row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-    .legend__dot { width: 8px; height: 8px; border-radius: 3px; background: var(--tile); flex-shrink: 0; }
-    .legend__label { color: var(--color-text-secondary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend__dot { width: 8px; height: 8px; border-radius: 2px; background: var(--color-text-placeholder); flex-shrink: 0; }
+    .legend__dot.is-lead { background: var(--color-accent); }
+    .legend__label { color: var(--color-text-secondary); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .legend__pct { margin-inline-start: auto; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
-    .legend__count { min-width: 20px; text-align: end; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+    .legend__count { min-width: 20px; text-align: end; font-weight: 500; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
 
     /* ── Queues ── */
     .queue-head {
       display: flex; align-items: center; gap: 6px; width: 100%;
       padding: 8px 2px 4px; border: none; cursor: pointer;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+      font-size: 12px; font-weight: 500;
       color: var(--color-text-tertiary); position: sticky; top: 0; z-index: 1;
       background: var(--color-surface);
     }
@@ -585,17 +581,16 @@ const CATALOG: TileDef[] = [
       border: 1px solid transparent; background: none; transition: background var(--transition-fast);
     }
     .queue-row:hover { background: var(--color-surface-hover); }
-    .queue-row__title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .queue-row__title { font-size: 14px; font-weight: 400; color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .queue-row__sub { grid-column: 1; font-size: 12px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .queue-row__date { grid-row: 1; grid-column: 2; font-size: 12px; font-weight: 500; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
-    .queue-row__date.is-overdue { color: var(--color-danger-text); font-weight: 600; }
+    .queue-row__date.is-overdue { color: var(--color-danger-text); }
 
     /* ── KPI ── */
     .kpi { display: flex; flex-direction: column; justify-content: center; flex: 1; min-height: 0; }
     .kpi--link { background: none; border: 0; padding: 0; text-align: start; cursor: pointer; border-radius: var(--r-sm); }
-    .kpi--link:hover .dash-value { color: var(--tile); }
-    .kpi__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 4px; min-height: 24px; }
-    .kpi__spark { width: 72px; height: 24px; flex-shrink: 0; opacity: 0.85; margin-inline-start: auto; }
+    .kpi--link:hover .dash-value { color: var(--color-accent-text); }
+    .kpi__foot { display: flex; align-items: flex-end; gap: 8px; margin-top: 4px; min-height: 16px; min-width: 0; }
   `]
 })
 export class DashboardComponent {
@@ -1058,8 +1053,11 @@ export class DashboardComponent {
     return d.direction === 'up' ? 'arrow_upward' : d.direction === 'down' ? 'arrow_downward' : 'remove';
   }
 
+  /** "+25% vs last week", or "New this week" when the previous period was empty. */
   pctLabel(d: Delta): string {
-    return d.label;
+    if (d.label === 'New') return `New this ${d.period}`;
+    if (d.direction === 'flat') return `Flat vs last ${d.period}`;
+    return `${d.label} vs last ${d.period}`;
   }
 
   /** Tooltip / screen-reader text for a delta chip. */

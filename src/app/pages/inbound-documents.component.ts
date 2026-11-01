@@ -321,7 +321,7 @@ function num(v: unknown): number | null {
               <button class="btn-ghost" [disabled]="busy()" (click)="ignore(d)">{{ 'inboundDocs.ignore' | translate }}</button>
             }
             @if (canRetry(d)) {
-              <button class="btn-secondary" [disabled]="busy()" (click)="retry(d)"><mat-icon>auto_awesome</mat-icon>{{ 'inboundDocs.retry' | translate }}</button>
+              <button class="btn-secondary" [disabled]="busy()" (click)="retry(d)"><mat-icon>refresh</mat-icon>{{ 'inboundDocs.retry' | translate }}</button>
             }
             @if (isStatementReview(d) && canImportStatement()) {
               <button class="btn-primary" [disabled]="busy() || !statementAccount()" (click)="importStatement(d)">{{ (busy() ? 'inboundDocs.reading' : 'inboundDocs.stmt.import') | translate }}</button>

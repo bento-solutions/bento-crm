@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from './shared/ui/brand-mark.component';
 import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon'
@@ -42,6 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', icon: 'home', route: '/' },
+      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
     ]
   },
   {
@@ -62,20 +64,19 @@ const NAV_SECTIONS: NavSection[] = [
     ]
   },
   {
-    label: 'Intelligence',
-    items: [
-      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
-    ]
-  },
-  {
-    label: 'CRM',
+    label: 'Clients',
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners' },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
       { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
       { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
       { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
-      { label: 'Finance', icon: 'account_balance', route: '/finance' },
+    ]
+  },
+  {
+    label: 'Accounting',
+    items: [
+      { label: 'Finance', icon: 'receipt_long', route: '/finance' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
       { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
@@ -173,7 +174,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
+  imports: [BrandMarkComponent, RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -189,17 +190,16 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     /* ── Sidebar ── */
     .app-sidebar {
-      width: 224px;
-      min-width: 224px;
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
       height: 100vh;
-      background: var(--color-surface);
+      background: var(--color-bg);
       border-right: 1px solid var(--color-border);
       display: flex;
       flex-direction: column;
       overflow: hidden;
       z-index: 40;
       flex-shrink: 0;
-      transition: width 200ms ease, min-width 200ms ease;
     }
 
     .app-sidebar.collapsed {
@@ -239,7 +239,8 @@ const SEARCH_ITEMS: SearchItem[] = [
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 20px 16px 16px;
+      height: var(--topbar-height);
+      padding: 0 16px 0 22px;
       flex-shrink: 0;
     }
 
@@ -247,9 +248,12 @@ const SEARCH_ITEMS: SearchItem[] = [
       gap: 0;
     }
 
-    .sidebar-logo img {
-      width: 28px;
-      height: 28px;
+    .sidebar-logo .brand-mark { color: var(--color-accent-text); }
+
+    .sidebar-logo img, .sidebar-logo .brand-mark {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
       object-fit: contain;
       border-radius: var(--r-control);
     }
@@ -266,7 +270,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       border: none;
       color: var(--color-text-tertiary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       flex-shrink: 0;
       overflow: hidden;
     }
@@ -298,54 +302,51 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .sidebar-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 16px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       color: var(--color-text-heading);
       max-width: 100px;
       opacity: 1;
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
     }
 
     .sidebar-nav {
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 4px 10px;
+      padding: 4px 12px 16px;
     }
 
     .sidebar-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-size: 12px;
+      font-weight: 500;
       color: var(--color-text-tertiary);
-      padding: 18px 12px 6px;
-      max-height: 40px;
+      padding: 24px 10px 8px;
+      max-height: 56px;
       opacity: 1;
       overflow: hidden;
-      transition: max-height 200ms ease, opacity 150ms ease, padding 200ms ease;
     }
 
     .sidebar-section-title:first-child {
-      padding-top: 6px;
+      padding-top: 8px;
     }
 
     .sidebar-link {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
+      gap: 0;
+      height: 32px;
+      padding: 0 10px;
       border-radius: var(--r-control);
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 400;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 200ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       text-decoration: none;
-      margin: 1px 0;
+      margin: 0 0 2px;
     }
 
     .sidebar-link:hover {
@@ -361,8 +362,9 @@ const SEARCH_ITEMS: SearchItem[] = [
       border-radius: 9px;
       background: var(--color-primary);
       color: var(--color-on-primary);
+      font-family: var(--font-mono);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 500;
       line-height: 18px;
       text-align: center;
     }
@@ -378,21 +380,23 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .sidebar-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      font-weight: 500;
+      box-shadow: 0 0 0 1px var(--color-border);
     }
 
     .sidebar-link.active mat-icon {
       color: var(--color-accent-text);
     }
 
-    .sidebar-link mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+    .sidebar-link mat-icon, .sidebar-bottom-link mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
       flex-shrink: 0;
-      line-height: 20px;
+      line-height: 18px;
+      color: var(--color-text-tertiary);
     }
 
     .nav-label {
@@ -401,7 +405,6 @@ const SEARCH_ITEMS: SearchItem[] = [
       white-space: nowrap;
       max-width: 200px;
       opacity: 1;
-      transition: max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
     }
 
     .sidebar-bottom {
@@ -413,14 +416,15 @@ const SEARCH_ITEMS: SearchItem[] = [
     .sidebar-bottom-link {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
+      gap: 0;
+      height: 32px;
+      padding: 0 10px;
       border-radius: var(--r-control);
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 400;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 200ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       text-decoration: none;
       background: transparent;
       border: none;
@@ -434,9 +438,10 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .sidebar-bottom-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      font-weight: 500;
+      box-shadow: 0 0 0 1px var(--color-border);
     }
 
     .sidebar-bottom-link.active mat-icon {
@@ -452,7 +457,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       margin-top: 4px;
       cursor: pointer;
       border-radius: var(--r-control);
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
       text-decoration: none;
     }
 
@@ -466,7 +471,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       height: 16px;
       color: var(--color-text-tertiary);
       flex-shrink: 0;
-      transition: transform 200ms ease;
+      transition: transform var(--transition-fast);
     }
 
     .sidebar-profile-wrapper {
@@ -518,7 +523,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       font-weight: 500;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       text-decoration: none;
       background: none;
       border: none;
@@ -546,7 +551,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       opacity: 1;
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
+      transition: max-width var(--transition-fast), opacity var(--transition-fast);
     }
 
     .sidebar-user-name {
@@ -582,7 +587,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       gap: 16px;
       min-height: var(--topbar-height);
       padding: 8px var(--content-padding);
-      background: var(--color-surface);
+      background: var(--color-bg);
       border-bottom: 1px solid var(--color-border);
       flex-shrink: 0;
       z-index: 30;
@@ -598,13 +603,13 @@ const SEARCH_ITEMS: SearchItem[] = [
       width: 100%;
       height: var(--control-height);
       padding: 0 12px 0 36px;
-      background: var(--color-bg);
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--r-control);
-      font-size: 13px;
+      font-size: 14px;
       color: var(--color-text-heading);
       outline: none;
-      transition: all 150ms ease;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .topbar-search input::placeholder {
@@ -622,9 +627,9 @@ const SEARCH_ITEMS: SearchItem[] = [
       left: 10px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
       color: var(--color-text-tertiary);
       pointer-events: none;
     }
@@ -665,20 +670,19 @@ const SEARCH_ITEMS: SearchItem[] = [
       border: 1px solid transparent;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       position: relative;
     }
 
     .topbar-icon-btn:hover {
       background: var(--color-surface-hover);
       color: var(--color-text-heading);
-      border-color: var(--color-border);
     }
 
     .topbar-icon-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .notification-dot {
@@ -694,9 +698,10 @@ const SEARCH_ITEMS: SearchItem[] = [
       display: flex;
       align-items: center;
       justify-content: center;
+      font-family: var(--font-mono);
       font-size: 11px;
       line-height: 1;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--color-on-primary);
     }
 
@@ -722,12 +727,10 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .search-group-label {
       padding: 8px 16px 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-size: 12px;
+      font-weight: 500;
       color: var(--color-text-tertiary);
-      background: var(--color-bg);
+      background: var(--color-subtle);
     }
 
     .search-result-item {
@@ -737,7 +740,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       padding: 10px 16px;
       border-bottom: 1px solid var(--color-surface-hover);
       cursor: pointer;
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
     }
 
     .search-result-item:last-child {
@@ -764,22 +767,20 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .search-result-breadcrumb {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--color-text-tertiary);
     }
 
     .search-result-title {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 500;
       color: var(--color-text-heading);
       margin-left: 8px;
     }
 
     .search-result-desc {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--color-text-secondary);
       margin-top: 2px;
       line-height: 1.3;
@@ -833,15 +834,16 @@ const SEARCH_ITEMS: SearchItem[] = [
     @media (max-width: 768px) {
       .app-sidebar {
         position: fixed;
-        left: -224px;
+        left: 0;
         top: 0;
         bottom: 0;
-        transition: left 250ms ease;
+        transform: translateX(-100%);
+        transition: transform 300ms var(--ease-out);
         z-index: 50;
       }
 
       .app-sidebar.mobile-open {
-        left: 0;
+        transform: none;
       }
 
       .mobile-sidebar-toggle {
@@ -884,7 +886,7 @@ const SEARCH_ITEMS: SearchItem[] = [
             @if (orgLogoUrl()) {
               <img [src]="orgLogoUrl()" [alt]="state.organization().name || 'Logo'" />
             } @else {
-              <img src="logo.webp" alt="Bento Logo" />
+              <app-brand-mark [size]="24" />
             }
             <span>{{ state.organization().name || 'Bento' }}</span>
             <button
@@ -1061,7 +1063,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                   <div class="menu create-menu__panel" role="menu">
                     @for (item of createItems; track item.label) {
                       <button class="menu-item" role="menuitem" (click)="runCreate(item)">
-                        <span class="create-menu__item-icon tone-icon tone" [attr.data-tone]="item.tone"><mat-icon class="icon-sm">{{ item.icon }}</mat-icon></span>
+                        <mat-icon class="icon-sm text-ink-3">{{ item.icon }}</mat-icon>
                         {{ item.label }}
                       </button>
                     }
@@ -1076,7 +1078,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                 [attr.aria-label]="'assistant.title' | translate"
                 [attr.aria-expanded]="assistantOpen()"
               >
-                <mat-icon>auto_awesome</mat-icon>
+                <mat-icon>chat_bubble_outline</mat-icon>
               </button>
               <button
                 class="topbar-icon-btn"

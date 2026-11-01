@@ -871,13 +871,13 @@ import { csvCell } from '../shared/csv.util';
 
                 <div class="mt-6 pt-4 border-t border-line-soft flex gap-2">
                   @if(partner.type === 'Lead' && canWrite()) {
-                    <button (click)="state.updatePartner(partner.id, { status: 'prospect' })" class="w-full btn-secondary rounded-xl px-3 py-2 text-sm font-semibold text-ink transition-all flex items-center justify-center">
+                    <button (click)="state.updatePartner(partner.id, { status: 'prospect' })" class="w-full btn-secondary rounded-xl px-3 py-2 text-sm font-semibold text-ink transition flex items-center justify-center">
                       <mat-icon class="mr-2 icon-sm">arrow_forward</mat-icon>
                       Convert to Prospect
                     </button>
                   }
                   @if(partner.type === 'Prospect' && canWrite()) {
-                    <button (click)="openConvertModal(partner)" class="w-full btn-secondary rounded-xl px-3 py-2 text-sm font-semibold text-ink transition-all flex items-center justify-center">
+                    <button (click)="openConvertModal(partner)" class="w-full btn-secondary rounded-xl px-3 py-2 text-sm font-semibold text-ink transition flex items-center justify-center">
                       <mat-icon class="mr-2 icon-sm">published_with_changes</mat-icon>
                       Convert to Customer
                     </button>

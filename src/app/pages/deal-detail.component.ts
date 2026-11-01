@@ -133,7 +133,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
 
         <!-- Activity Hub -->
         <div class="card p-5">
-          <h5 class="text-xs font-semibold text-ink-3 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <h5 class="text-xs font-semibold text-ink-3 mb-3 flex items-center gap-1.5">
             <mat-icon class="text-ink icon-sm">forum</mat-icon> Deal Activity Hub
           </h5>
 
@@ -233,7 +233,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
                 <div class="space-y-3">
                   @for (email of deal.activityLog?.emails; track email.id) {
                     <div [class]="email.direction === 'sent' ? 'bg-muted border-line ml-6' : 'bg-surface border-line-soft mr-6'"
-                         class="border rounded-lg p-3 shadow-xs space-y-1.5 transition-all">
+                         class="border rounded-lg p-3 shadow-xs space-y-1.5 transition">
                       <div class="flex justify-between items-start">
                         <div>
                           <span class="font-semibold text-ink text-xs">{{ email.subject }}</span>
@@ -275,7 +275,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
                         <div class="flex items-center gap-2">
                           <span class="font-semibold text-ink text-xs">{{ meeting.title }}</span>
                           <span [class]="meeting.type === 'teams' ? 'bg-muted text-ink border-line' : meeting.type === 'demo' ? 'bg-muted text-ink border-line' : 'bg-subtle text-ink-2 border-line'"
-                                class="px-1.5 py-0.2 rounded-sm text-meta font-semibold border uppercase">{{ meeting.type }}</span>
+                                class="px-1.5 py-0.2 rounded-sm text-meta font-semibold border">{{ meeting.type }}</span>
                         </div>
                         <span class="text-meta text-ink-3">{{ meeting.date }} à {{ meeting.time }}</span>
                       </div>
@@ -408,7 +408,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
                       @for (day of calendarDays; track day) {
                         <button type="button" (click)="selectCalendarDay(deal.id, day)"
                                 [class]="isSelectedCalendarDay(deal.id, day) ? 'bg-primary text-on-primary font-semibold' : hasEventsOnDay(deal, day) ? 'bg-muted text-ink font-semibold border-line-strong' : 'bg-subtle text-ink-2 hover:bg-muted border-line-soft border-line-soft'"
-                                class="w-full aspect-square rounded-lg text-meta font-semibold border flex flex-col items-center justify-center relative transition-all">
+                                class="w-full aspect-square rounded-lg text-meta font-semibold border flex flex-col items-center justify-center relative transition">
                           {{ day }}
                           @if (hasEventsOnDay(deal, day) && !isSelectedCalendarDay(deal.id, day)) {
                             <span class="absolute bottom-1 w-1.5 h-1.5 bg-primary rounded-full"></span>
@@ -430,7 +430,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
                             <span class="font-semibold text-ink text-xs">{{ m.title }}</span>
                             <span class="text-meta text-ink-3">{{ m.time }}</span>
                           </div>
-                          <div class="text-meta text-ink-3 uppercase tracking-wider mb-1">Type: {{ m.type }} | Location: {{ m.location }}</div>
+                          <div class="text-meta text-ink-3 mb-1">Type: {{ m.type }} | Location: {{ m.location }}</div>
                           <p class="text-meta text-ink-2 line-clamp-2 leading-relaxed">{{ m.summary }}</p>
                         </div>
                       } @empty {
@@ -482,7 +482,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
           </div>
           <h2 class="card-title">Deal not found</h2>
           <p class="text-xs text-ink-3 max-w-xs mx-auto">The requested deal does not exist or may have been deleted.</p>
-          <a routerLink="/sales" class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-xs">Return to Sales</a>
+          <a routerLink="/sales" class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition shadow-xs">Return to Sales</a>
         </div>
       }
     </div>
@@ -688,7 +688,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
             <div>
               <div class="flex justify-between items-center mb-1">
                 <label for="vendor" class="field-label">Vendor</label>
-                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-ink hover:text-ink text-meta font-semibold uppercase">
+                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-ink hover:text-ink text-meta font-semibold">
                   {{ showNewVendorForm() ? 'Select Existing' : '+ Create New Vendor Inline' }}
                 </button>
               </div>
