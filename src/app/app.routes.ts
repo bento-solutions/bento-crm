@@ -34,6 +34,7 @@ export const routes: Routes = [
   { path: 'drive', canActivate: [authGuard, authorityGuard('FILES_READ')], loadComponent: () => import('./pages/drive.component').then(m => m.DriveComponent) },
   { path: 'inbox-documents', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/inbound-documents.component').then(m => m.InboundDocumentsComponent) },
   { path: 'bank', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/bank.component').then(m => m.BankComponent) },
+  { path: 'ledger', canActivate: [authGuard, authorityGuard('LEDGER_READ')], loadComponent: () => import('./pages/ledger.component').then(m => m.LedgerComponent) },
   { path: 'tax-calendar', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/tax-calendar.component').then(m => m.TaxCalendarComponent) },
   { path: 'checklists', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/checklists.component').then(m => m.ChecklistsComponent) },
   { path: 'missions', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/missions.component').then(m => m.MissionsComponent) },
