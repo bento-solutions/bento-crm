@@ -63,10 +63,10 @@ const NO_TICKET = 'NONE';
     }
     .kanban-card {
       transition: transform 200ms cubic-bezier(0, 0, 0.2, 1),
-                  box-shadow 200ms ease;
+                  box-shadow var(--transition-fast);
     }
     .kanban-column {
-      transition: background-color 200ms ease;
+      transition: background-color var(--transition-fast);
     }
 
     /* Task rows: a checklist line, not a table row. The page's own width decides the layout (container

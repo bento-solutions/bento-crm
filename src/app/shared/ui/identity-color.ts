@@ -4,8 +4,8 @@
  * hex values are allowed outside styles.css. Everything else must use semantic tokens.
  */
 export const IDENTITY_PALETTE = [
-  '#4F46E5', '#047857', '#B45309', '#B91C1C', '#6D28D9',
-  '#BE185D', '#0F766E', '#C2410C', '#1D4ED8', '#4D7C0F',
+  '#3B4BA8', '#2F6B4F', '#93591C', '#A2423B', '#5E4A99',
+  '#97436B', '#2C6B6B', '#9C5228', '#2F5A9E', '#56662A',
 ] as const;
 
 export function identityColor(seed: string): string {

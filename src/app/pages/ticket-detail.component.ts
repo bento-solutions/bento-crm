@@ -153,7 +153,7 @@ interface TaskDraft { title: string; description: string; status: Task['status']
 
               @if (progress().total > 0) {
                 <div class="h-2 w-full bg-muted rounded-full overflow-hidden" role="progressbar" [attr.aria-valuenow]="progress().percent" aria-valuemin="0" aria-valuemax="100">
-                  <div class="h-full rounded-full transition-all duration-300" [class]="progress().done === progress().total ? 'bg-success' : 'bg-primary'" [style.width.%]="progress().percent"></div>
+                  <div class="h-full rounded-full transition duration-300" [class]="progress().done === progress().total ? 'bg-success' : 'bg-primary'" [style.width.%]="progress().percent"></div>
                 </div>
               }
 
@@ -292,7 +292,7 @@ interface TaskDraft { title: string; description: string; status: Task['status']
                         <div class="flex items-center gap-2">
                           <span class="text-xs font-semibold text-ink">{{ c.authorName }}</span>
                           @if (c.authorRole) {
-                            <span class="text-meta uppercase font-semibold tracking-wider text-ink-3">({{ c.authorRole }})</span>
+                            <span class="text-meta font-semibold text-ink-3">({{ c.authorRole }})</span>
                           }
                           @if (c.isInternal) {
                             <span class="badge badge-warning">Internal Note</span>
@@ -375,7 +375,7 @@ interface TaskDraft { title: string; description: string; status: Task['status']
           <div class="flex items-start justify-between gap-3 px-6 pt-5 pb-3 border-b border-line-soft">
             <div class="min-w-0 flex items-center gap-2 text-xs text-ink-3">
               <mat-icon class="icon-md">task_alt</mat-icon>
-              <span id="td_task_modal_title" class="font-semibold uppercase tracking-wide">Task</span>
+              <span id="td_task_modal_title" class="font-semibold">Task</span>
               <span class="font-mono text-ink-3">#{{ task.id.slice(0, 8) }}</span>
             </div>
             <div class="flex items-center gap-1 shrink-0">

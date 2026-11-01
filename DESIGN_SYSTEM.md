@@ -5,18 +5,25 @@ One visual language for every module. The rules below are enforced by `npm run l
 
 Source of truth: [`src/styles.css`](src/styles.css). Shared building blocks: [`src/app/shared/ui/`](src/app/shared/ui/).
 
-## Look and feel
+## Direction
 
-A soft, warm, low-contrast SaaS look: a white icon rail (`--sidebar-*` tokens) that expands from an edge toggle, a
-warm grey canvas, flat white cards with hairline borders and no shadows, and one butter-amber primary (`#FCD38D`, dark
-`--color-on-primary` text) for the main actions and the selected nav item. Tabs and segmented controls are grey tracks
-with a white selected item; badges are soft pastel tints; KPI numerals are large and light (weight 400).
-Radii: controls 10px, cards 14px, overlays 18px. Typeface: DM Sans; icons: Material Symbols Outlined (weight 300).
+The look follows an [unslop](https://github.com/heydamir/unslop) pass (unslop by Damir Sokolovsky,
+[@heydamir](https://x.com/heydamir), CC BY 4.0).
+
+- **Product:** a CRM and back office for Moroccan small businesses and their accountants, from lead to invoice, bank and tax deadline.
+- **Character:** exact, steady, a little warm.
+- **World:** the accountant's desk: ledgers, stamped invoices, dirham figures. Neutrals are a faintly warm graphite, the accent is stamp-ink blue.
+- **Moments:** the dashboard's pipeline figure and its chart. Everything around them stays quiet.
+- **Signature:** figures read like a ledger: tabular numerals, hairline rules, counts and references in mono.
+
+What that means in practice: one accent (ink blue) used for the primary action, links, focus and the one figure that matters;
+no coloured icon tiles; sentence-case labels (no uppercase tracking); weights 400/500 with 550 for rare emphasis;
+one easing curve (`cubic-bezier(0.22, 1, 0.36, 1)`); no looping or bouncy motion.
 
 ## Principles
 
-1. **Amber means action.** Primary buttons, the selected nav item, focus rings and links (`accent-text`). Amber is
-   never used as a status on its own.
+1. **Ink blue means interactive.** Primary buttons (light theme), links, selection and focus. On the dark theme the primary
+   button is off-white and the blue lives in links and selection. Blue is never a status.
 2. **Colour is for meaning.** Semantic hues (`success`, `warning`, `danger`, `info`) carry *status* and always come
    with text or an icon. Entity hues (see tones) carry *identity* and are decorative.
 3. **Every screen has the same anatomy:** page header → stat cards → tabs → toolbar → content (table / cards / board).
@@ -46,30 +53,29 @@ Chart series use `--chart-1…6`; per-person identity colours come from `identit
 
 ## Type scale
 
-DM Sans, 500 for headings and 600 for emphasis (no 700+). Sizes are tokens — never `text-[13px]`.
+Instrument Sans for the interface, Geist Mono for counts and references. 500 for titles, `font-semibold` (550) for rare emphasis, never 700+. Sizes are tokens — never `text-[13px]`.
 
 | Token | px | Use |
 |---|---|---|
-| `text-meta` | 11 | eyebrows, badges, timestamps |
+| `text-meta` | 11 | timestamps, tiny meta |
 | `text-xs` | 12 | secondary text, helper text, table meta |
-| `text-sm` / `text-body` | **13** | default body, controls, table cells |
-| `text-base` | 14 | emphasised body |
+| `text-sm` / `text-body` | **14** | default body, controls, table cells |
+| `text-base` | 15 | emphasised body |
 | `text-lg` | 16 | card / modal / section titles |
 | `text-xl` | 20 | section numerals |
 | `text-2xl` | 24 | hero numerals |
 
-Roles: `.t-title`, `.t-heading`, `.eyebrow` (11px caps), `.field-label` (12px), `.num` (tabular numerals).
+Roles: `.t-title` (24), `.t-heading`, `.eyebrow` (12px, sentence case), `.field-label` (12px), `.num` (tabular numerals). Labels are sentence case everywhere: no `uppercase`, no wide tracking.
 
 ## Space, radius, elevation
 
-4px grid. Page gutter 32 (16 on phones), section gap 24, card padding 20, tile padding 16, control height 36 (28 small / 40 large).
-Page titles are 24px, KPI numerals 28px.
-Radius roles: controls **10** (`rounded-lg`) · cards **16** (`rounded-xl`) · overlays **20** (`rounded-2xl`) · buttons, tabs and pills `rounded-full`.
-Shadows: `shadow-xs` cards, `shadow-lg` menus, `shadow-overlay` modals.
+4px grid. Page gutter 24 (16 on phones), section gap 24, card padding 20, tile padding 16, control height 36 (28 small / 40 large).
+Radius roles: controls **8** (`rounded-lg`) · cards **12** (`rounded-xl`) · overlays **16** (`rounded-2xl`) · pills `rounded-full`.
+Depth: cards and tiles are a surface plus a hairline, no shadow. `shadow-lg` menus, `shadow-overlay` modals.
 
 ## Icons
 
-Material Icons at five sizes only: `icon-xs` 14 · `icon-sm` 16 (buttons, row actions) · `icon-md` 20 (nav, headers) ·
+Material Symbols Outlined (line icons, weight 350, drawn through the `mat-icon` ligatures) at five sizes only: `icon-xs` 14 · `icon-sm` 16 (buttons, row actions) · `icon-md` 20 (nav, headers) ·
 `icon-lg` 24 · `icon-xl` 40 (empty states). Never size icons with `text-[…]` or `w-N h-N`.
 
 ## Components
@@ -95,9 +101,9 @@ Material Icons at five sizes only: `icon-xs` 14 · `icon-sm` 16 (buttons, row ac
 
 ### Entity tones
 
-One hue per business entity, used for icon chips everywhere (`ENTITY_TONE` in `shared/ui/tones.ts`):
-deals/pipeline **violet** · partners **blue** · tasks **emerald** · tickets **sky** · campaigns **amber** ·
-finance **slate** · late/lost **rose**. A tone says *what* a thing is, never *how it is doing*.
+`ENTITY_TONE` in `shared/ui/tones.ts` still names a hue per business entity, but icon chips no longer paint with it:
+icons take the text colour of their role. Tones remain for category pills and calendar markers, where colour tells
+items apart. A tone says *what* a thing is, never *how it is doing*.
 
 ## Page anatomy
 

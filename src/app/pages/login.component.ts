@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,7 +12,7 @@ import { TranslationService } from '../services/translation.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
+  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -37,47 +38,33 @@ import { TranslationService } from '../services/translation.service';
       gap: 48px;
       padding: 44px 48px;
       border-radius: var(--r-overlay);
-      background: linear-gradient(160deg,
-        color-mix(in srgb, var(--color-info) 30%, var(--color-surface)) 0%,
-        color-mix(in srgb, var(--chart-6) 32%, var(--color-surface)) 50%,
-        color-mix(in srgb, var(--color-info) 16%, var(--color-surface)) 100%);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       color: var(--color-text-primary);
       overflow: hidden;
     }
 
     .login-hero__brand { display: flex; align-items: center; gap: 12px; }
-    .login-hero__brand img {
-      width: 40px; height: 40px; padding: 7px; border-radius: var(--r-control);
-      background: var(--color-inverse); object-fit: contain;
-    }
     .login-hero__brand span { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 
     .login-hero__eyebrow {
-      display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px;
-      border-radius: var(--r-pill); font-size: 13px; font-weight: 500;
-      background: color-mix(in srgb, var(--color-surface) 70%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-surface) 90%, transparent);
+      display: block; font-size: 14px; font-weight: 500; color: var(--color-accent-text);
     }
-    .login-hero__eyebrow mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     .login-hero__title {
       margin: 20px 0 0; max-width: 540px;
-      font-size: 42px; line-height: 1.1; font-weight: 500; letter-spacing: -0.03em;
+      font-size: 40px; line-height: 1.1; font-weight: 500; letter-spacing: -0.02em;
     }
     .login-hero__subtitle { margin: 14px 0 0; max-width: 460px; font-size: 16px; line-height: 1.6; color: var(--color-text-secondary); }
 
-    .login-hero__features { display: flex; flex-direction: column; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+    .login-hero__features { display: flex; flex-direction: column; gap: 0; margin: 32px 0 0; padding: 0; list-style: none; }
     .login-hero__features li {
-      display: flex; align-items: center; gap: 14px; max-width: 440px;
-      padding: 12px 14px; border-radius: var(--r-card);
-      background: var(--color-surface); border: 1px solid var(--color-border);
-      font-size: 14px; font-weight: 500;
+      display: flex; align-items: baseline; gap: 16px; max-width: 440px;
+      padding: 12px 0; border-bottom: 1px solid var(--color-border-light);
+      font-size: 15px; font-weight: 400; color: var(--color-text-secondary);
     }
     .login-hero__num {
-      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-      width: 30px; height: 30px; border-radius: 8px;
-      background: var(--color-primary); color: var(--color-on-primary);
-      font-size: 12px; font-weight: 600;
+      flex-shrink: 0; font-family: var(--font-mono); font-size: 12px; color: var(--color-text-tertiary);
     }
     .login-hero__foot { font-size: 12px; color: var(--color-text-secondary); }
 
@@ -110,7 +97,7 @@ import { TranslationService } from '../services/translation.service';
     .login-logo span {
       font-weight: 600;
       font-size: 20px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       color: var(--color-text-primary);
     }
 
@@ -162,7 +149,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 13px;
       color: var(--color-text-primary);
       outline: none;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       box-sizing: border-box;
     }
 
@@ -202,7 +189,7 @@ import { TranslationService } from '../services/translation.service';
       justify-content: center;
       color: var(--color-text-tertiary);
       border-radius: 6px;
-      transition: color 150ms ease, background-color 150ms ease;
+      transition: color var(--transition-fast), background-color var(--transition-fast);
     }
 
     .password-toggle-btn:hover {
@@ -229,8 +216,8 @@ import { TranslationService } from '../services/translation.service';
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 150ms ease;
-      margin-top: 12px;
+      transition: background var(--transition-fast);
+      margin-top: 8px;
     }
 
     .login-btn:hover {
@@ -323,7 +310,7 @@ import { TranslationService } from '../services/translation.service';
       border-radius: var(--r-card);
       cursor: pointer;
       text-align: start;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .org-item-card:hover:not(:disabled) {
@@ -387,8 +374,7 @@ import { TranslationService } from '../services/translation.service';
       background: var(--color-border);
       padding: 1px 6px;
       border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
     }
 
     .org-item-arrow {
@@ -463,7 +449,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .back-btn:hover:not(:disabled) {
@@ -481,11 +467,11 @@ import { TranslationService } from '../services/translation.service';
     <div class="login-container">
       <aside class="login-hero">
         <div class="login-hero__brand">
-          <img src="logo.webp" alt="" />
+          <app-brand-mark [size]="28" />
           <span>Bento</span>
         </div>
         <div>
-          <span class="login-hero__eyebrow"><mat-icon>auto_awesome</mat-icon>{{ 'login.hero.eyebrow' | translate }}</span>
+          <span class="login-hero__eyebrow">{{ 'login.hero.eyebrow' | translate }}</span>
           <h2 class="login-hero__title">{{ 'login.hero.title' | translate }}</h2>
           <p class="login-hero__subtitle">{{ 'login.hero.subtitle' | translate }}</p>
           <ul class="login-hero__features">
@@ -499,7 +485,7 @@ import { TranslationService } from '../services/translation.service';
       <div class="login-panel">
       <div class="login-card">
         <div class="login-logo">
-          <img src="logo.webp" alt="Bento Logo" />
+          <app-brand-mark [size]="28" />
           <span>Bento</span>
         </div>
 

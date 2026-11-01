@@ -352,7 +352,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           </p>
           <a
             routerLink="/settings/users"
-            class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-xs"
+            class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition shadow-xs"
           >
             Return to list
           </a>

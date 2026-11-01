@@ -21,7 +21,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
       max-height: 0;
       overflow: hidden;
       opacity: 0;
-      transition: max-height 0.25s ease, opacity 0.25s ease;
+      transition: max-height var(--transition-fast), opacity var(--transition-fast);
     }
     .panel.open {
       max-height: 800px;
@@ -465,7 +465,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                     <p class="text-meta text-ink-3">Try adjusting your filters, query string or toggle settings to locate the user.</p>
                     <button
                       (click)="clearFilters()"
-                      class="bg-muted text-ink hover:bg-muted-strong border border-line px-3 py-1.5 rounded-lg text-meta font-semibold tracking-wide transition-colors cursor-pointer"
+                      class="bg-muted text-ink hover:bg-muted-strong border border-line px-3 py-1.5 rounded-lg text-meta font-semibold transition-colors cursor-pointer"
                     >
                       Clear Filters
                     </button>

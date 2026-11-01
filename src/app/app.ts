@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from './shared/ui/brand-mark.component';
 import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon'
@@ -48,6 +49,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', icon: 'home', route: '/' },
+      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
     ]
   },
   {
@@ -67,13 +69,7 @@ const NAV_SECTIONS: NavSection[] = [
     ]
   },
   {
-    label: 'Intelligence',
-    items: [
-      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
-    ]
-  },
-  {
-    label: 'CRM',
+    label: 'Clients',
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners' },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
@@ -224,7 +220,7 @@ function readSidebarCollapsed(): boolean {
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
+  imports: [BrandMarkComponent, RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -251,7 +247,6 @@ function readSidebarCollapsed(): boolean {
       flex-direction: column;
       z-index: 40;
       flex-shrink: 0;
-      transition: width 200ms ease, min-width 200ms ease;
     }
 
     .app-sidebar.collapsed {
@@ -288,14 +283,12 @@ function readSidebarCollapsed(): boolean {
       padding-inline: 0;
     }
 
-    /* The logo sits on a dark tile, like the reference design. */
+    /* An uploaded organisation logo sits as it is; without one, the flat Bento mark. */
     .sidebar-logo img {
-      width: 40px;
-      height: 40px;
-      padding: 7px;
+      width: 28px;
+      height: 28px;
       object-fit: contain;
-      border-radius: var(--r-control);
-      background: var(--color-inverse);
+      border-radius: var(--r-sm);
       flex-shrink: 0;
     }
 
@@ -325,7 +318,7 @@ function readSidebarCollapsed(): boolean {
       color: var(--color-text-secondary);
       cursor: pointer;
       z-index: 2;
-      transition: background 150ms ease, color 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
     }
 
     .sidebar-edge-toggle:hover {
@@ -357,13 +350,11 @@ function readSidebarCollapsed(): boolean {
     }
 
     .sidebar-section-title {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
       color: var(--sidebar-muted);
-      padding: 14px 10px 6px;
-      max-height: 40px;
+      padding: 24px 10px 8px;
+      max-height: 56px;
       overflow: hidden;
     }
 
@@ -373,7 +364,7 @@ function readSidebarCollapsed(): boolean {
 
     /* Finance modules: a heading that opens its pages, which sit indented under it. */
     .sidebar-module { width: 100%; margin-top: 4px; background: none; border: 0; cursor: pointer; text-align: start; }
-    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 600; }
+    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 500; }
     .sidebar-module .nav-chevron { margin-inline-start: auto; font-size: 18px; width: 18px; height: 18px; }
     /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
     .sidebar-link.sidebar-module { height: auto; min-height: 40px; padding-block: 6px; }
@@ -392,17 +383,17 @@ function readSidebarCollapsed(): boolean {
       position: relative;
       display: flex;
       align-items: center;
-      gap: 12px;
-      height: 40px;
+      gap: 10px;
+      height: 36px;
       padding: 0 10px;
       border-radius: var(--r-control);
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 400;
       color: var(--sidebar-ink);
       cursor: pointer;
-      transition: background 150ms ease, color 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       text-decoration: none;
-      margin: 3px 0;
+      margin: 2px 0;
       background: transparent;
       border: none;
       width: 100%;
@@ -427,15 +418,23 @@ function readSidebarCollapsed(): boolean {
     .sidebar-bottom-link.active {
       background: var(--sidebar-active-bg);
       color: var(--sidebar-active-ink);
+      font-weight: 500;
+      box-shadow: 0 0 0 1px var(--sidebar-border);
     }
 
     .sidebar-link mat-icon,
     .sidebar-bottom-link mat-icon {
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
-      line-height: 22px;
+      line-height: 20px;
+      color: var(--sidebar-muted);
+    }
+
+    .sidebar-link.active mat-icon,
+    .sidebar-bottom-link.active mat-icon {
+      color: var(--color-accent-text);
     }
 
     .nav-label {
@@ -452,8 +451,9 @@ function readSidebarCollapsed(): boolean {
       border-radius: var(--r-pill);
       background: var(--color-danger);
       color: white;
+      font-family: var(--font-mono);
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       line-height: 20px;
       text-align: center;
     }
@@ -482,7 +482,7 @@ function readSidebarCollapsed(): boolean {
       padding: 6px;
       cursor: pointer;
       border-radius: var(--r-card);
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
       text-decoration: none;
     }
 
@@ -549,7 +549,7 @@ function readSidebarCollapsed(): boolean {
       font-weight: 500;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       text-decoration: none;
       background: none;
       border: none;
@@ -634,7 +634,7 @@ function readSidebarCollapsed(): boolean {
       font-size: 13px;
       color: var(--color-text-heading);
       outline: none;
-      transition: all 150ms ease;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .topbar-search input::placeholder {
@@ -652,9 +652,9 @@ function readSidebarCollapsed(): boolean {
       left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
       color: var(--color-text-tertiary);
       pointer-events: none;
     }
@@ -700,7 +700,7 @@ function readSidebarCollapsed(): boolean {
       border: 1px solid var(--color-border);
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       position: relative;
     }
 
@@ -710,9 +710,9 @@ function readSidebarCollapsed(): boolean {
     }
 
     .topbar-icon-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .notification-dot {
@@ -728,6 +728,7 @@ function readSidebarCollapsed(): boolean {
       display: flex;
       align-items: center;
       justify-content: center;
+      font-family: var(--font-mono);
       font-size: 11px;
       line-height: 1;
       font-weight: 600;
@@ -758,12 +759,10 @@ function readSidebarCollapsed(): boolean {
 
     .search-group-label {
       padding: 8px 16px 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-size: 12px;
+      font-weight: 500;
       color: var(--color-text-tertiary);
-      background: var(--color-bg);
+      background: var(--color-subtle);
     }
 
     .search-result-item {
@@ -773,7 +772,7 @@ function readSidebarCollapsed(): boolean {
       padding: 10px 16px;
       border-bottom: 1px solid var(--color-surface-hover);
       cursor: pointer;
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
     }
 
     .search-result-item:last-child {
@@ -800,22 +799,20 @@ function readSidebarCollapsed(): boolean {
     }
 
     .search-result-breadcrumb {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--color-text-tertiary);
     }
 
     .search-result-title {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 500;
       color: var(--color-text-heading);
       margin-left: 8px;
     }
 
     .search-result-desc {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--color-text-secondary);
       margin-top: 2px;
       line-height: 1.3;
@@ -873,15 +870,16 @@ function readSidebarCollapsed(): boolean {
     @media (max-width: 768px) {
       .app-sidebar {
         position: fixed;
-        left: calc(-1 * var(--sidebar-width));
+        left: 0;
         top: 0;
         bottom: 0;
-        transition: left 250ms ease;
+        transform: translateX(-100%);
+        transition: transform 300ms var(--ease-out);
         z-index: 50;
       }
 
       .app-sidebar.mobile-open {
-        left: 0;
+        transform: none;
       }
 
       .mobile-sidebar-toggle {
@@ -928,7 +926,7 @@ function readSidebarCollapsed(): boolean {
             @if (orgLogoUrl()) {
               <img [src]="orgLogoUrl()" [alt]="state.organization().name || 'Logo'" />
             } @else {
-              <img src="logo.webp" alt="Bento Logo" />
+              <app-brand-mark [size]="24" />
             }
             <span>{{ state.organization().name || 'Bento' }}</span>
           </div>
@@ -1122,7 +1120,7 @@ function readSidebarCollapsed(): boolean {
                   <div class="menu create-menu__panel" role="menu">
                     @for (item of createItems; track item.label) {
                       <button class="menu-item" role="menuitem" (click)="runCreate(item)">
-                        <span class="create-menu__item-icon tone-icon tone" [attr.data-tone]="item.tone"><mat-icon class="icon-sm">{{ item.icon }}</mat-icon></span>
+                        <mat-icon class="icon-sm text-ink-3">{{ item.icon }}</mat-icon>
                         {{ item.label }}
                       </button>
                     }
@@ -1137,7 +1135,7 @@ function readSidebarCollapsed(): boolean {
                 [attr.aria-label]="'assistant.title' | translate"
                 [attr.aria-expanded]="assistantOpen()"
               >
-                <mat-icon>auto_awesome</mat-icon>
+                <mat-icon>chat_bubble_outline</mat-icon>
               </button>
               <button
                 class="topbar-icon-btn"

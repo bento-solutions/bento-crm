@@ -18,7 +18,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
       max-height: 0;
       overflow: hidden;
       opacity: 0;
-      transition: max-height 0.25s ease, opacity 0.25s ease;
+      transition: max-height var(--transition-fast), opacity var(--transition-fast);
     }
     .panel.open {
       max-height: 800px;
@@ -201,7 +201,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   [class.bg-surface]="activeTab() === 'chat'"
                   [class.text-accent-ink]="activeTab() === 'chat'"
                   [class.shadow-xs]="activeTab() === 'chat'"
-                  class="px-3 py-1 rounded-md text-meta font-semibold text-ink-2 cursor-pointer transition-all"
+                  class="px-3 py-1 rounded-md text-meta font-semibold text-ink-2 cursor-pointer transition"
                 >
                   Chat
                 </button>
@@ -210,7 +210,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   [class.bg-surface]="activeTab() === 'meetings'"
                   [class.text-accent-ink]="activeTab() === 'meetings'"
                   [class.shadow-xs]="activeTab() === 'meetings'"
-                  class="px-3 py-1 rounded-md text-meta font-semibold text-ink-2 cursor-pointer transition-all"
+                  class="px-3 py-1 rounded-md text-meta font-semibold text-ink-2 cursor-pointer transition"
                 >
                   Meetings
                 </button>
@@ -326,7 +326,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                 @if (canWriteGroup()) {
                   <button
                     (click)="toggleScheduleForm()"
-                    class="bg-muted hover:bg-muted-strong text-ink border border-line px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                    class="bg-muted hover:bg-muted-strong text-ink border border-line px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1"
                   >
                     <mat-icon class="icon-sm">event</mat-icon>
                     Schedule Meeting
