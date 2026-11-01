@@ -32,27 +32,27 @@ import { WhatsAppCampaignsService, CampaignRecipient } from '../services/domains
             <div class="grid grid-cols-3 sm:grid-cols-6 gap-px bg-muted border-b border-line-soft">
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-ink">{{ s.total }}</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div>
+                <div class="text-meta font-semibold text-ink-3">Total</div>
               </div>
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-info-ink">{{ s.sent + s.delivered + s.read }}</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Sent</div>
+                <div class="text-meta font-semibold text-ink-3">Sent</div>
               </div>
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-success-ink">{{ s.replied }}</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Replied</div>
+                <div class="text-meta font-semibold text-ink-3">Replied</div>
               </div>
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-danger-ink">{{ s.failed }}</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Failed</div>
+                <div class="text-meta font-semibold text-ink-3">Failed</div>
               </div>
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-warning-ink">{{ s.followupsPending }}</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Relances due</div>
+                <div class="text-meta font-semibold text-ink-3">Relances due</div>
               </div>
               <div class="bg-surface p-3 text-center">
                 <div class="text-lg font-semibold text-ink">{{ s.replyRate }}%</div>
-                <div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Reply rate</div>
+                <div class="text-meta font-semibold text-ink-3">Reply rate</div>
               </div>
             </div>
           }

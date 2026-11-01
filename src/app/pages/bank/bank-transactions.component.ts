@@ -65,7 +65,7 @@ interface CategoryForm {
             <button class="btn-ghost" (click)="clearFilter()">{{ 'bank.tx.clear' | translate }}</button>
           }
           @if (canWrite()) {
-            <button class="btn-secondary" [disabled]="busy()" (click)="categorizeAll()"><mat-icon>auto_awesome</mat-icon>{{ 'bank.tx.categorizeAll' | translate }}</button>
+            <button class="btn-secondary" [disabled]="busy()" (click)="categorizeAll()"><mat-icon>category</mat-icon>{{ 'bank.tx.categorizeAll' | translate }}</button>
           }
         </div>
       </div>

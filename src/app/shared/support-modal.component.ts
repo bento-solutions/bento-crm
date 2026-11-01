@@ -54,7 +54,7 @@ const SEARCH_ITEMS: SearchItem[] = [
   imports: [MatIconModule, CommonModule, FormsModule],
   styles: [`
     .drop-zone {
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
     .drop-zone.dragging {
       background: var(--color-accent-light);
@@ -133,7 +133,7 @@ const SEARCH_ITEMS: SearchItem[] = [
               <div class="flex gap-2">
                 <button
                   (click)="contactMethod.set('email')"
-                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition"
                   [class.bg-muted]="contactMethod() === 'email'"
                   [class.border-line-strong]="contactMethod() === 'email'"
                   [class.text-ink]="contactMethod() === 'email'"
@@ -146,7 +146,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                 </button>
                 <button
                   (click)="contactMethod.set('whatsapp')"
-                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition"
                   [class.bg-muted]="contactMethod() === 'whatsapp'"
                   [class.border-line-strong]="contactMethod() === 'whatsapp'"
                   [class.text-ink]="contactMethod() === 'whatsapp'"
@@ -176,7 +176,7 @@ const SEARCH_ITEMS: SearchItem[] = [
               <label for="attachments" class="field-label mb-1.5">Attachments <span class="font-normal normal-case text-ink-3">(screenshots, recordings, documents)</span></label>
               <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
               <div
-                class="drop-zone border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all"
+                class="drop-zone border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition"
                 [class.dragging]="isDragging()"
                 [class.border-line]="!isDragging()"
                 [class.bg-subtle]="!isDragging()"

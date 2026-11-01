@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -27,13 +28,13 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
 @Component({
   selector: 'app-onboarding',
   standalone: true,
-  imports: [FormsModule, CommonModule, MatIconModule, RouterLink],
+  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule, RouterLink],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-canvas p-6">
       <div class="card w-full max-w-[460px] px-8 pt-10 pb-8">
 
         <div class="flex items-center justify-center gap-2.5 mb-6">
-          <img src="logo.webp" alt="Bento Logo" class="w-8 h-8 rounded-lg object-contain" />
+          <app-brand-mark [size]="28" />
           <span class="font-semibold text-xl tracking-tight text-ink">Bento</span>
         </div>
 
@@ -42,7 +43,7 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
           <button
             type="button"
             (click)="setMode('create')"
-            class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer"
+            class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition text-center cursor-pointer"
             [class]="mode() === 'create' ? 'bg-surface text-ink shadow-xs' : 'text-ink-3 hover:text-ink'"
           >
             Create Organization
@@ -50,7 +51,7 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
           <button
             type="button"
             (click)="setMode('join')"
-            class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer"
+            class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition text-center cursor-pointer"
             [class]="mode() === 'join' ? 'bg-surface text-ink shadow-xs' : 'text-ink-3 hover:text-ink'"
           >
             Join Organization
@@ -62,7 +63,7 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
           <div class="flex items-center justify-center gap-2 mb-7">
             @for (s of [1, 2]; track s) {
               <div
-                class="h-1.5 rounded-full transition-all duration-200"
+                class="h-1.5 rounded-full transition duration-200"
                 [class.w-8]="step() === s"
                 [class.bg-primary]="step() >= s"
                 [class.w-4]="step() !== s"

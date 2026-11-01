@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,7 +12,7 @@ import { TranslationService } from '../services/translation.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
+  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -53,9 +54,9 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .login-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 20px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       color: var(--color-text-primary);
     }
 
@@ -99,7 +100,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 13px;
       color: var(--color-text-primary);
       outline: none;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       box-sizing: border-box;
     }
 
@@ -139,7 +140,7 @@ import { TranslationService } from '../services/translation.service';
       justify-content: center;
       color: var(--color-text-tertiary);
       border-radius: 6px;
-      transition: color 150ms ease, background-color 150ms ease;
+      transition: color var(--transition-fast), background-color var(--transition-fast);
     }
 
     .password-toggle-btn:hover {
@@ -165,7 +166,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
       margin-top: 8px;
     }
 
@@ -259,7 +260,7 @@ import { TranslationService } from '../services/translation.service';
       border-radius: var(--r-card);
       cursor: pointer;
       text-align: start;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .org-item-card:hover:not(:disabled) {
@@ -323,8 +324,7 @@ import { TranslationService } from '../services/translation.service';
       background: var(--color-border);
       padding: 1px 6px;
       border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
     }
 
     .org-item-arrow {
@@ -399,7 +399,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .back-btn:hover:not(:disabled) {
@@ -417,7 +417,7 @@ import { TranslationService } from '../services/translation.service';
     <div class="login-container">
       <div class="login-card">
         <div class="login-logo">
-          <img src="logo.webp" alt="Bento Logo" />
+          <app-brand-mark [size]="28" />
           <span>Bento</span>
         </div>
 

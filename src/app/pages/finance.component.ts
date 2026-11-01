@@ -306,7 +306,7 @@ interface InvoiceLine {
               <div class="lg:col-span-2 space-y-3">
                 <span class="eyebrow block">Overdue Invoices</span>
                 @for (invoice of overdueInvoices(); track invoice.id) {
-                  <div class="card p-4 flex items-center justify-between transition-all"
+                  <div class="card p-4 flex items-center justify-between transition"
                     [class.is-selected]="selectedInvoiceIds().includes(invoice.id)">
                     <div class="flex items-center gap-3">
                       <input type="checkbox"
@@ -500,7 +500,7 @@ interface InvoiceLine {
                 <label for="partner-select" class="field-label mb-1.5">
                   Select Customer
                   @if (invoiceType() === 'Deal') {
-                    <span class="badge badge-neutral ml-1">🔒 Locked by Deal</span>
+                    <span class="badge badge-neutral ml-1"><mat-icon class="icon-xs">lock</mat-icon>Locked by deal</span>
                   }
                   @if (invoiceType() === 'Manual' && newInvoiceData.type === 'Customer') {
                     <span class="badge badge-neutral ml-1">Fields auto-fill on selection</span>
@@ -531,7 +531,7 @@ interface InvoiceLine {
                 }
                 @if (invoiceType() === 'Manual' && newInvoiceData.partnerId && autoFilledFields().size > 0) {
                   <div class="mt-2 bg-muted border border-line-strong rounded-lg px-3 py-2 flex items-center gap-2">
-                    <mat-icon class="text-ink-2 shrink-0 icon-sm">auto_awesome</mat-icon>
+                    <mat-icon class="text-ink-2 shrink-0 icon-sm">edit_note</mat-icon>
                     <span class="text-xs text-ink font-medium">Customer details auto-filled from account record. You can still edit any field below.</span>
                   </div>
                 }
@@ -721,7 +721,7 @@ interface InvoiceLine {
               <!-- Add Custom Line button -->
               <button type="button"
                 (click)="addBlankLine()"
-                class="w-full border-2 border-dashed border-line-strong hover:border-line-strong text-ink-2 hover:text-ink rounded-xl py-2.5 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 hover:bg-muted">
+                class="w-full border-2 border-dashed border-line-strong hover:border-line-strong text-ink-2 hover:text-ink rounded-xl py-2.5 text-xs font-semibold transition flex items-center justify-center gap-1.5 hover:bg-muted">
                 <mat-icon class="icon-sm">add</mat-icon>
                 + Add Custom Invoice Line
               </button>

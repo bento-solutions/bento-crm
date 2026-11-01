@@ -185,7 +185,7 @@ type LedgerTab = 'open' | 'closed' | 'transactions';
               @if (data.transactions.length > 0) {
                 <tfoot class="bg-subtle">
                   <tr>
-                    <td colspan="4" class="text-right uppercase tracking-wider">Closing balance</td>
+                    <td colspan="4" class="text-right">Closing balance</td>
                     <td class="text-right">{{ signedMoney(data.totals.balance) }}</td>
                   </tr>
                 </tfoot>

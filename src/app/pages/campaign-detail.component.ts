@@ -226,13 +226,13 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
         <!-- Stats -->
         @if (isWhatsApp(c) && wa.stats(); as s) {
           <div class="grid grid-cols-3 sm:grid-cols-7 gap-px bg-muted border border-line-soft rounded-2xl overflow-hidden">
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.total }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ s.pending }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Pending</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-info-ink">{{ s.sent + s.delivered + s.read }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Sent</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-success-ink">{{ s.replied }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Replied</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-danger-ink">{{ s.failed }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Failed</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ s.skipped }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Skipped</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.replyRate }}%</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Reply rate</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.total }}</div><div class="text-meta font-semibold text-ink-3">Total</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ s.pending }}</div><div class="text-meta font-semibold text-ink-3">Pending</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-info-ink">{{ s.sent + s.delivered + s.read }}</div><div class="text-meta font-semibold text-ink-3">Sent</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-success-ink">{{ s.replied }}</div><div class="text-meta font-semibold text-ink-3">Replied</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-danger-ink">{{ s.failed }}</div><div class="text-meta font-semibold text-ink-3">Failed</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ s.skipped }}</div><div class="text-meta font-semibold text-ink-3">Skipped</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ s.replyRate }}%</div><div class="text-meta font-semibold text-ink-3">Reply rate</div></div>
           </div>
           @if (s.followupsPending > 0) {
             <div class="card flex items-center justify-between px-4 py-2">
@@ -244,9 +244,9 @@ const AUDIENCE_GROUPS: AudienceGroup[] = [
           }
         } @else {
           <div class="grid grid-cols-3 gap-px bg-muted border border-line-soft rounded-2xl overflow-hidden">
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ wa.recipients().length }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Total</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ pendingCount() }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Ready</div></div>
-            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ skippedCount() }}</div><div class="text-meta font-semibold uppercase tracking-wider text-ink-3">Skipped</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink">{{ wa.recipients().length }}</div><div class="text-meta font-semibold text-ink-3">Total</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-ink-3">{{ pendingCount() }}</div><div class="text-meta font-semibold text-ink-3">Ready</div></div>
+            <div class="bg-surface p-3 text-center"><div class="text-lg font-semibold text-warning-ink">{{ skippedCount() }}</div><div class="text-meta font-semibold text-ink-3">Skipped</div></div>
           </div>
         }
 

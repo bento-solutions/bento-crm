@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -32,13 +33,13 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
 @Component({
   selector: 'app-invite-accept',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [BrandMarkComponent, CommonModule, FormsModule, MatIconModule],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-canvas p-6">
       <div class="card w-full max-w-[440px] px-8 pt-10 pb-8">
 
         <div class="flex items-center justify-center gap-2.5 mb-8">
-          <img src="logo.webp" alt="Bento Logo" class="w-8 h-8 rounded-lg object-contain" />
+          <app-brand-mark [size]="28" />
           <span class="font-semibold text-xl tracking-tight text-ink">Bento</span>
         </div>
 

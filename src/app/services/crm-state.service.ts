@@ -3952,19 +3952,20 @@ export class CrmStateService {
     'kpi:openTickets',
     'kpi:newTasksWeek',
     'late-payers',
-    'today',
     'pipeline',
+    'today',
     'tasks-queue',
-    'schedule',
     'tickets-queue',
     'partner-mix',
-    'task-status'
+    'task-status',
+    'schedule'
   ];
 
   // Bumped to v2 when the default tile order changed to lead with KPIs — this
   // invalidates layouts saved under the old default so returning users pick up
   // the new order instead of being stuck on a stale arrangement.
-  private static readonly LAYOUT_KEY = 'bento_dashboard_layout_v2';
+  // v3: the redesign made Pipeline the wide main figure next to Focus today.
+  private static readonly LAYOUT_KEY = 'bento_dashboard_layout_v3';
 
   dashboardLayout = signal<string[]>(this.readStoredLayout());
 
