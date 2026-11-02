@@ -108,6 +108,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'General ledger', icon: 'menu_book', route: '/ledger', hint: 'Every line per account, with running balance', tab: 'ledger', authority: 'LEDGER_READ' },
       { label: 'Trial balance', icon: 'balance', route: '/ledger', hint: 'Debit and credit per account', tab: 'trial', authority: 'LEDGER_READ' },
       { label: 'Cost centers', icon: 'hub', route: '/ledger', hint: 'Analytic codes for entry lines', tab: 'cost-centers', authority: 'LEDGER_READ' },
+      { label: 'Posting setup', icon: 'tune', route: '/ledger', hint: 'Accounts that invoices, bills, payments and expenses post to', tab: 'setup', authority: 'LEDGER_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', hint: 'TVA, IS, IR and CNSS deadlines', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   },

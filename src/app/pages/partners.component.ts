@@ -18,9 +18,11 @@ import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
 import { csvCell } from '../shared/csv.util';
 
+import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.component';
+
 @Component({
   selector: 'app-partners',
-  imports: [MatIconModule, CommonModule, FormsModule, CreatedByBadgeComponent, UserAvatarComponent, DataStatusBannerComponent, PaginatorComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, CreatedByBadgeComponent, UserAvatarComponent, DataStatusBannerComponent, PaginatorComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerPartnerGroupsComponent],
   template: `
     <div class="page">
       <app-page-header title="Partners" subtitle="Leads, customers, prospects and vendors in one directory">
@@ -1019,6 +1021,12 @@ import { csvCell } from '../shared/csv.util';
                     </div>
                   }
 
+                  @if (newPartner.type !== 'Lead') {
+                    <app-ledger-partner-groups [side]="newPartner.type === 'Vendor' ? 'SUPPLIER' : 'CUSTOMER'"
+                                               [(customerGroupId)]="newPartner.customerGroupId" [(supplierGroupId)]="newPartner.supplierGroupId"
+                                               [(businessGroupId)]="newPartner.businessGroupId" />
+                  }
+
                   <div>
                     <label for="comments_notes" class="field-label mb-1.5">Comments / Notes</label>
                     <textarea id="comments_notes" [(ngModel)]="newPartner.comments" name="comments" rows="3" placeholder="Additional details..." class="input-field w-full"></textarea>
@@ -1340,6 +1348,9 @@ export class PartnersComponent {
     if (!this.canCreate()) return;
     this.newPartner.id = undefined;
     this.newPartner.type = this.activeTab();
+    this.newPartner.customerGroupId = null;
+    this.newPartner.supplierGroupId = null;
+    this.newPartner.businessGroupId = null;
     this.showCreateModal.set(true);
   }
 
@@ -1358,7 +1369,10 @@ export class PartnersComponent {
       RC: '',
       score: undefined,
       source: 'Website form',
-      assignedTo: ''
+      assignedTo: '',
+      customerGroupId: 'customerGroupId' in partner ? partner.customerGroupId ?? null : null,
+      supplierGroupId: 'supplierGroupId' in partner ? partner.supplierGroupId ?? null : null,
+      businessGroupId: 'businessGroupId' in partner ? partner.businessGroupId ?? null : null
     };
     this.showCreateModal.set(true);
   }
@@ -1396,7 +1410,10 @@ export class PartnersComponent {
     RC: '',
     score: undefined as number | undefined,
     source: 'Website form' as 'Website form' | 'Trade show' | 'LinkedIn' | 'Marketing campaign' | 'Referral',
-    assignedTo: ''
+    assignedTo: '',
+    customerGroupId: null as string | null | undefined,
+    supplierGroupId: null as string | null | undefined,
+    businessGroupId: null as string | null | undefined
   };
 
   filteredPartners = () => {
@@ -1509,8 +1526,13 @@ export class PartnersComponent {
         if (!this.newPartner.RC || !this.newPartner.RC.trim()) { this.notify.show('RC is required.', { type: 'warning' }); return; }
       }
 
+      const groups = this.newPartner.type === 'Lead' ? {} : {
+        customerGroupId: this.newPartner.customerGroupId ?? null,
+        supplierGroupId: this.newPartner.supplierGroupId ?? null,
+        businessGroupId: this.newPartner.businessGroupId ?? null,
+      };
       if (this.newPartner.id) {
-        this.state.updatePartner(this.newPartner.id, { status: 'active' });
+        this.state.updatePartner(this.newPartner.id, { status: 'active', ...groups });
       } else {
         const fiscal = this.newPartner.type === 'Customer'
           ? { ice: this.newPartner.ICE, ifField: this.newPartner.IF, rc: this.newPartner.RC }
@@ -1522,7 +1544,8 @@ export class PartnersComponent {
           phone: this.newPartner.phone,
           city: this.newPartner.city,
           comments: this.newPartner.comments,
-          status: 'active'
+          status: 'active',
+          ...groups
         } as Omit<Partner, 'id' | 'createdAt' | 'createdBy'>, fiscal);
       }
 
@@ -1541,7 +1564,10 @@ export class PartnersComponent {
         RC: '',
         score: undefined,
         source: 'Website form',
-        assignedTo: ''
+        assignedTo: '',
+        customerGroupId: null,
+        supplierGroupId: null,
+        businessGroupId: null
       };
     }
   }

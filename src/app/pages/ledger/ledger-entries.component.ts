@@ -1,6 +1,7 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../pipes/translate.pipe';
 import { TranslationService } from '../../services/translation.service';
 import { ToastService } from '../../services/toast.service';
@@ -13,7 +14,7 @@ import {
 import { formatMoney, shortDate } from '../../shared/bank.util';
 import { canPostEntry, defaultPeriod, entryTotals, isoDate, lineError, toAmount } from '../../shared/ledger.util';
 import { LedgerPickerComponent, PickerOption } from './ledger-picker.component';
-import { errorDetail, sideAmount, sourceLabel } from './ledger-labels';
+import { errorDetail, sideAmount, sourceLabel, sourceRoute } from './ledger-labels';
 
 /** Journals a manual entry may be posted in. */
 const MANUAL_KINDS = ['MISC', 'OPENING'];
@@ -47,7 +48,7 @@ interface ReverseForm {
  */
 @Component({
   selector: 'app-ledger-entries',
-  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent, PaginatorComponent, LedgerPickerComponent],
+  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, EmptyStateComponent, PaginatorComponent, LedgerPickerComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -102,7 +103,13 @@ interface ReverseForm {
                   <td class="col-num num whitespace-nowrap font-medium">{{ money(e.totalDebit) }}</td>
                   <td class="cell-muted whitespace-nowrap">
                     {{ source(e.sourceType) }}
-                    @if (e.sourceLabel) { <div class="cell-sub truncate max-w-48">{{ e.sourceLabel }}</div> }
+                    @if (e.sourceLabel) {
+                      @if (link(e.sourceType); as r) {
+                        <div class="cell-sub truncate max-w-48"><a class="text-accent-ink hover:underline" [routerLink]="r.path" [queryParams]="r.query">{{ e.sourceLabel }}</a></div>
+                      } @else {
+                        <div class="cell-sub truncate max-w-48">{{ e.sourceLabel }}</div>
+                      }
+                    }
                   </td>
                 </tr>
               } @empty {
@@ -136,7 +143,9 @@ interface ReverseForm {
           <p class="text-sm text-ink break-words">{{ e.description || '—' }}</p>
           <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <dt class="text-ink-3">{{ 'ledger.entries.source' | translate }}</dt>
-            <dd class="text-ink break-words">{{ source(e.sourceType) }}@if (e.sourceLabel) { · {{ e.sourceLabel }} }</dd>
+            <dd class="text-ink break-words">{{ source(e.sourceType) }}@if (e.sourceLabel) { ·
+              @if (link(e.sourceType); as r) { <a class="text-accent-ink hover:underline" [routerLink]="r.path" [queryParams]="r.query">{{ e.sourceLabel }}</a> }
+              @else { {{ e.sourceLabel }} } }</dd>
             <dt class="text-ink-3">{{ 'ledger.entries.postedBy' | translate }}</dt><dd class="text-ink">{{ e.postedBy || '—' }}</dd>
             <dt class="text-ink-3">{{ 'ledger.entries.postedOn' | translate }}</dt><dd class="text-ink">{{ date(e.createdAt) }}</dd>
           </dl>
@@ -310,8 +319,10 @@ export class LedgerEntriesComponent implements OnInit {
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
 
-  /** An entry to open on arrival (from the general ledger). */
+  /** An entry to open (from the general ledger, or ?entry= from a document's "View journal entry"). */
   openEntryId = input<string | null>(null);
+  /** The side panel was closed. */
+  closed = output<void>();
 
   filter = signal<EntryFilter>({ ...defaultPeriod() });
   q = signal('');
@@ -350,8 +361,14 @@ export class LedgerEntriesComponent implements OnInit {
     this.api.accounts().subscribe({ next: a => this.accounts.set(a ?? []), error: e => this.fail(e) });
     this.api.costCenters().subscribe({ next: c => this.costCenters.set(c ?? []), error: () => { /* the picker stays empty */ } });
     this.load();
-    const id = this.openEntryId();
-    if (id) this.openById(id);
+  }
+
+  constructor() {
+    // Opens the entry asked for on arrival, and again when the link changes while the tab is open.
+    effect(() => {
+      const id = this.openEntryId();
+      if (id) untracked(() => this.openById(id));
+    });
   }
 
   load(): void {
@@ -412,6 +429,7 @@ export class LedgerEntriesComponent implements OnInit {
 
   close(): void {
     this.selected.set(null);
+    this.closed.emit();
   }
 
   journalName(e: Entry): string {
@@ -505,6 +523,7 @@ export class LedgerEntriesComponent implements OnInit {
   side(v: number | null | undefined): string { return sideAmount(v); }
   date(iso: string | null | undefined): string { return shortDate(iso); }
   source(s: string | null | undefined): string { return sourceLabel(this.i18n, s); }
+  link(s: string | null | undefined) { return sourceRoute(s); }
 
   private fail(e: unknown): void {
     this.busy.set(false);

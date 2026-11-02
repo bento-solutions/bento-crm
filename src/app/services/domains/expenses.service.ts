@@ -15,6 +15,8 @@ export interface Expense {
   vendorPartnerId?: string | null;
   vendorName?: string | null;
   reference?: string | null;
+  /** Cost center (general ledger), put on the expense's posting line. */
+  costCenterId?: string | null;
   createdAt: string;
 }
 

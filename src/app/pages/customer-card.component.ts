@@ -7,6 +7,8 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { ApiService } from '../services/api.service';
 import { ClientChecklistsComponent } from './checklists/client-checklists.component';
 import { ClientPortalAccessComponent } from './checklists/client-portal-access.component';
+import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.component';
+import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 import {
   CrmStateService,
   CustomerCard,
@@ -27,7 +29,7 @@ const JOB_TITLES = [
 
 @Component({
   selector: 'app-customer-card',
-  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent, LedgerPartnerGroupsComponent],
   template: `
     <div class="page max-w-7xl mx-auto pb-12">
 
@@ -162,6 +164,14 @@ const JOB_TITLES = [
           </div>
         </div>
       </section>
+
+      <!-- Accounting: posting groups (general ledger readers only) -->
+      @if (groupsStore.enabled()) {
+        <section class="card p-5">
+          <app-ledger-partner-groups side="BOTH" [(customerGroupId)]="groups().customerGroupId" [(supplierGroupId)]="groups().supplierGroupId"
+                                     [(businessGroupId)]="groups().businessGroupId" />
+        </section>
+      }
 
       <!-- Section 4: Addresses -->
       <section class="card p-5 space-y-5">
@@ -362,6 +372,12 @@ export class CustomerCardComponent implements OnInit {
 
   existingCards = computed(() => this.state.customerCards());
 
+  groupsStore = inject(LedgerGroupsStore);
+  /** The partner's posting groups, edited in place by the accounting section. */
+  groups = signal<{ customerGroupId: string | null; supplierGroupId: string | null; businessGroupId: string | null }>(
+    { customerGroupId: null, supplierGroupId: null, businessGroupId: null });
+  private loadedGroups = JSON.stringify(this.groups());
+
   constructor() {
     // Applies the card once it arrives from the backend, covering the case where
     // loadCustomerCard() (fired from ngOnInit) resolves after the form has already
@@ -382,7 +398,17 @@ export class CustomerCardComponent implements OnInit {
       this.fetchedType.set(null);
       if (this.partnerId) {
         this.api.getPartner(this.partnerId).subscribe({
-          next: p => this.fetchedType.set(String(p?.type ?? '')),
+          next: p => {
+            this.fetchedType.set(String(p?.type ?? ''));
+            const raw = (p ?? {}) as unknown as Record<string, string | null | undefined>;
+            const g = {
+              customerGroupId: raw['customerGroupId'] ?? raw['customer_group_id'] ?? null,
+              supplierGroupId: raw['supplierGroupId'] ?? raw['supplier_group_id'] ?? null,
+              businessGroupId: raw['businessGroupId'] ?? raw['business_group_id'] ?? null,
+            };
+            this.groups.set(g);
+            this.loadedGroups = JSON.stringify(g);
+          },
           error: () => this.fetchedType.set(null),
         });
       }
@@ -545,6 +571,9 @@ export class CustomerCardComponent implements OnInit {
       this.state.convertToCustomer(this.partnerId);
     }
     this.state.saveCustomerCard(this.form());
+    if (this.groupsStore.enabled() && JSON.stringify(this.groups()) !== this.loadedGroups) {
+      this.state.updatePartner(this.partnerId, { ...this.groups() });
+    }
     this.goBack();
   }
 
