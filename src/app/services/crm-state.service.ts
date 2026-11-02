@@ -88,6 +88,16 @@ export interface CrmGroup {
   createdAt: Date;
 }
 
+/** A group as the API sends it: `createdBy` where CrmGroup says `createdByUserId`, and ISO dates. */
+export interface GroupDto {
+  id: string;
+  name: string;
+  description?: string;
+  createdBy?: string;
+  memberUserIds?: string[];
+  createdAt?: string;
+}
+
 export interface GroupMessage {
   id: string;
   groupId: string;
@@ -107,6 +117,18 @@ export interface GroupMeeting {
   organizerUserId: string;
   attendeeUserIds: string[];
   status: 'scheduled' | 'cancelled' | 'completed';
+}
+
+/** A meeting as the API sends it. It has no status: a meeting is over once its time has passed. */
+export interface GroupMeetingDto {
+  id: string;
+  groupId: string;
+  title: string;
+  description?: string;
+  scheduledAt: string;
+  durationMinutes?: number | null;
+  createdByUserId: string;
+  attendeeUserIds?: string[] | null;
 }
 
 export const CRM_ROLES: CrmRole[] = [
@@ -1449,7 +1471,7 @@ export class CrmStateService {
     this.api.getGroups().subscribe({
       next: (groups) => {
         if (groups && groups.length > 0) {
-          this.groups.set(groups);
+          this.groups.set(groups.map(g => this.groupFromDto(g)));
         }
       },
       error: (err) => {
@@ -2224,24 +2246,45 @@ export class CrmStateService {
     this.updateUser(userId, { roleId });
   }
 
-  createGroup(draft: Omit<CrmGroup, 'id' | 'createdAt'>): CrmGroup {
-    const tempId = 'grp_' + Math.random().toString(36).substring(2, 9);
-    const newGroup: CrmGroup = {
-      ...draft,
-      id: tempId,
-      createdAt: new Date()
+  private groupFromDto(dto: GroupDto): CrmGroup {
+    return {
+      id: dto.id,
+      name: dto.name,
+      description: dto.description,
+      createdByUserId: dto.createdBy ?? '',
+      memberUserIds: dto.memberUserIds ?? [],
+      createdAt: dto.createdAt ? new Date(dto.createdAt) : new Date()
     };
-    this.groups.update(list => [...list, newGroup]);
-    this.api.createGroup({ name: draft.name, description: draft.description }).subscribe({
+  }
+
+  private meetingFromDto(dto: GroupMeetingDto): GroupMeeting {
+    const scheduledAt = new Date(dto.scheduledAt);
+    return {
+      id: dto.id,
+      groupId: dto.groupId,
+      title: dto.title,
+      description: dto.description,
+      scheduledAt,
+      durationMinutes: dto.durationMinutes ?? 0,
+      organizerUserId: dto.createdByUserId,
+      attendeeUserIds: dto.attendeeUserIds ?? [],
+      status: scheduledAt.getTime() < Date.now() ? 'completed' : 'scheduled'
+    };
+  }
+
+  /** Waits for the server rather than adding the group straight away: until then it has no id to open it by. */
+  createGroup(draft: { name: string; description?: string; memberUserIds: string[] }, onCreated?: (group: CrmGroup) => void, onError?: () => void): void {
+    this.api.createGroup(draft).subscribe({
       next: (dto) => {
-        this.groups.update(list => list.map(g => g.id === tempId ? { ...g, id: dto.id } : g));
+        const group = this.groupFromDto(dto);
+        this.groups.update(list => [...list, group]);
+        onCreated?.(group);
       },
       error: () => {
-        this.groups.update(list => list.filter(g => g.id !== tempId));
         this.toast.show('Failed to save group to the server', { type: 'error' });
+        onError?.();
       }
     });
-    return newGroup;
   }
 
   updateGroup(groupId: string, updates: Partial<Pick<CrmGroup, 'name' | 'description' | 'memberUserIds'>>): void {
@@ -2250,7 +2293,8 @@ export class CrmStateService {
     this.groups.update(list => list.map(g => g.id === groupId ? { ...g, ...updates } : g));
     this.api.updateGroup(groupId, {
       name: updates.name ?? prev.name,
-      description: updates.description ?? prev.description
+      description: updates.description ?? prev.description,
+      memberUserIds: updates.memberUserIds
     }).subscribe({
       error: () => {
         this.groups.update(list => list.map(g => g.id === groupId ? prev : g));
@@ -2303,6 +2347,7 @@ export class CrmStateService {
       title: draft.title,
       description: draft.description,
       scheduledAt: draft.scheduledAt,
+      durationMinutes: draft.durationMinutes,
       meetingLink: (draft as { meetingLink?: string }).meetingLink,
       attendeeUserIds: draft.attendeeUserIds
     }).subscribe({
@@ -2311,9 +2356,21 @@ export class CrmStateService {
           this.groupMeetings.update(list => list.map(m => m === newMeeting ? { ...m, id: dto.id } : m));
         }
       },
-      error: () => this.toast.show('Failed to save meeting to the server', { type: 'error' })
+      error: () => {
+        this.groupMeetings.update(list => list.filter(m => m !== newMeeting));
+        this.toast.show('Failed to save meeting to the server', { type: 'error' });
+      }
     });
     return newMeeting;
+  }
+
+  loadGroupMeetings(groupId: string): void {
+    this.api.getGroupMeetings(groupId).subscribe({
+      next: (meetings) => {
+        this.groupMeetings.update(list => [...list.filter(m => m.groupId !== groupId), ...meetings.map(m => this.meetingFromDto(m))]);
+      },
+      error: (err) => console.warn('Failed to load group meetings:', err)
+    });
   }
 
   private assertNotLastAdmin(userId: string): void {
@@ -3952,19 +4009,20 @@ export class CrmStateService {
     'kpi:openTickets',
     'kpi:newTasksWeek',
     'late-payers',
-    'today',
     'pipeline',
+    'today',
     'tasks-queue',
-    'schedule',
     'tickets-queue',
     'partner-mix',
-    'task-status'
+    'task-status',
+    'schedule'
   ];
 
   // Bumped to v2 when the default tile order changed to lead with KPIs — this
   // invalidates layouts saved under the old default so returning users pick up
   // the new order instead of being stuck on a stale arrangement.
-  private static readonly LAYOUT_KEY = 'bento_dashboard_layout_v2';
+  // v3: the redesign made Pipeline the wide main figure next to Focus today.
+  private static readonly LAYOUT_KEY = 'bento_dashboard_layout_v3';
 
   dashboardLayout = signal<string[]>(this.readStoredLayout());
 

@@ -219,7 +219,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
       @if (activeTab() === 'proposals') {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           @for (prop of paginatedProposals(); track prop.id) {
-            <div class="card p-5 flex flex-col justify-between transition-all">
+            <div class="card p-5 flex flex-col justify-between transition">
               <div class="space-y-3">
                 <div class="flex justify-between items-start">
                   <span class="badge"
@@ -494,8 +494,8 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div class="grid grid-cols-2 gap-3">
               <button type="button" (click)="toggleChannel('email')"
                 [class]="isChannelSelected('email')
-                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition-all shadow-sm'
-                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition-all gap-2 text-ink-2'">
+                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition shadow-sm'
+                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition gap-2 text-ink-2'">
                 <mat-icon class="icon-xl">email</mat-icon>
                 <span class="text-sm font-semibold">Email</span>
                 @if (isChannelSelected('email')) {
@@ -504,8 +504,8 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               </button>
               <button type="button" (click)="toggleChannel('whatsapp')"
                 [class]="isChannelSelected('whatsapp')
-                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition-all shadow-sm'
-                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition-all gap-2 text-ink-2'">
+                  ? 'flex flex-col items-center justify-center p-4 border-2 border-ink bg-muted text-ink rounded-xl gap-2 font-semibold transition shadow-sm'
+                  : 'flex flex-col items-center justify-center p-4 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-ink transition gap-2 text-ink-2'">
                 <mat-icon class="icon-xl">chat</mat-icon>
                 <span class="text-sm font-semibold">WhatsApp</span>
                 @if (isChannelSelected('whatsapp')) {
@@ -1012,7 +1012,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
             <div>
               <div class="flex justify-between items-center mb-1">
                 <label class="field-label">Vendor</label>
-                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-ink hover:text-ink text-meta font-semibold uppercase">
+                <button (click)="showNewVendorForm.set(!showNewVendorForm())" class="text-ink hover:text-ink text-meta font-semibold">
                   {{ showNewVendorForm() ? 'Select Existing' : '+ Create New Vendor Inline' }}
                 </button>
               </div>
@@ -1043,7 +1043,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               
               <div class="space-y-3">
                 @for (line of poLines(); track $index; let i = $index) {
-                  <div class="card hover:bg-subtle p-3.5 space-y-2.5 relative transition-all">
+                  <div class="card hover:bg-subtle p-3.5 space-y-2.5 relative transition">
                     <!-- Line Header -->
                     <div class="flex justify-between items-center">
                       <span class="eyebrow">Line #{{ i + 1 }}</span>
@@ -1388,22 +1388,22 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
               <div class="grid grid-cols-3 gap-2">
                 <button type="button" (click)="confirmMethod.set('Email')"
                   [class]="confirmMethod() === 'Email' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-accent-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-accent-ink transition-all gap-1 text-ink-3 text-xs'">
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-accent-soft/40 text-ink rounded-xl gap-1 font-semibold transition text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-accent-ink transition gap-1 text-ink-3 text-xs'">
                   <mat-icon class="icon-md">email</mat-icon>
                   <span>Email</span>
                 </button>
                 <button type="button" (click)="confirmMethod.set('WhatsApp')"
                   [class]="confirmMethod() === 'WhatsApp' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-success-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-success-ink transition-all gap-1 text-ink-3 text-xs'">
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-success-soft/40 text-ink rounded-xl gap-1 font-semibold transition text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-success-ink transition gap-1 text-ink-3 text-xs'">
                   <mat-icon class="icon-md">chat</mat-icon>
                   <span>WhatsApp</span>
                 </button>
                 <button type="button" (click)="confirmMethod.set('Call')"
                   [class]="confirmMethod() === 'Call' 
-                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-warning-soft/40 text-ink rounded-xl gap-1 font-semibold transition-all text-xs' 
-                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-warning-ink transition-all gap-1 text-ink-3 text-xs'">
+                    ? 'flex flex-col items-center justify-center py-2 px-3 border-2 border-ink bg-warning-soft/40 text-ink rounded-xl gap-1 font-semibold transition text-xs' 
+                    : 'flex flex-col items-center justify-center py-2 px-3 border border-line rounded-xl hover:border-line-strong hover:bg-subtle hover:text-warning-ink transition gap-1 text-ink-3 text-xs'">
                   <mat-icon class="icon-md">phone</mat-icon>
                   <span>Call Log</span>
                 </button>
@@ -1417,7 +1417,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                   Attach {{ confirmMethod() }} Confirmation Screenshot / PDF
                 </label>
                 
-                <div class="card p-4 flex flex-col items-center justify-center hover:bg-subtle transition-all relative">
+                <div class="card p-4 flex flex-col items-center justify-center hover:bg-subtle transition relative">
                   <input type="file" (change)="onConfirmFileSelected($event)" accept="image/*,application/pdf"
                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                   <mat-icon class="text-ink-4 mb-1 icon-xl">cloud_upload</mat-icon>
@@ -1968,7 +1968,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
 
               <!-- Activity Hub -->
               <div class="border-t border-line pt-4">
-                <h5 class="text-xs font-semibold text-ink-3 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <h5 class="text-xs font-semibold text-ink-3 mb-3 flex items-center gap-1.5">
                   <mat-icon class="text-ink icon-sm">forum</mat-icon> Deal Activity Hub
                 </h5>
                 
@@ -1976,49 +1976,49 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                 <div class="flex flex-wrap gap-1 border-b border-line mb-4 bg-surface border border-line p-1 rounded-lg">
                   <button type="button" (click)="setDealTab(deal.id, 'calls')"
                     [class]="getDealTab(deal.id) === 'calls' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">call</mat-icon>
                     Calls
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.calls?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'emails')"
                     [class]="getDealTab(deal.id) === 'emails' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">email</mat-icon>
                     Emails
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.emails?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'meetings')"
                     [class]="getDealTab(deal.id) === 'meetings' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">groups</mat-icon>
                     Meetings
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.meetings?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'recordings')"
                     [class]="getDealTab(deal.id) === 'recordings' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">videocam</mat-icon>
                     Recordings
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.recordings?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'notes')"
                     [class]="getDealTab(deal.id) === 'notes' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">note_alt</mat-icon>
                     Notes
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.notes?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'followups')"
                     [class]="getDealTab(deal.id) === 'followups' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">notification_important</mat-icon>
                     Follow-ups
                     <span class="bg-muted text-ink px-1 py-0.2 rounded-full text-meta font-semibold">{{ deal.activityLog?.followUps?.length || 0 }}</span>
                   </button>
                   <button type="button" (click)="setDealTab(deal.id, 'calendar')"
                     [class]="getDealTab(deal.id) === 'calendar' ? 'bg-surface text-ink shadow-xs border-line' : 'text-ink-2 border-transparent hover:text-ink hover:bg-muted'"
-                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-md text-xs font-medium border transition flex items-center gap-1.5">
                     <mat-icon class="icon-xs">calendar_month</mat-icon>
                     Calendar
                   </button>
@@ -2074,7 +2074,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                       <div class="space-y-3">
                         @for (email of deal.activityLog?.emails; track email.id) {
                           <div [class]="email.direction === 'sent' ? 'bg-muted border-line ml-6' : 'bg-surface border-line-soft mr-6'"
-                               class="border rounded-lg p-3 shadow-xs space-y-1.5 transition-all">
+                               class="border rounded-lg p-3 shadow-xs space-y-1.5 transition">
                             <div class="flex justify-between items-start">
                               <div>
                                 <span class="font-semibold text-ink text-xs">{{ email.subject }}</span>
@@ -2124,7 +2124,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                                 <span [class]="meeting.type === 'teams' ? 'bg-muted text-ink border-line' : 
                                                meeting.type === 'demo' ? 'bg-muted text-ink border-line' : 
                                                'bg-subtle text-ink-2 border-line'"
-                                      class="px-1.5 py-0.2 rounded-sm text-meta font-semibold border uppercase">
+                                      class="px-1.5 py-0.2 rounded-sm text-meta font-semibold border">
                                   {{ meeting.type }}
                                 </span>
                               </div>
@@ -2271,7 +2271,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                                       [class]="isSelectedCalendarDay(deal.id, day) ? 'bg-primary text-on-primary font-semibold' : 
                                                hasEventsOnDay(deal, day) ? 'bg-muted text-ink font-semibold border-line-strong' : 
                                                'bg-subtle text-ink-2 hover:bg-muted border-line-soft border-line-soft'"
-                                      class="w-full aspect-square rounded-lg text-meta font-semibold border flex flex-col items-center justify-center relative transition-all">
+                                      class="w-full aspect-square rounded-lg text-meta font-semibold border flex flex-col items-center justify-center relative transition">
                                 {{ day }}
                                 @if (hasEventsOnDay(deal, day) && !isSelectedCalendarDay(deal.id, day)) {
                                   <span class="absolute bottom-1 w-1.5 h-1.5 bg-primary rounded-full"></span>
@@ -2296,7 +2296,7 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                                   <span class="font-semibold text-ink text-xs">{{ m.title }}</span>
                                   <span class="text-meta text-ink-3">{{ m.time }}</span>
                                 </div>
-                                <div class="text-meta text-ink-3 uppercase tracking-wider mb-1">
+                                <div class="text-meta text-ink-3 mb-1">
                                   Type: {{ m.type }} | Location: {{ m.location }}
                                 </div>
                                 <p class="text-meta text-ink-2 line-clamp-2 leading-relaxed">{{ m.summary }}</p>
@@ -2309,9 +2309,9 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                           </div>
                         </div>
 
-                        <div class="badge badge-neutral p-2.5 mt-4 leading-relaxed">
-                          💡 <strong>Tip:</strong> Meetings logged in the <strong>Meetings</strong> tab automatically populate this calendar view.
-                        </div>
+                        <p class="mt-4 text-xs text-ink-3 leading-relaxed">
+                          Meetings logged in the Meetings tab show up on this calendar
+                        </p>
                       </div>
                     </div>
                   }

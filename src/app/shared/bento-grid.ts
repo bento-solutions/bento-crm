@@ -244,7 +244,7 @@ export class BentoGrid {
     // Anchoring the scale to the grab point keeps the tile pinned under the cursor.
     el.style.transformOrigin = `${(this.grabDx / rect.width) * 100}% ${(this.grabDy / rect.height) * 100}%`;
     el.style.willChange = 'transform';
-    el.style.transition = 'box-shadow 160ms ease, opacity 160ms ease';
+    el.style.transition = 'box-shadow var(--transition-fast), opacity var(--transition-fast)';
     el.classList.add('is-dragging');
     this.host.classList.add('is-dragging-active');
     document.body.classList.add('bento-dragging');

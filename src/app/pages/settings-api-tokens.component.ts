@@ -8,6 +8,7 @@ import { ToastService } from '../services/toast.service';
 import { CrmStateService } from '../services/crm-state.service';
 import { ApiScope, ApiTokenView, ApiTokensApi } from '../services/domains/api-tokens.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 
 interface ScopeOption {
@@ -29,7 +30,7 @@ const SCOPES: ScopeOption[] = [
  */
 @Component({
   selector: 'app-settings-api-tokens',
-  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'tokens.title' | translate" [subtitle]="'tokens.subtitle' | translate">
@@ -41,46 +42,55 @@ const SCOPES: ScopeOption[] = [
         }
       </app-page-header>
 
-      @if (created() || creating()) {
-      <section class="card p-5 space-y-4">
-
-        @if (created(); as c) {
-          <div class="alert alert-success !flex-col !items-stretch space-y-3" role="alert">
-            <p class="text-sm font-semibold">{{ 'tokens.copyNow' | translate }}</p>
-            <div class="flex gap-2 items-center">
-              <code class="flex-1 rounded-lg border border-line bg-subtle px-3 py-2 text-xs font-mono break-all" dir="ltr">{{ c.token }}</code>
-              <button type="button" class="btn-secondary btn-sm" (click)="copy(c.token, 'token')">
-                <mat-icon class="icon-xs">content_copy</mat-icon>{{ (copied() === 'token' ? 'tokens.copied' : 'tokens.copy') | translate }}
+      @if (created(); as c) {
+        <section class="card">
+          <div class="card-body space-y-4">
+            <div class="alert alert-success" role="alert">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ 'tokens.copyNow' | translate }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <code class="code-block" dir="ltr">{{ c.token }}</code>
+              <button type="button" class="btn-secondary shrink-0" (click)="copy(c.token, 'token')">
+                <mat-icon class="icon-sm">{{ copied() === 'token' ? 'check' : 'content_copy' }}</mat-icon>
+                {{ (copied() === 'token' ? 'tokens.copied' : 'tokens.copy') | translate }}
               </button>
             </div>
-            <div>
-              <p class="text-xs font-semibold mb-1">{{ 'tokens.claudeCode' | translate }}</p>
-              <div class="flex gap-2 items-start">
-                <code class="flex-1 rounded-lg border border-line bg-subtle px-3 py-2 text-xs font-mono break-all" dir="ltr">{{ claudeCommand(c.token) }}</code>
-                <button type="button" class="btn-icon btn-sm" (click)="copy(claudeCommand(c.token), 'claude')" [attr.aria-label]="'tokens.copy' | translate">
+            <div class="field">
+              <span class="field-label">{{ 'tokens.claudeCode' | translate }}</span>
+              <div class="flex items-start gap-2">
+                <code class="code-block" dir="ltr">{{ claudeCommand(c.token) }}</code>
+                <button type="button" class="btn-icon is-bordered shrink-0" (click)="copy(claudeCommand(c.token), 'claude')" [attr.aria-label]="'tokens.copy' | translate">
                   <mat-icon class="icon-sm">{{ copied() === 'claude' ? 'check' : 'content_copy' }}</mat-icon>
                 </button>
               </div>
             </div>
-            <div>
-              <p class="text-xs font-semibold mb-1">{{ 'tokens.claudeDesktop' | translate }}</p>
-              <div class="flex gap-2 items-start">
-                <code class="flex-1 rounded-lg border border-line bg-subtle px-3 py-2 text-xs font-mono break-all" dir="ltr">{{ desktopCommand() }}</code>
-                <button type="button" class="btn-icon btn-sm" (click)="copy(desktopCommand(), 'desktop')" [attr.aria-label]="'tokens.copy' | translate">
+            <div class="field">
+              <span class="field-label">{{ 'tokens.claudeDesktop' | translate }}</span>
+              <div class="flex items-start gap-2">
+                <code class="code-block" dir="ltr">{{ desktopCommand() }}</code>
+                <button type="button" class="btn-icon is-bordered shrink-0" (click)="copy(desktopCommand(), 'desktop')" [attr.aria-label]="'tokens.copy' | translate">
                   <mat-icon class="icon-sm">{{ copied() === 'desktop' ? 'check' : 'content_copy' }}</mat-icon>
                 </button>
               </div>
-              <p class="text-xs text-ink-2 mt-1">{{ 'tokens.desktopHint' | translate }}</p>
+              <span class="field-hint">{{ 'tokens.desktopHint' | translate }}</span>
             </div>
-            <button type="button" class="btn-secondary btn-sm" (click)="created.set(null)">{{ 'tokens.done' | translate }}</button>
           </div>
-        }
+          <div class="card-footer">
+            <button type="button" class="btn-primary" (click)="created.set(null)">{{ 'tokens.done' | translate }}</button>
+          </div>
+        </section>
+      }
 
-        @if (creating()) {
-          <div class="space-y-4 pt-2">
-            <label class="block max-w-sm">
+      @if (creating()) {
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title">{{ 'tokens.new' | translate }}</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <label class="field">
               <span class="field-label">{{ 'tokens.name' | translate }}</span>
-              <input class="input-field w-full mt-1" [placeholder]="'tokens.namePlaceholder' | translate"
+              <input class="input-field" [placeholder]="'tokens.namePlaceholder' | translate"
                      [ngModel]="name()" (ngModelChange)="name.set($event)" maxlength="100" />
             </label>
             <fieldset class="space-y-2">
@@ -89,8 +99,8 @@ const SCOPES: ScopeOption[] = [
                 <label class="choice-row">
                   <input type="checkbox" class="mt-1" [checked]="scopes().has(opt.scope)" (change)="toggleScope(opt.scope)" />
                   <span>
-                    <span class="text-sm font-semibold block"><code dir="ltr">{{ opt.scope }}</code></span>
-                    <span class="text-xs text-ink-2">{{ ('tokens.scope.' + opt.scope) | translate }}</span>
+                    <code class="row-title t-mono" dir="ltr">{{ opt.scope }}</code>
+                    <span class="row-hint">{{ ('tokens.scope.' + opt.scope) | translate }}</span>
                   </span>
                 </label>
               }
@@ -98,57 +108,65 @@ const SCOPES: ScopeOption[] = [
             @if (scopes().has('whatsapp:send')) {
               <p class="alert alert-warning">{{ 'tokens.sendWarning' | translate }}</p>
             }
-            <div class="grid gap-3 sm:grid-cols-2 max-w-lg">
-              <label>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="field">
                 <span class="field-label">{{ 'tokens.expiry' | translate }}</span>
-                <select class="input-field w-full mt-1" [ngModel]="expiry()" (ngModelChange)="expiry.set(+$event)">
+                <select class="input-field" [ngModel]="expiry()" (ngModelChange)="expiry.set(+$event)">
                   @for (d of [30, 90, 365]; track d) {
                     <option [value]="d">{{ 'tokens.days' | translate: { n: d } }}</option>
                   }
                 </select>
               </label>
-              <label>
+              <label class="field">
                 <span class="field-label">{{ 'tokens.cap' | translate }}</span>
-                <input type="number" min="1" max="200" class="input-field w-full mt-1"
+                <input type="number" min="1" max="200" class="input-field"
                        [ngModel]="cap()" (ngModelChange)="cap.set(+$event)" />
               </label>
             </div>
-            <div class="flex gap-2">
-              <button type="button" class="btn-primary"
-                      [disabled]="busy() || !name().trim() || scopes().size === 0" (click)="create()">
-                {{ 'tokens.create' | translate }}
-              </button>
-              <button type="button" class="btn-secondary" (click)="creating.set(false)">{{ 'inbox.cancel' | translate }}</button>
-            </div>
           </div>
-        }
-      </section>
+          <div class="card-footer">
+            <button type="button" class="btn-secondary" (click)="creating.set(false)">{{ 'inbox.cancel' | translate }}</button>
+            <button type="button" class="btn-primary"
+                    [disabled]="busy() || !name().trim() || scopes().size === 0" (click)="create()">
+              {{ 'tokens.create' | translate }}
+            </button>
+          </div>
+        </section>
       }
 
-      <section class="card p-5">
-        <h3 class="card-title mb-2">{{ 'tokens.yours' | translate }}</h3>
+      <section class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ 'tokens.yours' | translate }}</h3>
+          <span class="count-pill">{{ tokens().length }}</span>
+        </div>
         @for (t of tokens(); track t.id) {
-          <div class="border-t border-line-soft first:border-t-0 flex flex-wrap items-center justify-between gap-2 py-3">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold">{{ t.name }} <code class="text-xs text-ink-3" dir="ltr">{{ t.tokenPrefix }}…</code></p>
-              <p class="text-xs text-ink-2">{{ t.scopes.join(', ') }} · {{ 'tokens.capShort' | translate: { n: t.maxSendsPerHour ?? 20 } }}</p>
-              <p class="text-xs text-ink-3">
+          <div class="list-row">
+            <div class="list-row__main">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="row-title">{{ t.name }}</span>
+                <code class="count-pill" dir="ltr">{{ t.tokenPrefix }}…</code>
                 @if (t.revokedAt) {
-                  <span class="text-danger-ink">{{ 'tokens.revoked' | translate }}</span>
+                  <span class="badge badge-danger">{{ 'tokens.revoked' | translate }}</span>
                 } @else if (expired(t)) {
-                  <span class="text-danger-ink">{{ 'tokens.expired' | translate }}</span>
-                } @else {
-                  {{ 'tokens.expires' | translate: { date: date(t.expiresAt) } }}
+                  <span class="badge badge-danger">{{ 'tokens.expired' | translate }}</span>
                 }
-                · {{ t.lastUsedAt ? ('tokens.lastUsed' | translate: { date: date(t.lastUsedAt) }) : ('tokens.neverUsed' | translate) }}
-              </p>
+              </div>
+              <span class="row-hint">{{ t.scopes.join(', ') }} · {{ 'tokens.capShort' | translate: { n: t.maxSendsPerHour ?? 20 } }}</span>
+              <span class="row-hint">
+                @if (!t.revokedAt && !expired(t)) {
+                  {{ 'tokens.expires' | translate: { date: date(t.expiresAt) } }} ·
+                }
+                {{ t.lastUsedAt ? ('tokens.lastUsed' | translate: { date: date(t.lastUsedAt) }) : ('tokens.neverUsed' | translate) }}
+              </span>
             </div>
             @if (!t.revokedAt) {
-              <button type="button" class="btn-danger-soft btn-sm" (click)="revoke(t)">{{ 'tokens.revoke' | translate }}</button>
+              <div class="list-row__actions">
+                <button type="button" class="btn-danger-soft btn-sm" (click)="revoke(t)">{{ 'tokens.revoke' | translate }}</button>
+              </div>
             }
           </div>
         } @empty {
-          <p class="text-xs text-ink-3">{{ 'tokens.none' | translate }}</p>
+          <app-empty-state icon="key" [title]="'tokens.none' | translate" />
         }
       </section>
     </div>

@@ -20,54 +20,54 @@ const PRESETS = [-7, -3, 0, 1, 3, 7, 15, 30];
   selector: 'app-settings-billing',
   imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
+    <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'billing.title' | translate" [subtitle]="'billing.subtitle' | translate" />
 
       <section class="card">
         <div class="card-body space-y-6">
-          <div class="flex items-start gap-3">
-            <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="enabled()" [disabled]="!canWrite()"
+          <label class="switch-row" for="billing-enabled">
+            <button type="button" id="billing-enabled" role="switch" class="switch" [attr.aria-checked]="enabled()" [disabled]="!canWrite()"
                     [attr.aria-label]="'billing.enable' | translate" (click)="enabled.set(!enabled())"></button>
             <span>
-              <span class="text-sm font-medium text-ink block">{{ 'billing.enable' | translate }}</span>
-              <span class="text-xs text-ink-3">{{ 'billing.enableHint' | translate }}</span>
+              <span class="row-title">{{ 'billing.enable' | translate }}</span>
+              <span class="row-hint">{{ 'billing.enableHint' | translate }}</span>
             </span>
-          </div>
+          </label>
 
-          <div>
+          <div class="space-y-2">
             <p class="field-label">{{ 'billing.when' | translate }}</p>
             <div class="flex flex-wrap gap-2">
               @for (d of choices(); track d) {
-                <button type="button" class="btn-sm" [class.btn-primary]="offsets().has(d)" [class.btn-secondary]="!offsets().has(d)"
+                <button type="button" class="choice-chip"
                         [disabled]="!canWrite()" [attr.aria-pressed]="offsets().has(d)" (click)="toggle(d)">
                   {{ label(d) }}
                 </button>
               }
             </div>
-            <div class="flex flex-wrap items-center gap-2 mt-3">
+            <div class="flex flex-wrap items-center gap-2 pt-1">
               <input type="number" min="-30" max="365" class="input-field w-24" [disabled]="!canWrite()"
                      [attr.aria-label]="'billing.customDay' | translate" [ngModel]="custom()" (ngModelChange)="custom.set($event)" />
-              <button type="button" class="btn-secondary btn-sm" [disabled]="!canWrite() || !validCustom()" (click)="addCustom()">
+              <button type="button" class="btn-secondary" [disabled]="!canWrite() || !validCustom()" (click)="addCustom()">
                 {{ 'billing.addDay' | translate }}
               </button>
-              <span class="text-xs text-ink-3">{{ 'billing.customHint' | translate }}</span>
+              <span class="field-hint">{{ 'billing.customHint' | translate }}</span>
             </div>
           </div>
 
-          <label class="block">
+          <label class="field">
             <span class="field-label">{{ 'billing.message' | translate }}</span>
             <textarea rows="3" maxlength="2000" class="input-field" [disabled]="!canWrite()"
                       [placeholder]="'billing.messagePlaceholder' | translate" [ngModel]="message()" (ngModelChange)="message.set($event)"></textarea>
           </label>
 
-          <div class="alert alert-info text-xs">{{ 'billing.note' | translate }}</div>
+          <div class="alert alert-info">{{ 'billing.note' | translate }}</div>
 
           @if (lastRun(); as r) {
             <p class="text-xs text-ink-2">{{ 'billing.runResult' | translate: { sent: r.remindersSent, overdue: r.markedOverdue, skipped: r.skippedNoEmail } }}</p>
           }
         </div>
         @if (canWrite()) {
-          <div class="card-footer flex flex-wrap gap-2 justify-end">
+          <div class="card-footer flex-wrap">
             <button type="button" class="btn-secondary" [disabled]="busy()" (click)="runNow()">
               <mat-icon class="icon-sm">send</mat-icon>{{ 'billing.runNow' | translate }}
             </button>

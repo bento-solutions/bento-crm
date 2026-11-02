@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from './shared/ui/brand-mark.component';
 import { Component, signal, ElementRef, inject, OnDestroy, OnInit, computed, effect, HostListener, viewChild } from '@angular/core';
 import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon'
@@ -30,11 +31,17 @@ interface NavItem {
   authority?: string | string[];
   /** Live count shown next to the label. */
   badge?: 'whatsappUnread';
+  /** A tab of the page, passed as ?tab=; the item is active only on that tab. */
+  tab?: string;
+  /** This tab is the page's default, so the page without ?tab= counts as it. */
+  defaultTab?: boolean;
 }
 
 interface NavSection {
   label: string;
   items: NavItem[];
+  /** A finance module: a heading that opens and closes its pages. CRM sections stay open. */
+  module?: { key: string; icon: string };
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -42,6 +49,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', icon: 'home', route: '/' },
+      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
     ]
   },
   {
@@ -58,30 +66,63 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Tasks', icon: 'task_alt', route: '/tasks' },
       { label: 'Tickets', icon: 'support_agent', route: '/tickets' },
       { label: 'Automation', icon: 'smart_toy', route: '/automation' },
-      { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
     ]
   },
   {
-    label: 'Intelligence',
-    items: [
-      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
-    ]
-  },
-  {
-    label: 'CRM',
+    label: 'Clients',
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners' },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
       { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
       { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
+      { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
       { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
-      { label: 'Finance', icon: 'account_balance', route: '/finance' },
+    ]
+  },
+  {
+    label: 'Account Receivables',
+    module: { key: 'ar', icon: 'call_received' },
+    items: [
+      { label: 'Customer invoices', icon: 'receipt', route: '/finance', tab: 'Customer', defaultTab: true },
+      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring' },
+      { label: 'Recovery', icon: 'notifications_active', route: '/finance', tab: 'Recovery' },
+      { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
+    ]
+  },
+  {
+    label: 'Account Payables',
+    module: { key: 'ap', icon: 'call_made' },
+    items: [
+      { label: 'Supplier bills', icon: 'request_quote', route: '/finance', tab: 'Vendor' },
+      { label: 'Expenses', icon: 'payments', route: '/finance', tab: 'Expenses', authority: 'PAYMENTS_READ' },
+      { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'SupplierAging' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
-      { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
+    ]
+  },
+  {
+    label: 'Cash and Bank',
+    module: { key: 'bank', icon: 'savings' },
+    items: [
+      { label: 'Cash position', icon: 'savings', route: '/bank', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
+      { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', tab: 'transactions', authority: 'PAYMENTS_READ' },
+      { label: 'Bank accounts', icon: 'account_balance', route: '/bank', tab: 'accounts', authority: 'PAYMENTS_READ' },
+      { label: 'Matching rules', icon: 'rule', route: '/bank', tab: 'rules', authority: 'PAYMENTS_READ' },
+    ]
+  },
+  {
+    label: 'General Ledger',
+    module: { key: 'gl', icon: 'menu_book' },
+    items: [
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   }
 ];
+
+const OPEN_MODULES_KEY = 'bento_open_nav_modules';
+
+function readOpenModules(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(OPEN_MODULES_KEY) ?? '[]')); } catch { return new Set(); }
+}
 
 interface SearchItem {
   mainMenu: string;
@@ -155,12 +196,6 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Customer Invoices', subIcon: 'receipt', tab: 'Customer', action: 'Manage customer invoices and billing', keywords: 'finance invoices customers billing' },
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Vendor Invoices', subIcon: 'receipt_long', tab: 'Vendor', action: 'Manage vendor invoices and payables', keywords: 'finance invoices vendors billing' },
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Recovery', subIcon: 'healing', tab: 'Recovery', action: 'Send payment reminders for overdue invoices', keywords: 'finance recovery reminders overdue invoices' },
-  { mainMenu: 'Automation', mainIcon: 'smart_toy', mainRoute: '/automation', action: 'Create and manage workflow automation rules', keywords: 'automation workflows rules triggers conditions' },
-  { mainMenu: 'Groups', mainIcon: 'group_work', mainRoute: '/groups', action: 'Collaborate with teams via chat, meetings, and file sharing', keywords: 'groups chat meetings collaboration teams' },
-  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/organization', submenu: 'Organization', subIcon: 'business', action: 'Configure organization profile and settings', keywords: 'settings organization company profile' },
-  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/users', submenu: 'Users', subIcon: 'people', action: 'Manage user accounts and permissions', keywords: 'settings users accounts permissions roles' },
-  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/teams', submenu: 'Teams', subIcon: 'groups', action: 'Configure teams, departments, and assignments', keywords: 'settings teams departments groups' },
-  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/groups', submenu: 'Groups', subIcon: 'forum', action: 'Manage collaboration group settings', keywords: 'settings groups collaboration' },
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', action: 'Bank accounts, statement import, reconciliation and cash forecast', keywords: 'bank cash accounts statements reconciliation forecast treasury' },
   { mainMenu: 'Tax calendar', mainIcon: 'event_note', mainRoute: '/tax-calendar', action: 'TVA, IS, IR and CNSS deadlines for the company and its clients', keywords: 'tax calendar deadlines tva vat is ir cnss declarations impots fiscal' },
@@ -169,11 +204,23 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
   { mainMenu: 'Documents', mainIcon: 'folder_open', mainRoute: '/drive', action: 'Browse, upload and share files in the document drive', keywords: 'documents drive files folders upload share' },
   { mainMenu: 'Documents inbox', mainIcon: 'move_to_inbox', mainRoute: '/inbox-documents', action: 'Check supplier invoices and bank statements received by email or WhatsApp', keywords: 'documents inbox supplier invoices bank statements review ocr' },
+  { mainMenu: 'Automation', mainIcon: 'smart_toy', mainRoute: '/automation', action: 'Create and manage workflow automation rules', keywords: 'automation workflows rules triggers conditions' },
+  { mainMenu: 'Groups', mainIcon: 'group_work', mainRoute: '/groups', action: 'Collaborate with teams via chat, meetings, and file sharing', keywords: 'groups chat meetings collaboration teams' },
+  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/organization', submenu: 'Organization', subIcon: 'business', action: 'Configure organization profile and settings', keywords: 'settings organization company profile' },
+  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/users', submenu: 'Users', subIcon: 'people', action: 'Manage user accounts and permissions', keywords: 'settings users accounts permissions roles' },
+  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/teams', submenu: 'Teams', subIcon: 'groups', action: 'Configure teams, departments, and assignments', keywords: 'settings teams departments groups' },
+  { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/groups', submenu: 'Groups', subIcon: 'forum', action: 'Manage collaboration group settings', keywords: 'settings groups collaboration' },
 ];
+
+const SIDEBAR_COLLAPSED_KEY = 'bento.sidebarCollapsed';
+
+function readSidebarCollapsed(): boolean {
+  try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'false'; } catch { return true; }
+}
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
+  imports: [BrandMarkComponent, RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -187,24 +234,24 @@ const SEARCH_ITEMS: SearchItem[] = [
       overflow: hidden;
     }
 
-    /* ── Sidebar ── */
+    /* ── Sidebar: a slim white icon rail that expands to show labels ── */
     .app-sidebar {
-      width: 224px;
-      min-width: 224px;
+      position: relative;
+      width: var(--sidebar-width);
+      min-width: var(--sidebar-width);
       height: 100vh;
-      background: var(--color-surface);
-      border-right: 1px solid var(--color-border);
+      background: var(--sidebar-bg);
+      color: var(--sidebar-ink);
+      border-inline-end: 1px solid var(--sidebar-border);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
       z-index: 40;
       flex-shrink: 0;
-      transition: width 200ms ease, min-width 200ms ease;
     }
 
     .app-sidebar.collapsed {
-      width: 60px;
-      min-width: 60px;
+      width: var(--sidebar-width-collapsed);
+      min-width: var(--sidebar-width-collapsed);
     }
 
     .app-sidebar.collapsed .sidebar-section-title {
@@ -215,273 +262,257 @@ const SEARCH_ITEMS: SearchItem[] = [
       overflow: hidden;
     }
 
-    .app-sidebar.collapsed .nav-label {
-      max-width: 0;
-      opacity: 0;
-      margin-left: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-logo span {
-      max-width: 0;
-      opacity: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-user-info {
-      max-width: 0;
-      opacity: 0;
-    }
-
-    .app-sidebar.collapsed .sidebar-user {
-      gap: 0;
+    .app-sidebar.collapsed .nav-label,
+    .app-sidebar.collapsed .sidebar-logo span,
+    .app-sidebar.collapsed .sidebar-user-info,
+    .app-sidebar.collapsed .sidebar-user-chevron {
+      display: none;
     }
 
     .sidebar-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 20px 16px 16px;
+      gap: 12px;
+      padding: 22px 18px 18px;
       flex-shrink: 0;
+      cursor: pointer;
     }
 
     .app-sidebar.collapsed .sidebar-logo {
-      gap: 0;
+      justify-content: center;
+      padding-inline: 0;
     }
 
+    /* An uploaded organisation logo sits as it is; without one, the flat Bento mark. */
     .sidebar-logo img {
       width: 28px;
       height: 28px;
       object-fit: contain;
-      border-radius: var(--r-control);
-    }
-
-    .sidebar-collapse-btn {
-      margin-left: auto;
-      width: 28px;
-      height: 28px;
-      border-radius: var(--r-control);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-      border: none;
-      color: var(--color-text-tertiary);
-      cursor: pointer;
-      transition: all 150ms ease;
+      border-radius: var(--r-sm);
       flex-shrink: 0;
-      overflow: hidden;
-    }
-
-    .sidebar-collapse-btn:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-    }
-
-    .sidebar-collapse-btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-
-    .app-sidebar.collapsed .sidebar-collapse-btn {
-      opacity: 0;
-      pointer-events: none;
-      width: 0;
-      margin-left: 0;
-      overflow: hidden;
-    }
-
-    .app-sidebar.collapsed .sidebar-link,
-    .app-sidebar.collapsed .sidebar-bottom-link {
-      justify-content: center;
-      gap: 0;
-      padding: 7px 0;
     }
 
     .sidebar-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 16px;
-      letter-spacing: -0.02em;
-      color: var(--color-text-heading);
-      max-width: 100px;
-      opacity: 1;
+      letter-spacing: -0.01em;
+      color: var(--sidebar-ink-strong);
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
+      text-overflow: ellipsis;
     }
+
+    /* Expand / collapse handle on the rail's edge. */
+    .sidebar-edge-toggle {
+      position: absolute;
+      inset-inline-end: -14px;
+      top: 50%;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      z-index: 2;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .sidebar-edge-toggle:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-text-primary);
+    }
+
+    .sidebar-edge-toggle mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+    }
+
+    [dir='rtl'] .sidebar-edge-toggle mat-icon { transform: scaleX(-1); }
 
     .sidebar-nav {
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 4px 10px;
+      padding: 4px 18px 12px;
+      scrollbar-width: none;
+    }
+
+    .sidebar-nav::-webkit-scrollbar { display: none; }
+
+    .app-sidebar.collapsed .sidebar-nav {
+      padding-inline: 18px;
     }
 
     .sidebar-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--color-text-tertiary);
-      padding: 18px 12px 6px;
-      max-height: 40px;
-      opacity: 1;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--sidebar-muted);
+      padding: 24px 10px 8px;
+      max-height: 56px;
       overflow: hidden;
-      transition: max-height 200ms ease, opacity 150ms ease, padding 200ms ease;
     }
 
     .sidebar-section-title:first-child {
-      padding-top: 6px;
+      padding-top: 4px;
     }
 
-    .sidebar-link {
+    /* Finance modules: a heading that opens its pages, which sit indented under it. */
+    .sidebar-module { width: 100%; margin-top: 4px; background: none; border: 0; cursor: pointer; text-align: start; }
+    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 500; }
+    .sidebar-module .nav-chevron { margin-inline-start: auto; font-size: 18px; width: 18px; height: 18px; }
+    /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
+    .sidebar-link.sidebar-module { height: auto; min-height: 40px; padding-block: 6px; }
+    .sidebar-link.sidebar-module .nav-label { white-space: normal; line-height: 1.25; }
+    .sidebar-link.sidebar-sublink { padding-inline-start: 22px; height: 36px; font-size: 13px; }
+    .app-sidebar.collapsed .sidebar-module { display: none; }
+    .app-sidebar.collapsed .sidebar-link.sidebar-sublink { padding: 0; height: 40px; }
+
+    .app-sidebar.collapsed .sidebar-section-title + .sidebar-link,
+    .app-sidebar.collapsed .sidebar-section-title:not(:first-child) {
+      margin-top: 4px;
+    }
+
+    .sidebar-link,
+    .sidebar-bottom-link {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 7px 12px;
+      height: 36px;
+      padding: 0 10px;
       border-radius: var(--r-control);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--color-text-secondary);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--sidebar-ink);
       cursor: pointer;
-      transition: all 200ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       text-decoration: none;
-      margin: 1px 0;
+      margin: 2px 0;
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: start;
+      font-family: inherit;
     }
 
-    .sidebar-link:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
+    .app-sidebar.collapsed .sidebar-link,
+    .app-sidebar.collapsed .sidebar-bottom-link {
+      justify-content: center;
+      width: 40px;
+      padding: 0;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-bottom-link:hover {
+      background: var(--sidebar-hover);
+      color: var(--sidebar-ink-strong);
+    }
+
+    .sidebar-link.active,
+    .sidebar-bottom-link.active {
+      background: var(--sidebar-active-bg);
+      color: var(--sidebar-active-ink);
+      font-weight: 500;
+      box-shadow: 0 0 0 1px var(--sidebar-border);
+    }
+
+    .sidebar-link mat-icon,
+    .sidebar-bottom-link mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      line-height: 20px;
+      color: var(--sidebar-muted);
+    }
+
+    .sidebar-link.active mat-icon,
+    .sidebar-bottom-link.active mat-icon {
+      color: var(--color-accent-text);
+    }
+
+    .nav-label {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .nav-badge {
       margin-inline-start: auto;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
-      border-radius: 9px;
-      background: var(--color-primary);
-      color: var(--color-on-primary);
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: var(--r-pill);
+      background: var(--color-danger);
+      color: white;
+      font-family: var(--font-mono);
       font-size: 11px;
-      font-weight: 700;
-      line-height: 18px;
+      font-weight: 500;
+      line-height: 20px;
       text-align: center;
     }
 
     .app-sidebar.collapsed .nav-badge {
       position: absolute;
       margin: 0;
-      transform: translate(14px, -10px);
+      top: -4px;
+      inset-inline-end: -6px;
       min-width: 16px;
       height: 16px;
       line-height: 16px;
       font-size: 10px;
-    }
-
-    .sidebar-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
-    }
-
-    .sidebar-link.active mat-icon {
-      color: var(--color-accent-text);
-    }
-
-    .sidebar-link mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-      line-height: 20px;
-    }
-
-    .nav-label {
-      margin-left: 10px;
-      overflow: hidden;
-      white-space: nowrap;
-      max-width: 200px;
-      opacity: 1;
-      transition: max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
+      padding: 0 4px;
     }
 
     .sidebar-bottom {
       flex-shrink: 0;
-      border-top: 1px solid var(--color-border);
-      padding: 8px 10px;
-    }
-
-    .sidebar-bottom-link {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
-      border-radius: var(--r-control);
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: all 200ms ease;
-      text-decoration: none;
-      background: transparent;
-      border: none;
-      width: 100%;
-      text-align: left;
-    }
-
-    .sidebar-bottom-link:hover {
-      background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-    }
-
-    .sidebar-bottom-link.active {
-      background: var(--color-accent-light);
-      color: var(--color-accent-text);
-      font-weight: 600;
-    }
-
-    .sidebar-bottom-link.active mat-icon {
-      color: var(--color-accent-text);
+      padding: 8px 18px 18px;
     }
 
     .sidebar-user {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
-      border-top: 1px solid var(--color-border-light);
-      margin-top: 4px;
+      padding: 6px;
       cursor: pointer;
-      border-radius: var(--r-control);
-      transition: background 150ms ease;
+      border-radius: var(--r-card);
+      transition: background var(--transition-fast);
       text-decoration: none;
     }
 
+    .app-sidebar.collapsed .sidebar-user {
+      justify-content: center;
+      padding: 6px 0;
+    }
+
     .sidebar-user:hover {
-      background: var(--color-surface-hover);
+      background: var(--sidebar-hover);
     }
 
     .sidebar-user-chevron {
       font-size: 16px;
       width: 16px;
       height: 16px;
-      color: var(--color-text-tertiary);
+      color: var(--sidebar-muted);
       flex-shrink: 0;
-      transition: transform 200ms ease;
     }
 
     .sidebar-profile-wrapper {
       position: relative;
-      border-top: 1px solid var(--color-border-light);
-      margin-top: 4px;
+      margin-top: 10px;
     }
 
     .sidebar-profile-wrapper .sidebar-user {
-      border-top: none;
-      margin-top: 0;
       background: none;
       border: none;
       width: 100%;
-      text-align: left;
+      text-align: start;
       font-family: inherit;
       font-size: inherit;
       line-height: inherit;
@@ -489,20 +520,20 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .profile-menu {
       position: absolute;
-      bottom: calc(100% + 4px);
+      bottom: calc(100% + 6px);
       left: 0;
       right: 0;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--r-card);
       box-shadow: var(--shadow-lg);
-      padding: 4px;
+      padding: 6px;
       z-index: 60;
       overflow: hidden;
     }
 
     .app-sidebar.collapsed .profile-menu {
-      left: 56px;
+      left: 52px;
       bottom: 0;
       right: auto;
       min-width: 180px;
@@ -518,12 +549,12 @@ const SEARCH_ITEMS: SearchItem[] = [
       font-weight: 500;
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       text-decoration: none;
       background: none;
       border: none;
       width: 100%;
-      text-align: left;
+      text-align: start;
       font-family: inherit;
     }
 
@@ -542,17 +573,14 @@ const SEARCH_ITEMS: SearchItem[] = [
     .sidebar-user-info {
       flex: 1;
       min-width: 0;
-      max-width: 150px;
-      opacity: 1;
       overflow: hidden;
       white-space: nowrap;
-      transition: max-width 200ms ease, opacity 150ms ease;
     }
 
     .sidebar-user-name {
       font-size: 13px;
-      font-weight: 600;
-      color: var(--color-text-heading);
+      font-weight: 500;
+      color: var(--sidebar-ink-strong);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -560,7 +588,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-user-role {
       font-size: 11px;
-      color: var(--color-text-tertiary);
+      color: var(--sidebar-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -573,38 +601,40 @@ const SEARCH_ITEMS: SearchItem[] = [
       flex-direction: column;
       min-width: 0;
       overflow: hidden;
+      background: var(--color-bg);
     }
 
+    /* The top bar blends into the canvas: no bar, just the search and actions. */
     .content-topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
       min-height: var(--topbar-height);
-      padding: 8px var(--content-padding);
-      background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
+      padding: 18px 36px 0;
+      background: transparent;
       flex-shrink: 0;
       z-index: 30;
     }
 
     .topbar-search {
       position: relative;
-      max-width: 400px;
+      max-width: 360px;
       flex: 1;
     }
 
     .topbar-search input {
       width: 100%;
-      height: var(--control-height);
-      padding: 0 12px 0 36px;
-      background: var(--color-bg);
-      border: 1px solid var(--color-border);
+      height: 40px;
+      padding: 0 14px 0 38px;
+      background: var(--color-surface-active);
+      border: 1px solid var(--color-border-strong);
       border-radius: var(--r-control);
+      font-family: inherit;
       font-size: 13px;
       color: var(--color-text-heading);
       outline: none;
-      transition: all 150ms ease;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .topbar-search input::placeholder {
@@ -613,25 +643,25 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .topbar-search input:focus {
       background: var(--color-surface);
-      border-color: var(--color-accent-text);
+      border-color: var(--color-focus);
       box-shadow: 0 0 0 3px var(--color-focus-ring);
     }
 
     .topbar-search mat-icon {
       position: absolute;
-      left: 10px;
+      left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
       color: var(--color-text-tertiary);
       pointer-events: none;
     }
 
     .topbar-search .clear-btn {
       position: absolute;
-      right: 8px;
+      right: 12px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
@@ -650,35 +680,39 @@ const SEARCH_ITEMS: SearchItem[] = [
     .topbar-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
+    .topbar-actions .create-menu .btn-primary {
+      height: 40px;
+      padding-inline: 16px;
+    }
+
     .topbar-icon-btn {
-      width: var(--control-height);
-      height: var(--control-height);
+      width: 40px;
+      height: 40px;
       border-radius: var(--r-control);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
-      border: 1px solid transparent;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       color: var(--color-text-secondary);
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background var(--transition-fast), color var(--transition-fast);
       position: relative;
     }
 
     .topbar-icon-btn:hover {
       background: var(--color-surface-hover);
-      color: var(--color-text-heading);
-      border-color: var(--color-border);
+      color: var(--color-text-primary);
     }
 
     .topbar-icon-btn mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .notification-dot {
@@ -688,22 +722,25 @@ const SEARCH_ITEMS: SearchItem[] = [
       min-width: 18px;
       height: 18px;
       padding: 0 4px;
-      background: var(--color-primary);
-      border: 2px solid var(--color-surface);
+      background: var(--color-danger);
+      border: 2px solid var(--color-bg);
       border-radius: 9999px;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-family: var(--font-mono);
       font-size: 11px;
       line-height: 1;
       font-weight: 600;
-      color: var(--color-on-primary);
+      color: white;
     }
 
     .topbar-avatar {
       flex-shrink: 0;
+      margin-inline-start: 4px;
       border-radius: 9999px;
       overflow: hidden;
+      box-shadow: none;
     }
 
     .search-dropdown {
@@ -722,12 +759,10 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .search-group-label {
       padding: 8px 16px 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      font-size: 12px;
+      font-weight: 500;
       color: var(--color-text-tertiary);
-      background: var(--color-bg);
+      background: var(--color-subtle);
     }
 
     .search-result-item {
@@ -737,7 +772,7 @@ const SEARCH_ITEMS: SearchItem[] = [
       padding: 10px 16px;
       border-bottom: 1px solid var(--color-surface-hover);
       cursor: pointer;
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
     }
 
     .search-result-item:last-child {
@@ -764,22 +799,20 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
     .search-result-breadcrumb {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 12px;
+      font-weight: 400;
       color: var(--color-text-tertiary);
     }
 
     .search-result-title {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 500;
       color: var(--color-text-heading);
       margin-left: 8px;
     }
 
     .search-result-desc {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--color-text-secondary);
       margin-top: 2px;
       line-height: 1.3;
@@ -790,7 +823,7 @@ const SEARCH_ITEMS: SearchItem[] = [
     .content-main {
       flex: 1;
       overflow-y: auto;
-      padding: var(--content-padding);
+      padding: 22px 36px 40px;
     }
 
     /* Pages are centred with a generous cap so ultra-wide screens keep readable line lengths. */
@@ -802,7 +835,11 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     @media (max-width: 640px) {
       .content-main { padding: 16px; }
-      .content-topbar { padding-inline: 16px; }
+      .content-topbar { padding-inline: 16px; gap: 8px; }
+      /* Room for the assistant button at 375px: the avatar is also in the sidebar, and "+" says Create. */
+      .topbar-search { min-width: 0; }
+      .topbar-avatar, .create-menu__label { display: none; }
+      .topbar-actions { gap: 6px; }
     }
 
     /* ── Create menu (global "+") ── */
@@ -833,19 +870,24 @@ const SEARCH_ITEMS: SearchItem[] = [
     @media (max-width: 768px) {
       .app-sidebar {
         position: fixed;
-        left: -224px;
+        left: 0;
         top: 0;
         bottom: 0;
-        transition: left 250ms ease;
+        transform: translateX(-100%);
+        transition: transform 300ms var(--ease-out);
         z-index: 50;
       }
 
       .app-sidebar.mobile-open {
-        left: 0;
+        transform: none;
       }
 
       .mobile-sidebar-toggle {
         display: flex;
+      }
+
+      .sidebar-edge-toggle {
+        display: none;
       }
 
       .mobile-overlay {
@@ -876,7 +918,7 @@ const SEARCH_ITEMS: SearchItem[] = [
         }
 
         <!-- Sidebar -->
-        <aside class="app-sidebar" [class.mobile-open]="mobileMenuOpen()" [class.collapsed]="sidebarCollapsed()">
+        <aside class="app-sidebar" [class.mobile-open]="mobileMenuOpen()" [class.collapsed]="sidebarCollapsed() && !mobileMenuOpen()">
 
           <!-- Logo + collapse toggle -->
           <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
@@ -884,27 +926,43 @@ const SEARCH_ITEMS: SearchItem[] = [
             @if (orgLogoUrl()) {
               <img [src]="orgLogoUrl()" [alt]="state.organization().name || 'Logo'" />
             } @else {
-              <img src="logo.webp" alt="Bento Logo" />
+              <app-brand-mark [size]="24" />
             }
             <span>{{ state.organization().name || 'Bento' }}</span>
-            <button
-              class="sidebar-collapse-btn"
-              (click)="toggleCollapse($event)"
-              [title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-            >
-              <mat-icon>{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</mat-icon>
-            </button>
           </div>
+
+          <button
+            class="sidebar-edge-toggle"
+            (click)="toggleCollapse($event)"
+            [title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-label]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-expanded]="!sidebarCollapsed()"
+          >
+            <mat-icon>{{ sidebarCollapsed() ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left' }}</mat-icon>
+          </button>
 
           <!-- Navigation -->
           <nav class="sidebar-nav">
             @for (section of navSections; track section.label) {
-              <div class="sidebar-section-title">{{ section.label }}</div>
-              @for (item of section.items; track item.route) {
-                @if (canSee(item)) {
+              @if (section.module; as mod) {
+                @if (sectionVisible(section)) {
+                  <button type="button" class="sidebar-link sidebar-module" [class.has-active]="sectionActive(section)"
+                          [title]="section.label" [attr.aria-expanded]="moduleOpen(mod.key)" (click)="toggleModule(mod.key)">
+                    <mat-icon>{{ mod.icon }}</mat-icon>
+                    <span class="nav-label">{{ section.label }}</span>
+                    <mat-icon class="nav-chevron">{{ moduleOpen(mod.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                }
+              } @else {
+                <div class="sidebar-section-title">{{ section.label }}</div>
+              }
+              @for (item of section.items; track item.label) {
+                @if (canSee(item) && (!section.module || moduleOpen(section.module.key) || sidebarCollapsed())) {
                   <a
                     [routerLink]="item.route"
+                    [queryParams]="item.tab && !item.defaultTab ? { tab: item.tab } : null"
                     class="sidebar-link"
+                    [class.sidebar-sublink]="!!section.module"
                     [class.active]="isNavActive(item)"
                     [title]="item.label"
                     (click)="mobileMenuOpen.set(false)"
@@ -1051,9 +1109,10 @@ const SEARCH_ITEMS: SearchItem[] = [
                   (click)="quickActionsOpen.set(!quickActionsOpen())"
                   [attr.aria-expanded]="quickActionsOpen()"
                   aria-haspopup="menu"
+                  aria-label="Create"
                 >
                   <mat-icon>add</mat-icon>
-                  Create
+                  <span class="create-menu__label">Create</span>
                 </button>
                 @if (quickActionsOpen()) {
                   <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events,@angular-eslint/template/interactive-supports-focus -->
@@ -1061,7 +1120,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                   <div class="menu create-menu__panel" role="menu">
                     @for (item of createItems; track item.label) {
                       <button class="menu-item" role="menuitem" (click)="runCreate(item)">
-                        <span class="create-menu__item-icon tone-icon tone" [attr.data-tone]="item.tone"><mat-icon class="icon-sm">{{ item.icon }}</mat-icon></span>
+                        <mat-icon class="icon-sm text-ink-3">{{ item.icon }}</mat-icon>
                         {{ item.label }}
                       </button>
                     }
@@ -1076,7 +1135,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                 [attr.aria-label]="'assistant.title' | translate"
                 [attr.aria-expanded]="assistantOpen()"
               >
-                <mat-icon>auto_awesome</mat-icon>
+                <mat-icon>chat_bubble_outline</mat-icon>
               </button>
               <button
                 class="topbar-icon-btn"
@@ -1208,7 +1267,8 @@ export class App implements OnInit, OnDestroy {
   }
 
   // Sidebar collapse
-  sidebarCollapsed = signal(false);
+  /** The rail starts as icons only; the choice is remembered per browser. */
+  sidebarCollapsed = signal(readSidebarCollapsed());
 
   orgLogoUrl = computed(() => {
     return this.state.resolveLogoUrl(this.state.organization().logoUrl);
@@ -1225,6 +1285,7 @@ export class App implements OnInit, OnDestroy {
   toggleCollapse(event: Event) {
     event.stopPropagation();
     this.sidebarCollapsed.update(v => !v);
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(this.sidebarCollapsed())); } catch { /* storage unavailable */ }
   }
 
   // Current user display name
@@ -1542,18 +1603,53 @@ export class App implements OnInit, OnDestroy {
 
   /** Tracks which primary route is currently active */
   activeRoute = signal<string>('/');
+  /** The ?tab= of the current page, so a module's page that is a tab can light up. */
+  activeTab = signal<string | null>(null);
+  private openModules = signal<Set<string>>(readOpenModules());
+
+  moduleOpen(key: string): boolean {
+    return this.openModules().has(key);
+  }
+
+  toggleModule(key: string): void {
+    const next = new Set(this.openModules());
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.openModules.set(next);
+    try { localStorage.setItem(OPEN_MODULES_KEY, JSON.stringify([...next])); } catch { /* private mode */ }
+  }
+
+  sectionVisible(section: NavSection): boolean {
+    return section.items.some(i => this.canSee(i));
+  }
+
+  sectionActive(section: NavSection): boolean {
+    return section.items.some(i => this.isNavActive(i));
+  }
+
+  /** Opening a page of a closed module (a link, a search result) opens the module too. */
+  private revealActiveModule(): void {
+    for (const s of this.navSections) {
+      if (s.module && !this.moduleOpen(s.module.key) && this.sectionActive(s)) this.toggleModule(s.module.key);
+    }
+  }
+
+  private trackUrl(url: string): void {
+    const [path, query] = url.split('?');
+    this.activeRoute.set(path);
+    this.activeTab.set(new URLSearchParams(query ?? '').get('tab'));
+    this.revealActiveModule();
+  }
 
   private routerSub: Subscription | null = null;
   private notifPollSub: Subscription | null = null;
 
   ngOnInit() {
-    this.activeRoute.set(this.router.url.split('?')[0]);
+    this.trackUrl(this.router.url);
 
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: NavigationEnd) => {
-        const newRoute = e.urlAfterRedirects.split('?')[0];
-        this.activeRoute.set(newRoute);
+        this.trackUrl(e.urlAfterRedirects);
         this.state.breadcrumbLabel.set(null);
       });
 
@@ -1585,8 +1681,12 @@ export class App implements OnInit, OnDestroy {
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();
     if (item.route === '/') return route === '/';
-    // A whole path segment, so /inbox does not also light up for /inbox-documents.
-    return route === item.route || route.startsWith(item.route + '/');
+    if (item.tab) {
+      const tab = this.activeTab();
+      return route === item.route && (tab === item.tab || (!tab && !!item.defaultTab));
+    }
+    // Whole path segments only: '/inbox' must not light up on '/inbox-documents'.
+    return route === item.route || route.startsWith(item.route + '/') || route.startsWith(item.route + '?');
   }
 
   onNotificationOpened() {

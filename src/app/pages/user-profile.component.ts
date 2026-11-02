@@ -9,29 +9,30 @@ import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslationService } from '../services/translation.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="page">
       <app-page-header
-        [title]="isOwnProfile() ? 'My Profile' : 'User Profile'"
+        [title]="isOwnProfile() ? 'My profile' : 'User profile'"
         [subtitle]="isOwnProfile() ? 'Your details, preferences and activity' : 'Account details, role and activity'"
         [backLink]="isOwnProfile() ? null : '/settings/users'"
         backLabel="Users" />
 
       @if (user(); as u) {
         <!-- PROFILE HEADER CARD -->
-        <div class="card p-5 space-y-6">
-          <div class="flex items-start justify-between">
-            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+        <div class="card p-5 space-y-5">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-4 min-w-0">
               <!-- Avatar size 56 -->
-              <app-user-avatar [userId]="u.id" [size]="56"></app-user-avatar>
-              
-              <div class="text-center sm:text-left space-y-1">
-                <div class="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+              <div class="shrink-0"><app-user-avatar [userId]="u.id" [size]="56"></app-user-avatar></div>
+
+              <div class="min-w-0 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
                   @if (isEditingName()) {
                     <input
                       [(ngModel)]="editName"
@@ -44,6 +45,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                     <button
                       (click)="toggleEditName()"
                       class="btn-icon btn-sm"
+                      [attr.aria-label]="isEditingName() ? 'Save name' : 'Edit name'"
                     >
                       <mat-icon class="icon-sm">
                         {{ isEditingName() ? 'check' : 'edit' }}
@@ -52,7 +54,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   }
                 </div>
 
-                <div class="flex items-center justify-center sm:justify-start gap-1">
+                <div class="flex items-center gap-1 flex-wrap">
                   @if (isEditingJobTitle()) {
                     <input
                       [(ngModel)]="editJobTitle"
@@ -65,6 +67,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                     <button
                       (click)="toggleEditJobTitle()"
                       class="btn-icon btn-sm"
+                      [attr.aria-label]="isEditingJobTitle() ? 'Save job title' : 'Edit job title'"
                     >
                       <mat-icon class="icon-sm">
                         {{ isEditingJobTitle() ? 'check' : 'edit' }}
@@ -73,13 +76,13 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   }
                 </div>
 
-                <div class="text-xs text-ink-3 pt-1 font-mono">ID: {{ u.id }}</div>
+                <div class="t-mono text-ink-3 break-all">ID: {{ u.id }}</div>
               </div>
             </div>
 
             <!-- Active / Inactive Badge -->
             <span
-              [class]="u.isActive ? 'badge-success' : 'bg-muted text-ink-3 border-line'"
+              [class]="u.isActive ? 'badge-success' : 'badge-neutral'"
               class="badge"
             >
               {{ u.isActive ? 'Active' : 'Inactive' }}
@@ -89,16 +92,17 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <!-- Email & Phone info grid -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-line-soft">
             <div>
-              <span class="eyebrow block mb-0.5">Email (Immutable)</span>
-              <span class="text-sm font-semibold text-ink">{{ u.email }}</span>
+              <span class="field-label mb-1">Email (can't be changed)</span>
+              <span class="text-sm text-ink break-all">{{ u.email }}</span>
             </div>
             <div>
-              <div class="flex items-center gap-1.5 mb-0.5">
-                <span class="eyebrow block">Phone</span>
+              <div class="flex items-center gap-1 mb-1 min-h-7">
+                <span class="field-label">Phone</span>
                 @if (canEdit()) {
                   <button
                     (click)="toggleEditPhone()"
                     class="btn-icon btn-sm"
+                    [attr.aria-label]="isEditingPhone() ? 'Save phone' : 'Edit phone'"
                   >
                     <mat-icon class="icon-sm">
                       {{ isEditingPhone() ? 'check' : 'edit' }}
@@ -112,7 +116,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                   class="input-field w-full max-w-xs"
                 />
               } @else {
-                <span class="text-sm font-semibold text-ink">{{ u.phone || '—' }}</span>
+                <span class="text-sm text-ink num">{{ u.phone || '—' }}</span>
               }
             </div>
           </div>
@@ -130,18 +134,18 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
         @if (profileTab() === 'profile') {
         <!-- ROLE & TEAM SECTION -->
         <div class="card p-5 space-y-4">
-          <h3 class="card-title">Role & Team Assignment</h3>
-          
+          <h3 class="card-title">Role and team</h3>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <!-- Role -->
             <div class="space-y-2">
-              <label for="system_role" class="field-label">System Role</label>
+              <label for="system_role" class="field-label">System role</label>
               @if (isAdmin()) {
                 <div class="space-y-1">
                   <select id="system_role"
                     [value]="u.roleId"
                     (change)="updateUserRole(u.id, $event)"
-                    class="input-field cursor-pointer w-full max-w-xs font-semibold"
+                    class="input-field max-w-xs"
                   >
                     <option value="admin">Admin</option>
                     <option value="manager">Manager</option>
@@ -150,7 +154,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                     <option value="viewer">Viewer</option>
                   </select>
                   @if (roleError()) {
-                    <p class="text-meta text-ink font-semibold mt-1">{{ roleError() }}</p>
+                    <p class="field-error">{{ roleError() }}</p>
                   }
                 </div>
               } @else {
@@ -162,7 +166,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 
             <!-- Team -->
             <div class="space-y-2">
-              <label for="team_link" class="field-label">Team Link</label>
+              <span class="field-label">Team</span>
               <div>
                 @if (u.teamId) {
                   <a
@@ -173,7 +177,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                     {{ getTeamName(u.teamId) }}
                   </a>
                 } @else {
-                  <span class="text-xs text-ink-3 font-semibold">— Unassigned</span>
+                  <span class="text-sm text-ink-3">Unassigned</span>
                 }
               </div>
             </div>
@@ -183,77 +187,56 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 
         @if (profileTab() === 'preferences') {
         <!-- PREFERENCES SECTION -->
-        <div class="card p-5 space-y-6">
-          <h3 class="card-title">Notification Preferences</h3>
+        <div class="card p-5 space-y-5">
+          <h3 class="card-title">Notification preferences</h3>
 
-          <div class="space-y-3 max-w-md">
-            <!-- Toggle 1 -->
-            <label for="label_2" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
-              <div>
-                <span class="text-xs font-semibold text-ink block">Notify on lead assignment</span>
-                <span class="text-meta text-ink-3 block mt-0.5">Send alerts when a lead is assigned to you</span>
-              </div>
-              <input
-        type="checkbox"
-        [checked]="u.preferences.notifyOnLeadAssign"
-        (change)="togglePreference(u, 'notifyOnLeadAssign')"
-        
-       />
+          <div class="space-y-4">
+            <label class="switch-row" for="pref-lead-assign">
+              <button type="button" id="pref-lead-assign" role="switch" class="switch" [attr.aria-checked]="u.preferences.notifyOnLeadAssign"
+                      aria-label="Notify on lead assignment" (click)="togglePreference(u, 'notifyOnLeadAssign')"></button>
+              <span>
+                <span class="row-title">Notify on lead assignment</span>
+                <span class="row-hint">Send alerts when a lead is assigned to you</span>
+              </span>
             </label>
 
-            <!-- Toggle 2 -->
-            <label for="label_3" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
-              <div>
-                <span class="text-xs font-semibold text-ink block">Notify on deal updates</span>
-                <span class="text-meta text-ink-3 block mt-0.5">Receive updates when status/stage changes on your deals</span>
-              </div>
-              <input
-        type="checkbox"
-        [checked]="u.preferences.notifyOnDealUpdate"
-        (change)="togglePreference(u, 'notifyOnDealUpdate')"
-        
-       />
+            <label class="switch-row" for="pref-deal-update">
+              <button type="button" id="pref-deal-update" role="switch" class="switch" [attr.aria-checked]="u.preferences.notifyOnDealUpdate"
+                      aria-label="Notify on deal updates" (click)="togglePreference(u, 'notifyOnDealUpdate')"></button>
+              <span>
+                <span class="row-title">Notify on deal updates</span>
+                <span class="row-hint">Receive updates when status or stage changes on your deals</span>
+              </span>
             </label>
 
-            <!-- Toggle 3 -->
-            <label for="label_4" class="flex items-center justify-between p-2.5 rounded-xl border border-line-soft hover:bg-subtle cursor-pointer select-none transition-colors">
-              <div>
-                <span class="text-xs font-semibold text-ink block">Notify on mentions</span>
-                <span class="text-meta text-ink-3 block mt-0.5">Get notified immediately when mentioned in group chats</span>
-              </div>
-              <input
-        type="checkbox"
-        [checked]="u.preferences.notifyOnMention"
-        (change)="togglePreference(u, 'notifyOnMention')"
-        
-       />
+            <label class="switch-row" for="pref-mention">
+              <button type="button" id="pref-mention" role="switch" class="switch" [attr.aria-checked]="u.preferences.notifyOnMention"
+                      aria-label="Notify on mentions" (click)="togglePreference(u, 'notifyOnMention')"></button>
+              <span>
+                <span class="row-title">Notify on mentions</span>
+                <span class="row-hint">Get notified immediately when mentioned in group chats</span>
+              </span>
             </label>
           </div>
 
-          <div class="pt-4 border-t border-line-soft space-y-2">
-            <label for="appearance" class="field-label">Appearance</label>
-            <select id="appearance"
-              [value]="u.preferences.theme"
-              (change)="changeTheme(u, $event)"
-              class="input-field cursor-pointer w-full max-w-xs font-semibold"
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
-            </select>
-          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 border-t border-line-soft">
+            <label class="field">
+              <span class="field-label">Appearance</span>
+              <select [value]="u.preferences.theme" (change)="changeTheme(u, $event)" class="input-field">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System</option>
+              </select>
+            </label>
 
-          <div class="pt-4 border-t border-line-soft space-y-2">
-            <label for="interface_language" class="field-label">Interface Language</label>
-            <select id="interface_language"
-              [value]="u.preferences.language"
-              (change)="changeLanguage(u, $event)"
-              class="input-field cursor-pointer w-full max-w-xs font-semibold"
-            >
-              @for (lang of translation.availableLanguages; track lang.code) {
-                <option [value]="lang.code">{{ lang.nativeLabel }} ({{ lang.code }})</option>
-              }
-            </select>
+            <label class="field">
+              <span class="field-label">Interface language</span>
+              <select [value]="u.preferences.language" (change)="changeLanguage(u, $event)" class="input-field">
+                @for (lang of translation.availableLanguages; track lang.code) {
+                  <option [value]="lang.code">{{ lang.nativeLabel }} ({{ lang.code }})</option>
+                }
+              </select>
+            </label>
           </div>
         </div>
         }
@@ -262,7 +245,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
         <!-- GROUPS SECTION -->
         <div class="card p-5 space-y-4">
           <div class="flex items-center gap-2">
-            <h3 class="card-title">Collaboration Groups</h3>
+            <h3 class="card-title">Collaboration groups</h3>
             <span class="badge badge-neutral">
               {{ getUserGroups(u.id).length }}
             </span>
@@ -273,12 +256,12 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
               <a
                 [routerLink]="['/groups']"
                 [queryParams]="{ groupId: grp.id }"
-                class="bg-subtle border border-line hover:bg-muted hover:text-ink hover:border-accent-line px-3 py-1 rounded-xl text-xs font-semibold text-ink-2 transition-colors shadow-2xs block"
+                class="btn-secondary btn-sm"
               >
-                # {{ grp.name }}
+                {{ grp.name }}
               </a>
             } @empty {
-              <span class="text-xs text-ink-3 italic">This user does not belong to any collaboration groups.</span>
+              <span class="text-sm text-ink-3">This user does not belong to any collaboration groups.</span>
             }
           </div>
         </div>
@@ -287,14 +270,14 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
         @if (profileTab() === 'activity') {
         <!-- ACTIVITY SECTION -->
         <div class="card p-5 space-y-4">
-          <h3 class="card-title">Activity Details</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-ink-2">
+          <h3 class="card-title">Activity details</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-ink">
             <div>
-              <span class="eyebrow block mb-0.5">Member since</span>
+              <span class="field-label mb-1">Member since</span>
               <span>{{ u.createdAt | date: 'dd MMMM yyyy, HH:mm' }}</span>
             </div>
             <div>
-              <span class="eyebrow block mb-0.5">Last active</span>
+              <span class="field-label mb-1">Last active</span>
               <span>{{ getRelativeTime(u.lastActiveAt) }}</span>
             </div>
           </div>
@@ -302,61 +285,36 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 
         <!-- DANGER ZONE (Admin only & not viewing own profile) -->
         @if (isAdmin() && u.id !== state.currentUserId()) {
-          <div class="bg-muted border border-line-strong rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 class="card-title">Danger Zone</h3>
-            <p class="text-xs text-ink/90 leading-normal">
+          <div class="card border-danger-line p-5 space-y-3">
+            <h3 class="card-title text-danger-ink">Danger zone</h3>
+            <p class="text-sm text-ink-2">
               Deactivating this user will remove them from all assigned teams. They will not be able to log in or schedule meetings until reactivated.
             </p>
 
             @if (showDeactivateConfirm()) {
-              <div class="card p-4 space-y-3">
-                <p class="text-xs text-ink font-semibold">Are you absolutely sure you want to deactivate {{ u.displayName }}?</p>
-                <div class="flex items-center gap-2">
-                  <button
-                    (click)="showDeactivateConfirm.set(false)"
-                    class="bg-muted hover:bg-muted-strong text-ink-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    (click)="deactivateAccount(u.id)"
-                    class="btn-primary btn-sm"
-                  >
-                    Confirm Deactivation
-                  </button>
+              <div class="alert alert-danger flex-col items-stretch" role="alert">
+                <p>Are you absolutely sure you want to deactivate {{ u.displayName }}?</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button (click)="showDeactivateConfirm.set(false)" class="btn-secondary btn-sm">Cancel</button>
+                  <button (click)="deactivateAccount(u.id)" class="btn-danger btn-sm">Confirm deactivation</button>
                   @if (deactivateError()) {
-                    <span class="text-meta text-ink font-semibold ml-2">{{ deactivateError() }}</span>
+                    <span class="field-error">{{ deactivateError() }}</span>
                   }
                 </div>
               </div>
             } @else {
-              <button
-                (click)="showDeactivateConfirm.set(true)"
-                class="btn-secondary btn-sm"
-              >
-                Deactivate Account
-              </button>
+              <button (click)="showDeactivateConfirm.set(true)" class="btn-danger-soft btn-sm">Deactivate account</button>
             }
           </div>
         }
         }
       } @else {
         <!-- 404 Empty State -->
-        <div class="bg-surface border border-line rounded-2xl p-16 text-center space-y-3">
-          <div class="w-16 h-16 bg-muted text-ink-3 rounded-full flex items-center justify-center mx-auto">
-            <mat-icon>error_outline</mat-icon>
-          </div>
-          <h2 class="card-title">User profile not found</h2>
-          <p class="text-xs text-ink-3 max-w-xs mx-auto">
-            The requested user account does not exist or may have been deleted permanently.
-          </p>
-          <a
-            routerLink="/settings/users"
-            class="inline-block bg-muted text-ink border border-line px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-xs"
-          >
-            Return to list
-          </a>
-        </div>
+        <section class="card">
+          <app-empty-state icon="error_outline" title="User profile not found" text="The requested user account does not exist or may have been deleted permanently.">
+            <a routerLink="/settings/users" class="btn-secondary btn-sm">Return to list</a>
+          </app-empty-state>
+        </section>
       }
     </div>
   `

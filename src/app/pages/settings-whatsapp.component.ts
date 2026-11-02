@@ -41,15 +41,15 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
       }
 
       <!-- Connection -->
-      <section class="card p-5 space-y-5">
+      <section class="card"><div class="card-body space-y-5">
         @if (loading()) {
           <p class="text-sm text-ink-3">{{ 'inbox.loading' | translate }}</p>
         } @else if (state() === 'open') {
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p class="text-lg font-semibold" dir="ltr">{{ phone(session()?.linkedPhone) }}</p>
+              <p class="text-lg font-medium text-ink num" dir="ltr">{{ phone(session()?.linkedPhone) }}</p>
               @if (session()?.linkedAt) {
-                <p class="text-xs text-ink-2">{{ 'waSettings.linkedSince' | translate: { date: date(session()?.linkedAt) } }}</p>
+                <p class="field-hint">{{ 'waSettings.linkedSince' | translate: { date: date(session()?.linkedAt) } }}</p>
               }
             </div>
             <button type="button" class="btn-danger-soft" [disabled]="busy()" (click)="unlink()">
@@ -58,22 +58,22 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
           </div>
         } @else if (state() === 'pairing' && session()?.pairingCode) {
           <div class="grid gap-4 sm:grid-cols-2 items-start">
-            <div class="rounded-xl border border-dashed border-line-strong bg-subtle p-5 text-center">
+            <div class="rounded-xl border border-line bg-subtle p-5 text-center">
               <p class="text-xs text-ink-2 mb-2">{{ 'waSettings.codeFor' | translate: { phone: phone(session()?.requestedPhone) } }}</p>
-              <p class="text-3xl font-mono font-semibold tracking-[0.25em]" dir="ltr" aria-live="polite">{{ session()?.pairingCode }}</p>
+              <p class="text-2xl font-mono font-medium text-ink tracking-[0.2em]" dir="ltr" aria-live="polite">{{ session()?.pairingCode }}</p>
               <p class="text-xs text-ink-2 mt-3">
                 {{ 'waSettings.expiresIn' | translate: { time: countdown() } }}
                 · {{ 'waSettings.attempt' | translate: { n: session()?.pairingAttempt ?? 1, max: 5 } }}
               </p>
             </div>
-            <ol class="text-sm space-y-2 list-decimal ps-5">
+            <ol class="text-sm text-ink-2 space-y-2 list-decimal ps-5">
               <li>{{ 'waSettings.step1' | translate }}</li>
               <li>{{ 'waSettings.step2' | translate }}</li>
               <li>{{ 'waSettings.step3' | translate }}</li>
               <li>{{ 'waSettings.step4' | translate }}</li>
             </ol>
           </div>
-          <p class="text-xs text-ink-3">{{ 'waSettings.pairingHint' | translate }}</p>
+          <p class="field-hint">{{ 'waSettings.pairingHint' | translate }}</p>
         } @else if (state() === 'connecting' || state() === 'reconnecting' || (state() === 'pairing' && !session()?.pairingCode)) {
           <p class="text-sm text-ink-2 flex items-center gap-2">
             <mat-icon class="animate-spin">progress_activity</mat-icon>{{ 'waSettings.connecting' | translate }}
@@ -87,12 +87,12 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
             <p class="alert alert-warning">{{ 'waSettings.pairingFailedHelp' | translate }}</p>
           }
           @if (session()?.error && state() !== 'stopped') {
-            <p class="text-xs text-danger-ink">{{ session()?.error }}</p>
+            <p class="field-error">{{ session()?.error }}</p>
           }
           <div class="flex flex-wrap items-end gap-3">
-            <label class="flex-1 min-w-[220px]">
+            <label class="field flex-1 basis-56">
               <span class="field-label">{{ 'waSettings.phoneLabel' | translate }}</span>
-              <input type="tel" dir="ltr" class="input-field w-full mt-1" placeholder="+212 6 12 34 56 78"
+              <input type="tel" dir="ltr" class="input-field" placeholder="+212 6 12 34 56 78"
                      [ngModel]="phoneInput()" (ngModelChange)="phoneInput.set($event)" autocomplete="tel" />
             </label>
             <button type="button" class="btn-primary"
@@ -105,61 +105,65 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
               </button>
             }
           </div>
-          <p class="text-xs text-ink-3">{{ 'waSettings.linkHint' | translate }}</p>
+          <p class="field-hint">{{ 'waSettings.linkHint' | translate }}</p>
         }
-      </section>
+      </div></section>
 
       <!-- Leads & visibility -->
       @if (settings(); as st) {
-        <section class="card p-5 space-y-5">
-          <h2 class="card-title">{{ 'waSettings.leadsTitle' | translate }}</h2>
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">{{ 'waSettings.leadsTitle' | translate }}</h2>
+          </div>
+          <div class="card-body space-y-5">
           <fieldset class="space-y-2">
-            <legend class="text-sm font-semibold mb-2">{{ 'waSettings.autoLeads' | translate }}</legend>
+            <legend class="row-title mb-2">{{ 'waSettings.autoLeads' | translate }}</legend>
             @for (opt of autoOptions; track opt) {
               <label class="choice-row">
                 <input type="radio" name="autoLeads" class="mt-1" [value]="opt" [ngModel]="st.autoCreateLeads"
                        (ngModelChange)="patch({ autoCreateLeads: $event })" />
                 <span>
-                  <span class="text-sm font-semibold block">{{ ('waSettings.auto.' + opt) | translate }}</span>
-                  <span class="text-xs text-ink-2">{{ ('waSettings.auto.' + opt + '.hint') | translate }}</span>
+                  <span class="row-title">{{ ('waSettings.auto.' + opt) | translate }}</span>
+                  <span class="row-hint">{{ ('waSettings.auto.' + opt + '.hint') | translate }}</span>
                 </span>
               </label>
             }
           </fieldset>
           <fieldset class="space-y-2">
-            <legend class="text-sm font-semibold mb-2">{{ 'waSettings.visibility' | translate }}</legend>
+            <legend class="row-title mb-2">{{ 'waSettings.visibility' | translate }}</legend>
             @for (opt of visibilityOptions; track opt) {
               <label class="choice-row">
                 <input type="radio" name="visibility" class="mt-1" [value]="opt" [ngModel]="st.visibility"
                        (ngModelChange)="patch({ visibility: $event })" />
                 <span>
-                  <span class="text-sm font-semibold block">{{ ('waSettings.visibility.' + opt) | translate }}</span>
-                  <span class="text-xs text-ink-2">{{ ('waSettings.visibility.' + opt + '.hint') | translate }}</span>
+                  <span class="row-title">{{ ('waSettings.visibility.' + opt) | translate }}</span>
+                  <span class="row-hint">{{ ('waSettings.visibility.' + opt + '.hint') | translate }}</span>
                 </span>
               </label>
             }
           </fieldset>
           <div class="max-w-sm">
-            <span class="text-sm font-semibold">{{ 'waSettings.defaultAssignee' | translate }}</span>
-            <p class="text-xs text-ink-2 mb-2">{{ 'waSettings.defaultAssigneeHint' | translate }}</p>
+            <span class="row-title">{{ 'waSettings.defaultAssignee' | translate }}</span>
+            <p class="row-hint mb-2">{{ 'waSettings.defaultAssigneeHint' | translate }}</p>
             <app-user-picker [value]="st.defaultAssigneeUserId ?? ''" (valueChange)="patch({ defaultAssigneeUserId: $event || null })" />
           </div>
 
-          <details class="pt-2">
-            <summary class="text-sm font-semibold cursor-pointer">{{ 'waSettings.limits' | translate }}</summary>
-            <p class="text-xs text-ink-2 mt-2 mb-3">{{ 'waSettings.limitsHint' | translate }}</p>
-            <div class="grid gap-3 sm:grid-cols-2">
+          <details class="pt-5 border-t border-line-soft">
+            <summary class="row-title cursor-pointer">{{ 'waSettings.limits' | translate }}</summary>
+            <p class="row-hint mt-2 mb-3">{{ 'waSettings.limitsHint' | translate }}</p>
+            <div class="grid gap-4 sm:grid-cols-2">
               @for (f of limitFields; track f.key) {
-                <label>
+                <label class="field">
                   <span class="field-label">{{ f.label | translate }}</span>
-                  <input type="number" min="0" class="input-field w-full mt-1" [placeholder]="f.placeholder"
+                  <input type="number" min="0" class="input-field" [placeholder]="f.placeholder"
                          [ngModel]="st[f.key]" (ngModelChange)="patchNumber(f.key, $event)" />
                 </label>
               }
             </div>
           </details>
 
-          <div class="flex justify-end">
+          </div>
+          <div class="card-footer">
             <button type="button" class="btn-primary" [disabled]="busy() || !dirty()" (click)="saveSettings()">
               {{ 'waSettings.save' | translate }}
             </button>
@@ -168,16 +172,20 @@ const PAIRING_STATES = new Set(['pairing', 'connecting']);
       }
 
       <!-- Ignored numbers -->
-      <section class="card p-5 space-y-3">
-        <h2 class="card-title">{{ 'waSettings.ignoredTitle' | translate }}</h2>
-        <p class="text-sm text-ink-2">{{ 'waSettings.ignoredHint' | translate }}</p>
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">{{ 'waSettings.ignoredTitle' | translate }}</h2>
+            <p class="row-hint">{{ 'waSettings.ignoredHint' | translate }}</p>
+          </div>
+        </div>
         @for (b of blocked(); track b.id) {
-          <div class="flex items-center justify-between py-2 border-t border-line-soft">
-            <span class="text-sm" dir="ltr">{{ phone(b.phone) }}</span>
+          <div class="list-row">
+            <span class="text-sm num" dir="ltr">{{ phone(b.phone) }}</span>
             <button type="button" class="btn-secondary btn-sm" (click)="unblock(b)">{{ 'waSettings.stopIgnoring' | translate }}</button>
           </div>
         } @empty {
-          <p class="text-xs text-ink-3">{{ 'waSettings.noIgnored' | translate }}</p>
+          <p class="card-body field-hint">{{ 'waSettings.noIgnored' | translate }}</p>
         }
       </section>
     </div>

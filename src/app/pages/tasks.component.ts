@@ -63,10 +63,10 @@ const NO_TICKET = 'NONE';
     }
     .kanban-card {
       transition: transform 200ms cubic-bezier(0, 0, 0.2, 1),
-                  box-shadow 200ms ease;
+                  box-shadow var(--transition-fast);
     }
     .kanban-column {
-      transition: background-color 200ms ease;
+      transition: background-color var(--transition-fast);
     }
 
     /* Task rows: a checklist line, not a table row. The page's own width decides the layout (container
@@ -74,7 +74,7 @@ const NO_TICKET = 'NONE';
     .task-list { container-type: inline-size; }
     .task-row {
       display: grid; align-items: center; column-gap: 12px; row-gap: 6px;
-      grid-template-columns: 20px 32px minmax(0, 1fr) 84px 156px 120px 124px 148px;
+      grid-template-columns: 20px 32px minmax(0, 1fr) 168px 84px 156px 120px 124px 148px;
       padding: 10px 16px; border-top: 1px solid var(--color-border-light);
       border-inline-start: 3px solid transparent;
       transition: background var(--transition-fast);
@@ -84,7 +84,9 @@ const NO_TICKET = 'NONE';
     .task-row.is-selected { background: var(--color-accent-light); }
     .task-row[data-priority='Urgent'] { border-inline-start-color: var(--color-danger); }
     .task-row[data-priority='Medium'] { border-inline-start-color: var(--color-warning); }
-    .task-main, .task-meta > * { min-width: 0; }
+    .task-main, .task-link, .task-meta > * { min-width: 0; }
+    /* The record a task is linked to has its own column, so every row lines up. */
+    .task-link { display: flex; }
     .task-meta { display: contents; }
     .task-actions { display: inline-flex; align-items: center; gap: 2px; justify-content: flex-end; }
     /* Selection boxes stay out of the way until a row is hovered or something is selected. */
@@ -96,6 +98,9 @@ const NO_TICKET = 'NONE';
       .task-row { grid-template-columns: 20px 32px minmax(0, 1fr) 148px; }
       .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; grid-column: 3 / -1; grid-row: 2; }
       .task-actions { grid-column: 4; grid-row: 1; }
+      .task-link { grid-column: 3 / -1; grid-row: 2; }
+      .task-link:empty { display: none; }
+      .task-meta { grid-row: 3; }
     }
   `],
   template: `
@@ -218,21 +223,22 @@ const NO_TICKET = 'NONE';
             @if (task.description) {
               <div class="text-meta text-ink-3 mt-0.5 truncate" [title]="task.description">{{ task.description }}</div>
             }
+          </div>
+
+          <div class="task-link">
             @if (showLink) {
               @if (getRelatedLabel(task); as label) {
-                <div class="mt-1.5">
-                  @if (ticketRoute(task); as route) {
-                    <a [routerLink]="route" class="badge badge-neutral hover:underline" title="Open ticket">
-                      <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
-                      <span class="truncate max-w-xs">{{ label }}</span>
-                    </a>
-                  } @else {
-                    <span class="badge badge-neutral">
-                      <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
-                      <span class="truncate max-w-xs">{{ label }}</span>
-                    </span>
-                  }
-                </div>
+                @if (ticketRoute(task); as route) {
+                  <a [routerLink]="route" class="badge badge-neutral hover:underline max-w-full" title="Open ticket">
+                    <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
+                    <span class="truncate">{{ label }}</span>
+                  </a>
+                } @else {
+                  <span class="badge badge-neutral max-w-full" [title]="label">
+                    <mat-icon class="icon-xs">{{ getRelatedIcon(task) }}</mat-icon>
+                    <span class="truncate">{{ label }}</span>
+                  </span>
+                }
               }
             }
           </div>

@@ -9,6 +9,7 @@ import { CrmStateService, Brand } from '../services/crm-state.service';
 import { ApiService } from '../services/api.service';
 import { ApiClientError } from '../core/services/base-api.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 
 interface BrandForm {
@@ -28,7 +29,7 @@ const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: I
  */
 @Component({
   selector: 'app-settings-brands',
-  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'brands.title' | translate" [subtitle]="'brands.subtitle' | translate">
@@ -41,85 +42,88 @@ const EMPTY_FORM: BrandForm = { name: '', code: '', description: '', colorHex: I
       </app-page-header>
 
       @if (editing() !== null) {
-      <section class="card p-5 space-y-4">
-        @if (editing() !== null) {
-          <div class="space-y-4 pt-2">
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="block">
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title">{{ (editing() === 'new' ? 'brands.new' : 'brands.edit') | translate }}</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="field">
                 <span class="field-label">{{ 'brands.name' | translate }}</span>
-                <input class="input-field w-full mt-1"
+                <input class="input-field"
                        [placeholder]="'brands.namePlaceholder' | translate"
                        [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" maxlength="100" />
               </label>
-              <label class="block">
+              <label class="field">
                 <span class="field-label">{{ 'brands.code' | translate }}</span>
-                <input class="input-field w-full mt-1"
+                <input class="input-field"
                        [placeholder]="'brands.codePlaceholder' | translate"
                        [ngModel]="form().code" (ngModelChange)="patchForm({ code: $event })" maxlength="20" />
               </label>
             </div>
-            <label class="block">
+            <label class="field">
               <span class="field-label">{{ 'brands.description' | translate }}</span>
-              <textarea class="input-field w-full mt-1" rows="2"
+              <textarea class="input-field" rows="2"
                         [placeholder]="'brands.descriptionPlaceholder' | translate"
                         [ngModel]="form().description" (ngModelChange)="patchForm({ description: $event })"></textarea>
             </label>
-            <div class="flex flex-wrap items-end gap-4">
-              <label class="block">
-                <span class="field-label mb-1.5">{{ 'brands.color' | translate }}</span>
+            <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div class="field">
+                <span class="field-label">{{ 'brands.color' | translate }}</span>
                 <div class="flex items-center gap-2">
-                  <input type="color" class="w-9 h-9 rounded-lg cursor-pointer border-0 bg-transparent"
+                  <input type="color" class="color-input" [attr.aria-label]="'brands.color' | translate"
                          [ngModel]="form().colorHex" (ngModelChange)="patchForm({ colorHex: $event })" />
-                  <input class="input-field w-24" dir="ltr" maxlength="7"
+                  <input class="input-field w-28" dir="ltr" maxlength="7" [attr.aria-label]="'brands.color' | translate"
                          [ngModel]="form().colorHex" (ngModelChange)="patchForm({ colorHex: $event })" />
                 </div>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer pb-2">
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer h-9">
                 <input type="checkbox" [ngModel]="form().isDefault" (ngModelChange)="patchForm({ isDefault: $event })" />
                 <span class="text-sm">{{ 'brands.isDefault' | translate }}</span>
               </label>
-              <label class="flex items-center gap-2 cursor-pointer pb-2">
+              <label class="flex items-center gap-2 cursor-pointer h-9">
                 <input type="checkbox" [ngModel]="form().isActive" (ngModelChange)="patchForm({ isActive: $event })" />
                 <span class="text-sm">{{ 'brands.isActive' | translate }}</span>
               </label>
             </div>
-            <div class="flex gap-2">
-              <button type="button" class="btn-primary"
-                      [disabled]="busy() || !form().name.trim()" (click)="save()">
-                {{ (editing() === 'new' ? 'brands.create' : 'brands.saveChanges') | translate }}
-              </button>
-              <button type="button" class="btn-secondary" (click)="cancelEdit()">{{ 'inbox.cancel' | translate }}</button>
-            </div>
           </div>
-        }
-      </section>
+          <div class="card-footer">
+            <button type="button" class="btn-secondary" (click)="cancelEdit()">{{ 'inbox.cancel' | translate }}</button>
+            <button type="button" class="btn-primary"
+                    [disabled]="busy() || !form().name.trim()" (click)="save()">
+              {{ (editing() === 'new' ? 'brands.create' : 'brands.saveChanges') | translate }}
+            </button>
+          </div>
+        </section>
       }
 
-      <section class="card p-5">
-        <h3 class="card-title mb-2">{{ 'brands.list' | translate }}</h3>
+      <section class="card">
         @for (b of state.brands(); track b.id) {
-          <div class="border-t border-line-soft first:border-t-0 flex flex-wrap items-center justify-between gap-3 py-3">
-            <div class="flex items-center gap-3 min-w-0">
-              <span class="w-6 h-6 rounded-full border border-line shrink-0" [style.background-color]="b.colorHex || 'var(--color-text-placeholder)'"></span>
+          <div class="list-row">
+            <div class="list-row__main flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full shrink-0" [style.background-color]="b.colorHex || 'var(--color-text-placeholder)'"></span>
               <div class="min-w-0">
-                <p class="text-sm font-semibold flex items-center gap-2 flex-wrap">
-                  {{ b.name }}
-                  @if (b.code) { <code class="badge badge-neutral font-mono" dir="ltr">{{ b.code }}</code> }
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="row-title">{{ b.name }}</span>
+                  @if (b.code) { <code class="count-pill" dir="ltr">{{ b.code }}</code> }
                   @if (b.isDefault) { <span class="badge badge-accent">{{ 'brands.default' | translate }}</span> }
                   @if (!b.isActive) { <span class="badge badge-neutral">{{ 'brands.inactive' | translate }}</span> }
-                </p>
-                @if (b.description) { <p class="text-xs text-ink-2 truncate">{{ b.description }}</p> }
+                </div>
+                @if (b.description) { <span class="row-hint truncate">{{ b.description }}</span> }
               </div>
             </div>
             @if (canWrite()) {
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="list-row__actions">
                 <button type="button" class="btn-secondary btn-sm" (click)="startEdit(b)">{{ 'brands.edit' | translate }}</button>
-                <button type="button" class="btn-danger-soft btn-sm" (click)="brandToDelete.set(b)">{{ 'brands.delete' | translate }}</button>
+                <button type="button" class="btn-icon btn-sm btn-danger-hover" (click)="brandToDelete.set(b)"
+                        [title]="'brands.delete' | translate" [attr.aria-label]="'brands.delete' | translate">
+                  <mat-icon class="icon-sm">delete</mat-icon>
+                </button>
               </div>
             }
           </div>
         } @empty {
-          <p class="text-xs text-ink-3">{{ 'brands.none' | translate }}</p>
+          <app-empty-state icon="sell" [title]="'brands.none' | translate" />
         }
       </section>
 

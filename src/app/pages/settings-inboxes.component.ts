@@ -19,39 +19,39 @@ import { InboundApi, InboundMailbox, InboundSettings } from '../services/domains
   selector: 'app-settings-inboxes',
   imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
+    <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'inboxes.title' | translate" [subtitle]="'inboxes.subtitle' | translate" />
 
       @if (settings(); as s) {
         @if (s.aiEnabled) {
-          <div class="alert alert-success text-sm flex items-center gap-2">
-            <mat-icon class="icon-sm">auto_awesome</mat-icon>
+          <div class="alert alert-success">
+            <mat-icon>document_scanner</mat-icon>
             <span>{{ 'inboxes.aiOn' | translate: { model: s.documentModel || '—' } }}</span>
           </div>
         } @else {
-          <div class="alert alert-info text-sm">{{ 'inboxes.aiOff' | translate }}</div>
+          <div class="alert alert-info">{{ 'inboxes.aiOff' | translate }}</div>
         }
 
         @for (m of s.mailboxes; track m.id) {
           <section class="card">
-            <div class="card-header flex flex-wrap items-center justify-between gap-2">
+            <div class="card-header flex-wrap">
               <h3 class="card-title flex items-center gap-2">
-                <mat-icon class="icon-md text-ink-3">{{ m.kind === 'VENDOR_INVOICES' ? 'receipt_long' : 'account_balance' }}</mat-icon>
+                <mat-icon class="icon-sm text-ink-3">{{ m.kind === 'VENDOR_INVOICES' ? 'receipt_long' : 'account_balance' }}</mat-icon>
                 {{ ('inboxes.kind.' + m.kind) | translate }}
               </h3>
               @if (!m.active) { <span class="badge badge-neutral">{{ 'inboxes.paused' | translate }}</span> }
             </div>
             <div class="card-body space-y-5">
-              <div>
+              <div class="field">
                 <span class="field-label">{{ 'inboxes.address' | translate }}</span>
-                <div class="flex items-center gap-2 min-w-0">
-                  <code class="input-field t-mono truncate flex items-center">{{ m.address }}</code>
+                <div class="flex items-start gap-2 min-w-0">
+                  <code class="code-block" dir="ltr">{{ m.address }}</code>
                   <button class="btn-secondary shrink-0" (click)="copy(m.address)"><mat-icon class="icon-sm">content_copy</mat-icon>{{ 'inboxes.copy' | translate }}</button>
                 </div>
                 <p class="field-hint">{{ ('inboxes.addressHint.' + m.kind) | translate }}</p>
               </div>
 
-              <div>
+              <div class="field">
                 <span class="field-label">{{ 'inboxes.trusted' | translate }}</span>
                 <div class="flex flex-wrap gap-1.5">
                   @for (a of m.allowedSenders; track a) {
@@ -66,7 +66,7 @@ import { InboundApi, InboundMailbox, InboundSettings } from '../services/domains
                   }
                 </div>
                 @if (canEdit()) {
-                  <div class="flex gap-2 mt-2">
+                  <div class="flex gap-2">
                     <input class="input-field" [placeholder]="'inboxes.senderPlaceholder' | translate" [attr.aria-label]="'inboxes.trusted' | translate"
                            [(ngModel)]="drafts[m.id]" (keydown.enter)="addSender(m)" />
                     <button class="btn-secondary shrink-0" [disabled]="busy() || !drafts[m.id]" (click)="addSender(m)">{{ 'inboxes.add' | translate }}</button>
@@ -76,30 +76,30 @@ import { InboundApi, InboundMailbox, InboundSettings } from '../services/domains
               </div>
 
               @if (m.kind === 'VENDOR_INVOICES') {
-                <div class="flex items-start gap-3">
-                  <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="m.autoBook"
+                <label class="switch-row" [for]="'inbox-autobook-' + m.id">
+                  <button type="button" [id]="'inbox-autobook-' + m.id" role="switch" class="switch" [attr.aria-checked]="m.autoBook"
                           [disabled]="!canEdit() || busy()" [attr.aria-label]="'inboxes.autoBook' | translate"
                           (click)="save(m, { autoBook: !m.autoBook })"></button>
                   <span>
-                    <span class="text-sm font-medium text-ink block">{{ 'inboxes.autoBook' | translate }}</span>
-                    <span class="text-xs text-ink-3">{{ 'inboxes.autoBookHint' | translate }}</span>
+                    <span class="row-title">{{ 'inboxes.autoBook' | translate }}</span>
+                    <span class="row-hint">{{ 'inboxes.autoBookHint' | translate }}</span>
                   </span>
-                </div>
+                </label>
               }
 
-              <div class="flex items-start gap-3">
-                <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="m.active"
+              <label class="switch-row" [for]="'inbox-active-' + m.id">
+                <button type="button" [id]="'inbox-active-' + m.id" role="switch" class="switch" [attr.aria-checked]="m.active"
                         [disabled]="!canEdit() || busy()" [attr.aria-label]="'inboxes.active' | translate"
                         (click)="save(m, { active: !m.active })"></button>
                 <span>
-                  <span class="text-sm font-medium text-ink block">{{ 'inboxes.active' | translate }}</span>
-                  <span class="text-xs text-ink-3">{{ 'inboxes.activeHint' | translate }}</span>
+                  <span class="row-title">{{ 'inboxes.active' | translate }}</span>
+                  <span class="row-hint">{{ 'inboxes.activeHint' | translate }}</span>
                 </span>
-              </div>
+              </label>
             </div>
             @if (canEdit()) {
-              <div class="card-footer flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xs text-ink-3">{{ 'inboxes.rotateHint' | translate }}</span>
+              <div class="card-footer flex-wrap justify-between">
+                <span class="field-hint flex-1 basis-56">{{ 'inboxes.rotateHint' | translate }}</span>
                 <button class="btn-danger-soft btn-sm" [disabled]="busy()" (click)="rotate(m)"><mat-icon class="icon-sm">autorenew</mat-icon>{{ 'inboxes.rotate' | translate }}</button>
               </div>
             }
@@ -108,19 +108,19 @@ import { InboundApi, InboundMailbox, InboundSettings } from '../services/domains
 
         <section class="card">
           <div class="card-body">
-            <div class="flex items-start gap-3">
-              <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="s.whatsappDocuments"
+            <label class="switch-row" for="inbox-whatsapp">
+              <button type="button" id="inbox-whatsapp" role="switch" class="switch" [attr.aria-checked]="s.whatsappDocuments"
                       [disabled]="!canEdit() || busy()" [attr.aria-label]="'inboxes.whatsapp' | translate"
                       (click)="saveWhatsapp(!s.whatsappDocuments)"></button>
               <span>
-                <span class="text-sm font-medium text-ink block">{{ 'inboxes.whatsapp' | translate }}</span>
-                <span class="text-xs text-ink-3">{{ 'inboxes.whatsappHint' | translate }}</span>
+                <span class="row-title">{{ 'inboxes.whatsapp' | translate }}</span>
+                <span class="row-hint">{{ 'inboxes.whatsappHint' | translate }}</span>
               </span>
-            </div>
+            </label>
           </div>
         </section>
         @if (!canEdit()) {
-          <p class="text-xs text-ink-3">{{ 'inboxes.readOnly' | translate }}</p>
+          <p class="field-hint">{{ 'inboxes.readOnly' | translate }}</p>
         }
       }
     </div>

@@ -4,7 +4,7 @@ import { map } from 'rxjs/operators';
 import { BaseApiService } from '../core/services/base-api.service';
 import { CurrentUser } from '../core/services/auth-api.service';
 import type {
-  Organization, CrmUser, CrmTeam, CrmGroup, GroupMessage, GroupMeeting,
+  Organization, CrmUser, CrmTeam, GroupDto, GroupMeetingDto, GroupMessage,
   Partner, LeadContact, LeadActivity, LeadStatusHistory, CustomerCard,
   Deal, Proposal, ProposalTemplate, Task, Ticket, Invoice, PurchaseOrder,
   Campaign, AutomationRule, Notification, Brand, BusinessType, LeadKpiStats, Category
@@ -332,21 +332,21 @@ export class ApiService extends BaseApiService {
   }
 
   // Groups
-  getGroups(): Observable<CrmGroup[]> {
-    return this.get<PageResponse<CrmGroup>>(`/groups`).pipe(
+  getGroups(): Observable<GroupDto[]> {
+    return this.get<PageResponse<GroupDto>>(`/groups`).pipe(
       map(response => response.content || [])
     );
   }
 
-  getGroup(id: string): Observable<CrmGroup> {
+  getGroup(id: string): Observable<GroupDto> {
     return this.get(`/groups/${id}`);
   }
 
-  createGroup(group: unknown): Observable<CrmGroup> {
+  createGroup(group: unknown): Observable<GroupDto> {
     return this.post(`/groups`, group);
   }
 
-  updateGroup(id: string, group: unknown): Observable<CrmGroup> {
+  updateGroup(id: string, group: unknown): Observable<GroupDto> {
     return this.patch(`/groups/${id}`, group);
   }
 
@@ -381,13 +381,13 @@ export class ApiService extends BaseApiService {
   }
 
   // Meetings
-  getGroupMeetings(groupId: string): Observable<GroupMeeting[]> {
-    return this.get<PageResponse<GroupMeeting>>(`/groups/${groupId}/meetings`).pipe(
+  getGroupMeetings(groupId: string): Observable<GroupMeetingDto[]> {
+    return this.get<PageResponse<GroupMeetingDto>>(`/groups/${groupId}/meetings`).pipe(
       map(response => response.content || [])
     );
   }
 
-  createGroupMeeting(groupId: string, meeting: unknown): Observable<GroupMeeting> {
+  createGroupMeeting(groupId: string, meeting: unknown): Observable<GroupMeetingDto> {
     return this.post(`/groups/${groupId}/meetings`, meeting);
   }
 

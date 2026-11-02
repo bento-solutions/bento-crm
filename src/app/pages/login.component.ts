@@ -1,3 +1,4 @@
+import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,7 +12,7 @@ import { TranslationService } from '../services/translation.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
+  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule, RouterLink, TranslatePipe],
   styles: [`
     :host {
       display: block;
@@ -19,28 +20,69 @@ import { TranslationService } from '../services/translation.service';
       background: var(--color-bg);
     }
 
+    /* Split screen: a soft, misty brand panel beside the sign-in form. */
     .login-container {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       min-height: 100vh;
+      padding: 16px;
+      gap: 16px;
+      background: var(--color-bg);
+    }
+
+    .login-hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 48px;
+      padding: 44px 48px;
+      border-radius: var(--r-overlay);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      overflow: hidden;
+    }
+
+    .login-hero__brand { display: flex; align-items: center; gap: 12px; }
+    .login-hero__brand span { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+
+    .login-hero__eyebrow {
+      display: block; font-size: 14px; font-weight: 500; color: var(--color-accent-text);
+    }
+
+    .login-hero__title {
+      margin: 20px 0 0; max-width: 540px;
+      font-size: 40px; line-height: 1.1; font-weight: 500; letter-spacing: -0.02em;
+    }
+    .login-hero__subtitle { margin: 14px 0 0; max-width: 460px; font-size: 16px; line-height: 1.6; color: var(--color-text-secondary); }
+
+    .login-hero__features { display: flex; flex-direction: column; gap: 0; margin: 32px 0 0; padding: 0; list-style: none; }
+    .login-hero__features li {
+      display: flex; align-items: baseline; gap: 16px; max-width: 440px;
+      padding: 12px 0; border-bottom: 1px solid var(--color-border-light);
+      font-size: 15px; font-weight: 400; color: var(--color-text-secondary);
+    }
+    .login-hero__num {
+      flex-shrink: 0; font-family: var(--font-mono); font-size: 12px; color: var(--color-text-tertiary);
+    }
+    .login-hero__foot { font-size: 12px; color: var(--color-text-secondary); }
+
+    .login-panel {
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 48px 24px;
     }
 
     .login-card {
       width: 100%;
       max-width: 400px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--r-overlay);
-      box-shadow: var(--shadow-xs);
-      padding: 40px 32px 32px;
     }
 
     .login-logo {
-      display: flex;
+      display: none;
       align-items: center;
-      justify-content: center;
       gap: 10px;
       margin-bottom: 32px;
     }
@@ -53,29 +95,37 @@ import { TranslationService } from '../services/translation.service';
     }
 
     .login-logo span {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 20px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       color: var(--color-text-primary);
     }
 
     .login-title {
-      text-align: center;
-      margin-bottom: 6px;
+      margin-bottom: 28px;
     }
 
     .login-title h1 {
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 32px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
       color: var(--color-text-primary);
       margin: 0;
     }
 
     .login-title p {
-      font-size: 13px;
+      font-size: 14px;
       color: var(--color-text-tertiary);
-      margin: 4px 0 0;
+      margin: 6px 0 0;
     }
+
+    @media (max-width: 960px) {
+      .login-container { grid-template-columns: 1fr; padding: 0; }
+      .login-hero { display: none; }
+      .login-logo { display: flex; }
+    }
+
+    .login-card .input-field { height: 46px; font-size: 14px; background: var(--color-surface); }
 
     .form-group {
       margin-bottom: 16px;
@@ -99,7 +149,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 13px;
       color: var(--color-text-primary);
       outline: none;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
       box-sizing: border-box;
     }
 
@@ -139,7 +189,7 @@ import { TranslationService } from '../services/translation.service';
       justify-content: center;
       color: var(--color-text-tertiary);
       border-radius: 6px;
-      transition: color 150ms ease, background-color 150ms ease;
+      transition: color var(--transition-fast), background-color var(--transition-fast);
     }
 
     .password-toggle-btn:hover {
@@ -160,12 +210,13 @@ import { TranslationService } from '../services/translation.service';
       color: var(--color-on-primary);
       border: none;
       border-radius: var(--r-control);
-      height: var(--control-height-lg);
+      height: 48px;
       padding: 0 16px;
-      font-size: 13px;
-      font-weight: 500;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 150ms ease;
+      transition: background var(--transition-fast);
       margin-top: 8px;
     }
 
@@ -259,7 +310,7 @@ import { TranslationService } from '../services/translation.service';
       border-radius: var(--r-card);
       cursor: pointer;
       text-align: start;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .org-item-card:hover:not(:disabled) {
@@ -323,8 +374,7 @@ import { TranslationService } from '../services/translation.service';
       background: var(--color-border);
       padding: 1px 6px;
       border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
     }
 
     .org-item-arrow {
@@ -399,7 +449,7 @@ import { TranslationService } from '../services/translation.service';
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 150ms ease;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
     }
 
     .back-btn:hover:not(:disabled) {
@@ -415,9 +465,27 @@ import { TranslationService } from '../services/translation.service';
   `],
   template: `
     <div class="login-container">
+      <aside class="login-hero">
+        <div class="login-hero__brand">
+          <app-brand-mark [size]="28" />
+          <span>Bento</span>
+        </div>
+        <div>
+          <span class="login-hero__eyebrow">{{ 'login.hero.eyebrow' | translate }}</span>
+          <h2 class="login-hero__title">{{ 'login.hero.title' | translate }}</h2>
+          <p class="login-hero__subtitle">{{ 'login.hero.subtitle' | translate }}</p>
+          <ul class="login-hero__features">
+            <li><span class="login-hero__num">01</span>{{ 'login.hero.centralize' | translate }}</li>
+            <li><span class="login-hero__num">02</span>{{ 'login.hero.automate' | translate }}</li>
+            <li><span class="login-hero__num">03</span>{{ 'login.hero.collaborate' | translate }}</li>
+          </ul>
+        </div>
+        <div class="login-hero__foot">© Bento CRM</div>
+      </aside>
+      <div class="login-panel">
       <div class="login-card">
         <div class="login-logo">
-          <img src="logo.webp" alt="Bento Logo" />
+          <app-brand-mark [size]="28" />
           <span>Bento</span>
         </div>
 
@@ -551,6 +619,7 @@ import { TranslationService } from '../services/translation.service';
             <a routerLink="/onboarding">{{ 'login.createOrg' | translate }}</a>
           </p>
         }
+      </div>
       </div>
     </div>
   `

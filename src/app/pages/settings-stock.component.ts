@@ -18,93 +18,81 @@ interface WarehouseForm { id?: string; name: string; code: string; address: stri
   selector: 'app-settings-stock',
   imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
+    <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'stockSettings.title' | translate" [subtitle]="'stockSettings.subtitle' | translate" />
 
       <section class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ 'stockSettings.trigger' | translate }}</h3>
+        </div>
         <div class="card-body space-y-5">
-          <div>
-            <h3 class="text-sm font-semibold text-ink mb-2">{{ 'stockSettings.trigger' | translate }}</h3>
-            <div role="radiogroup" [attr.aria-label]="'stockSettings.trigger' | translate" class="space-y-2">
-              @for (t of triggers; track t) {
-                <label class="flex items-start gap-3 rounded-lg border border-line p-3">
-                  <input type="radio" name="trigger" class="mt-1" [value]="t" [checked]="trigger() === t"
-                         [disabled]="!canWrite()" (change)="trigger.set(t)" />
-                  <span>
-                    <span class="text-sm font-medium text-ink block">{{ 'stockSettings.trigger.' + t | translate }}</span>
-                    <span class="text-xs text-ink-3">{{ 'stockSettings.triggerHint.' + t | translate }}</span>
-                  </span>
-                </label>
-              }
-            </div>
+          <div role="radiogroup" [attr.aria-label]="'stockSettings.trigger' | translate" class="space-y-2">
+            @for (t of triggers; track t) {
+              <label class="choice-row">
+                <input type="radio" name="trigger" class="mt-1" [value]="t" [checked]="trigger() === t"
+                       [disabled]="!canWrite()" (change)="trigger.set(t)" />
+                <span>
+                  <span class="row-title">{{ 'stockSettings.trigger.' + t | translate }}</span>
+                  <span class="row-hint">{{ 'stockSettings.triggerHint.' + t | translate }}</span>
+                </span>
+              </label>
+            }
           </div>
 
-          <div class="flex items-start gap-3">
-            <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="receiveOnDelivery()"
+          <label class="switch-row" for="stock-receive-on-delivery">
+            <button type="button" id="stock-receive-on-delivery" role="switch" class="switch" [attr.aria-checked]="receiveOnDelivery()"
                     [disabled]="!canWrite()" [attr.aria-label]="'stockSettings.receiveOnDelivery' | translate"
                     (click)="receiveOnDelivery.set(!receiveOnDelivery())"></button>
             <span>
-              <span class="text-sm font-medium text-ink block">{{ 'stockSettings.receiveOnDelivery' | translate }}</span>
-              <span class="text-xs text-ink-3">{{ 'stockSettings.receiveOnDeliveryHint' | translate }}</span>
+              <span class="row-title">{{ 'stockSettings.receiveOnDelivery' | translate }}</span>
+              <span class="row-hint">{{ 'stockSettings.receiveOnDeliveryHint' | translate }}</span>
             </span>
-          </div>
+          </label>
 
-          <div class="alert alert-info text-xs">{{ 'stockSettings.matching' | translate }}</div>
+          <div class="alert alert-info">{{ 'stockSettings.matching' | translate }}</div>
         </div>
         @if (canWrite()) {
-          <div class="card-footer flex justify-end">
+          <div class="card-footer">
             <button type="button" class="btn-primary" [disabled]="busy()" (click)="saveSettings()">{{ 'stockSettings.save' | translate }}</button>
           </div>
         }
       </section>
 
       <section class="card">
-        <div class="card-header flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-ink">{{ 'stockSettings.warehouses' | translate }}</h3>
+        <div class="card-header">
+          <h3 class="card-title">{{ 'stockSettings.warehouses' | translate }}</h3>
           @if (canWrite()) {
             <button type="button" class="btn-secondary btn-sm" (click)="edit({ name: '', code: '', address: '' })">
               <mat-icon class="icon-sm">add</mat-icon>{{ 'stockSettings.addWarehouse' | translate }}
             </button>
           }
         </div>
-        <div class="table-card">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>{{ 'stockSettings.name' | translate }}</th>
-                <th>{{ 'stockSettings.code' | translate }}</th>
-                <th></th>
-                <th class="col-actions"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (w of warehouses(); track w.id) {
-                <tr [class.opacity-50]="!w.isActive">
-                  <td><div class="cell-title">{{ w.name }}</div>
-                    @if (w.address) { <div class="cell-sub">{{ w.address }}</div> }</td>
-                  <td class="cell-muted">{{ w.code || '—' }}</td>
-                  <td>
-                    @if (w.isDefault) { <span class="badge badge-info">{{ 'stockSettings.default' | translate }}</span> }
-                    @if (!w.isActive) { <span class="badge badge-neutral">{{ 'stockSettings.archived' | translate }}</span> }
-                  </td>
-                  <td class="col-actions whitespace-nowrap">
-                    @if (canWrite()) {
-                      @if (!w.isDefault && w.isActive) {
-                        <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="update(w, { isDefault: true })">{{ 'stockSettings.makeDefault' | translate }}</button>
-                      }
-                      <button class="btn-ghost btn-sm" (click)="edit({ id: w.id, name: w.name, code: w.code || '', address: w.address || '' })">{{ 'stockSettings.edit' | translate }}</button>
-                      @if (!w.isDefault) {
-                        <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="update(w, { isActive: !w.isActive })">
-                          {{ (w.isActive ? 'stockSettings.archive' : 'stockSettings.restore') | translate }}
-                        </button>
-                      }
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        @for (w of warehouses(); track w.id) {
+          <div class="list-row" [class.opacity-50]="!w.isActive">
+            <div class="list-row__main">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="row-title">{{ w.name }}</span>
+                @if (w.code) { <code class="count-pill" dir="ltr">{{ w.code }}</code> }
+                @if (w.isDefault) { <span class="badge badge-accent">{{ 'stockSettings.default' | translate }}</span> }
+                @if (!w.isActive) { <span class="badge badge-neutral">{{ 'stockSettings.archived' | translate }}</span> }
+              </div>
+              @if (w.address) { <span class="row-hint">{{ w.address }}</span> }
+            </div>
+            @if (canWrite()) {
+              <div class="list-row__actions">
+                @if (!w.isDefault && w.isActive) {
+                  <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="update(w, { isDefault: true })">{{ 'stockSettings.makeDefault' | translate }}</button>
+                }
+                <button class="btn-ghost btn-sm" (click)="edit({ id: w.id, name: w.name, code: w.code || '', address: w.address || '' })">{{ 'stockSettings.edit' | translate }}</button>
+                @if (!w.isDefault) {
+                  <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="update(w, { isActive: !w.isActive })">
+                    {{ (w.isActive ? 'stockSettings.archive' : 'stockSettings.restore') | translate }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
       </section>
 
       @if (form(); as f) {
@@ -115,11 +103,11 @@ interface WarehouseForm { id?: string; name: string; code: string; address: stri
               <button class="btn-icon btn-sm" (click)="form.set(null)" [attr.aria-label]="'stockSettings.cancel' | translate"><mat-icon class="icon-sm">close</mat-icon></button>
             </div>
             <div class="space-y-3">
-              <label class="block"><span class="field-label">{{ 'stockSettings.name' | translate }}</span>
+              <label class="field"><span class="field-label">{{ 'stockSettings.name' | translate }}</span>
                 <input class="input-field" maxlength="120" [(ngModel)]="f.name" /></label>
-              <label class="block"><span class="field-label">{{ 'stockSettings.code' | translate }}</span>
+              <label class="field"><span class="field-label">{{ 'stockSettings.code' | translate }}</span>
                 <input class="input-field" maxlength="30" [(ngModel)]="f.code" /></label>
-              <label class="block"><span class="field-label">{{ 'stockSettings.address' | translate }}</span>
+              <label class="field"><span class="field-label">{{ 'stockSettings.address' | translate }}</span>
                 <input class="input-field" [(ngModel)]="f.address" /></label>
             </div>
             <div class="modal-footer">
