@@ -26,6 +26,50 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
     }
   `],
   template: `
+    <!-- The create and edit forms share one list of chosen members: only one is open at a time. -->
+    <ng-template #memberPicker>
+      <div class="field">
+        <span class="field-label">Members</span>
+        <div class="relative">
+          <input
+            #searchBox
+            type="text"
+            placeholder="Search active users…"
+            aria-label="Search active users"
+            (input)="searchUsers(searchBox.value)"
+            (focus)="searchUsers(searchBox.value)"
+            (blur)="clearSearchDelay()"
+            class="input-field"
+          />
+          @if (userSearchMatches().length > 0) {
+            <div class="card absolute left-0 right-0 mt-1 z-20 overflow-hidden max-h-36 overflow-y-auto">
+              @for (match of userSearchMatches(); track match.id) {
+                <button
+                  (click)="addMember(match.id); searchBox.value = ''"
+                  class="menu-item"
+                >
+                  <app-user-avatar [userId]="match.id" [size]="20"></app-user-avatar>
+                  <span>{{ match.displayName }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+        @if (memberIds().length > 0) {
+          <div class="flex flex-wrap gap-1.5">
+            @for (id of memberIds(); track id) {
+              <span class="chip">
+                {{ getSenderName(id) }}
+                <button type="button" (click)="removeMember(id)" class="inline-flex items-center text-ink-3 hover:text-ink" [attr.aria-label]="'Remove ' + getSenderName(id)">
+                  <mat-icon class="icon-xs">close</mat-icon>
+                </button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </ng-template>
+
     <div class="page">
     <app-page-header [size]="embedded ? 'section' : 'page'" title="Groups" subtitle="Team chat, meetings and shared files">
       @if (canCreateGroup()) {
@@ -70,52 +114,13 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               class="input-field"
             ></textarea>
 
-            <!-- Search members -->
-            <div class="relative">
-              <input
-                #searchBox
-                type="text"
-                placeholder="Search active users…"
-                aria-label="Search active users"
-                (input)="searchUsers(searchBox.value)"
-                (focus)="searchUsers(searchBox.value)"
-                (blur)="clearSearchDelay()"
-                class="input-field"
-              />
-              @if (userSearchMatches().length > 0) {
-                <div class="card absolute left-0 right-0 mt-1 z-20 overflow-hidden max-h-36 overflow-y-auto">
-                  @for (match of userSearchMatches(); track match.id) {
-                    <button
-                      (click)="addMemberChip(match)"
-                      class="menu-item"
-                    >
-                      <app-user-avatar [userId]="match.id" [size]="20"></app-user-avatar>
-                      <span>{{ match.displayName }}</span>
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-
-            <!-- Chips -->
-            @if (selectedMemberChips().length > 0) {
-              <div class="flex flex-wrap gap-1.5">
-                @for (chip of selectedMemberChips(); track chip.id) {
-                  <span class="chip">
-                    {{ chip.displayName.split(' ')[0] }}
-                    <button type="button" (click)="removeMemberChip(chip.id)" class="inline-flex items-center text-ink-3 hover:text-ink" [attr.aria-label]="'Remove ' + chip.displayName">
-                      <mat-icon class="icon-xs">close</mat-icon>
-                    </button>
-                  </span>
-                }
-              </div>
-            }
+            <ng-container [ngTemplateOutlet]="memberPicker" />
 
             <div class="flex justify-end gap-2">
               <button (click)="closeCreateGroupForm()" class="btn-secondary btn-sm">Cancel</button>
               <button
                 (click)="saveGroup()"
-                [disabled]="!newGroupName.trim() || selectedMemberChips().length === 0"
+                [disabled]="savingGroup() || !newGroupName.trim() || memberIds().length === 0"
                 class="btn-primary btn-sm"
               >
                 Create
@@ -169,9 +174,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
               </button>
               <div class="min-w-0">
                 <h2 class="card-title truncate">{{ grp.name }}</h2>
-                @if (grp.memberUserIds.length > 0) {
-                  <p class="row-hint num">{{ grp.memberUserIds.length }} member{{ grp.memberUserIds.length === 1 ? '' : 's' }}</p>
-                }
+                <p class="row-hint num">{{ grp.memberUserIds.length }} member{{ grp.memberUserIds.length === 1 ? '' : 's' }}</p>
               </div>
             </div>
 
@@ -199,9 +202,10 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
             <h3 class="card-title">Edit group</h3>
             <input [(ngModel)]="editGroupName" placeholder="Group name" aria-label="Group name" class="input-field" />
             <textarea [(ngModel)]="editGroupDesc" placeholder="Description (optional)" aria-label="Description" rows="2" class="input-field"></textarea>
+            <ng-container [ngTemplateOutlet]="memberPicker" />
             <div class="flex justify-end gap-2">
               <button (click)="closeEditGroupForm()" class="btn-secondary btn-sm">Cancel</button>
-              <button (click)="saveGroupEdit(grp)" [disabled]="!editGroupName.trim()" class="btn-primary btn-sm">Save</button>
+              <button (click)="saveGroupEdit(grp)" [disabled]="!editGroupName.trim() || memberIds().length === 0" class="btn-primary btn-sm">Save</button>
             </div>
           </div>
           }
@@ -377,7 +381,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
                         <span class="eyebrow block">Time</span>
                         <div class="flex items-center gap-1 text-ink-2">
                           <mat-icon class="icon-xs">schedule</mat-icon>
-                          <span>{{ meet.scheduledAt | date: 'dd MMM, HH:mm' }} ({{ meet.durationMinutes }} min)</span>
+                          <span>{{ meet.scheduledAt | date: 'dd MMM, HH:mm' }}@if (meet.durationMinutes) { ({{ meet.durationMinutes }} min)}</span>
                         </div>
                       </div>
 
@@ -473,9 +477,10 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
 
   // Create group signals
   showCreateGroup = signal<boolean>(false);
+  savingGroup = signal(false);
   newGroupName = '';
   newGroupDesc = '';
-  selectedMemberChips = signal<CrmUser[]>([]);
+  memberIds = signal<string[]>([]);
   userSearchMatches = signal<CrmUser[]>([]);
 
   constructor() {
@@ -513,6 +518,9 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
     if (!this.canWriteGroup()) return;
     this.editGroupName = group.name;
     this.editGroupDesc = group.description || '';
+    this.memberIds.set(group.memberUserIds);
+    this.userSearchMatches.set([]);
+    this.showCreateGroup.set(false);
     this.showEditGroupForm.set(!this.showEditGroupForm());
   }
 
@@ -522,7 +530,7 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
 
   saveGroupEdit(group: CrmGroup) {
     if (!this.canWriteGroup() || !this.editGroupName.trim()) return;
-    this.state.updateGroup(group.id, { name: this.editGroupName.trim(), description: this.editGroupDesc.trim() });
+    this.state.updateGroup(group.id, { name: this.editGroupName.trim(), description: this.editGroupDesc.trim(), memberUserIds: this.memberIds() });
     this.showEditGroupForm.set(false);
   }
 
@@ -576,8 +584,10 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
     this.selectedGroupId.set(groupId);
     this.markMessagesAsRead(groupId);
     this.closeScheduleForm();
+    this.closeEditGroupForm();
     this.activeTab.set('chat');
     this.loadGroupMessages(groupId);
+    this.state.loadGroupMeetings(groupId);
     this.connectGroupStream(groupId);
     setTimeout(() => this.scrollChatToBottom(true), 50);
   }
@@ -761,9 +771,10 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
     this.showCreateGroup.set(!this.showCreateGroup());
     if (this.showCreateGroup()) {
       this.closeGroupOnPhone();
+      this.closeEditGroupForm();
       this.newGroupName = '';
       this.newGroupDesc = '';
-      this.selectedMemberChips.set([]);
+      this.memberIds.set([]);
       this.userSearchMatches.set([]);
     }
   }
@@ -782,11 +793,12 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
       this.userSearchMatches.set([]);
       return;
     }
-    const currentChips = this.selectedMemberChips().map(c => c.id);
-    const candidates = this.state.users().filter(u => 
-      u.isActive && 
-      u.id !== this.state.currentUserId() &&
-      !currentChips.includes(u.id) &&
+    const chosen = this.memberIds();
+    const candidates = this.state.users().filter(u =>
+      u.isActive &&
+      // Whoever creates a group is added to it by the server, so only editing can list them.
+      (this.showEditGroupForm() || u.id !== this.state.currentUserId()) &&
+      !chosen.includes(u.id) &&
       u.displayName.toLowerCase().includes(cleaned)
     );
     this.userSearchMatches.set(candidates);
@@ -798,33 +810,33 @@ export class GroupsComponent implements AfterViewChecked, OnDestroy {
     }, 200);
   }
 
-  addMemberChip(user: CrmUser) {
-    this.selectedMemberChips.update(chips => [...chips, user]);
+  addMember(userId: string) {
+    this.memberIds.update(ids => [...ids, userId]);
     this.userSearchMatches.set([]);
   }
 
-  removeMemberChip(userId: string) {
-    this.selectedMemberChips.update(chips => chips.filter(c => c.id !== userId));
+  removeMember(userId: string) {
+    this.memberIds.update(ids => ids.filter(id => id !== userId));
   }
 
   saveGroup() {
-    if (!this.canCreateGroup() || !this.newGroupName.trim()) return;
+    if (!this.canCreateGroup() || !this.newGroupName.trim() || this.savingGroup()) return;
 
-    const meId = this.state.currentUserId();
-    const members = Array.from(new Set([
-      meId, 
-      ...this.selectedMemberChips().map(c => c.id)
-    ]));
-
-    const grp = this.state.createGroup({
-      name: this.newGroupName.trim(),
-      description: this.newGroupDesc.trim() || undefined,
-      createdByUserId: meId,
-      memberUserIds: members
-    });
-
-    this.showCreateGroup.set(false);
-    this.openGroup(grp.id);
+    this.savingGroup.set(true);
+    this.state.createGroup(
+      {
+        name: this.newGroupName.trim(),
+        description: this.newGroupDesc.trim() || undefined,
+        memberUserIds: this.memberIds()
+      },
+      (grp) => {
+        this.savingGroup.set(false);
+        this.showCreateGroup.set(false);
+        this.openGroup(grp.id);
+      },
+      // The form stays open with what was typed, so a failed save can simply be retried.
+      () => this.savingGroup.set(false)
+    );
   }
 
   // Helpers
