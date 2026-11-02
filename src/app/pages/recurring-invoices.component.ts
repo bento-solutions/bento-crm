@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
@@ -10,6 +12,8 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { PartnersService } from '../services/domains/partners.service';
+import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { DEFAULT_VAT_CODE, vatCodeForRate, vatFraction } from '../services/domains/vat';
 import {
   GeneratedInvoice,
   RecurringFrequency,
@@ -17,9 +21,9 @@ import {
   RecurringInvoiceInput,
   RecurringInvoicesApi,
   RecurringLine,
+  RecurringType,
 } from '../services/domains/recurring-invoices.service';
 
-const VAT_RATES = [0, 0.07, 0.1, 0.14, 0.2];
 const FREQUENCIES: RecurringFrequency[] = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'];
 
 function today(): string {
@@ -27,8 +31,9 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function emptyForm(): RecurringInvoiceInput {
+function emptyForm(type: RecurringType): RecurringInvoiceInput {
   return {
+    type,
     partnerId: '',
     name: '',
     frequency: 'MONTHLY',
@@ -36,43 +41,52 @@ function emptyForm(): RecurringInvoiceInput {
     startDate: today(),
     endDate: null,
     paymentTermsDays: 30,
-    autoSend: true,
-    lines: [{ description: '', qty: 1, unitPrice: 0, vatRate: 0.2 }],
+    autoSend: type === 'CUSTOMER',
+    lines: [{ description: '', qty: 1, unitPrice: 0, vatRate: 0.2, vatCode: DEFAULT_VAT_CODE }],
   };
 }
 
 /**
  * Finance → Recurring invoices: templates that bill a customer every week, month, quarter or
  * year. The backend generates each invoice on its date and, when the customer has an email,
- * sends it with the PDF attached.
+ * sends it with the PDF attached. The Supplier side (?tab=VENDOR, "Recurring bills" under
+ * Accounts Payable) holds VENDOR templates, which generate supplier bills posted in AC.
  */
 @Component({
   selector: 'app-recurring-invoices',
   imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="page">
-      <app-page-header [title]="'recurring.title' | translate" [subtitle]="'recurring.subtitle' | translate"
+      <app-page-header [title]="(vendor() ? 'recurring.titleVendor' : 'recurring.title') | translate"
+                       [subtitle]="(vendor() ? 'recurring.subtitleVendor' : 'recurring.subtitle') | translate"
                        backLink="/finance" [backLabel]="'recurring.back' | translate">
         @if (!editing() && canCreate()) {
           <button actions type="button" class="btn-primary" (click)="startCreate()">
-            <mat-icon>add</mat-icon>{{ 'recurring.new' | translate }}
+            <mat-icon>add</mat-icon>{{ (vendor() ? 'recurring.newVendor' : 'recurring.new') | translate }}
           </button>
         }
       </app-page-header>
 
+      <div class="segmented mb-4" role="group" [attr.aria-label]="'recurring.side' | translate">
+        @for (t of types; track t) {
+          <button type="button" class="segmented__item" [class.is-active]="type() === t" [attr.aria-pressed]="type() === t" (click)="setType(t)">
+            {{ ('recurring.sideName.' + t) | translate }}</button>
+        }
+      </div>
+
       @if (editing()) {
         <section class="card">
           <div class="card-header">
-            <h2 class="card-title">{{ (editingId() ? 'recurring.editTitle' : 'recurring.newTitle') | translate }}</h2>
+            <h2 class="card-title">{{ (editingId() ? (vendor() ? 'recurring.editTitleVendor' : 'recurring.editTitle') : (vendor() ? 'recurring.newVendor' : 'recurring.newTitle')) | translate }}</h2>
           </div>
           <div class="card-body space-y-5">
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="block">
-                <span class="field-label">{{ 'recurring.customer' | translate }}</span>
+                <span class="field-label">{{ (vendor() ? 'recurring.supplier' : 'recurring.customer') | translate }}</span>
                 <select class="input-field" [ngModel]="form().partnerId" (ngModelChange)="patch({ partnerId: $event })">
-                  <option value="" disabled>{{ 'recurring.pickCustomer' | translate }}</option>
+                  <option value="" disabled>{{ (vendor() ? 'recurring.pickSupplier' : 'recurring.pickCustomer') | translate }}</option>
                   @for (c of customers(); track c.id) {
-                    <option [value]="c.id">{{ c.name }}{{ c.email ? '' : ' (' + ('recurring.noEmail' | translate) + ')' }}</option>
+                    <option [value]="c.id">{{ c.name }}{{ c.email || vendor() ? '' : ' (' + ('recurring.noEmail' | translate) + ')' }}</option>
                   }
                 </select>
               </label>
@@ -119,6 +133,7 @@ function emptyForm(): RecurringInvoiceInput {
                 <input type="number" min="0" max="365" class="input-field"
                        [ngModel]="form().paymentTermsDays" (ngModelChange)="patch({ paymentTermsDays: +$event || 0 })" />
               </label>
+              @if (!vendor()) {
               <div class="flex items-start gap-3 pb-1">
                 <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="form().autoSend"
                         [attr.aria-label]="'recurring.autoSend' | translate" (click)="patch({ autoSend: !form().autoSend })"></button>
@@ -127,6 +142,9 @@ function emptyForm(): RecurringInvoiceInput {
                   <span class="text-xs text-ink-3">{{ 'recurring.autoSendHint' | translate }}</span>
                 </span>
               </div>
+              } @else {
+                <p class="text-xs text-ink-3 pb-1">{{ 'recurring.vendorHint' | translate }}</p>
+              }
             </div>
 
             <div>
@@ -141,9 +159,9 @@ function emptyForm(): RecurringInvoiceInput {
                     <input type="number" min="0" step="any" class="input-field col-span-4 sm:col-span-2" [attr.aria-label]="'recurring.unitPrice' | translate"
                            [ngModel]="line.unitPrice" (ngModelChange)="setLine(i, { unitPrice: +$event })" />
                     <select class="input-field col-span-3 sm:col-span-2" [attr.aria-label]="'recurring.vat' | translate"
-                            [ngModel]="line.vatRate" (ngModelChange)="setLine(i, { vatRate: +$event })">
-                      @for (r of vatRates; track r) {
-                        <option [ngValue]="r">TVA {{ r * 100 }} %</option>
+                            [ngModel]="line.vatCode" (ngModelChange)="setVatCode(i, $event)">
+                      @for (c of groups.vatCodes(); track c.code) {
+                        <option [value]="c.code">{{ groups.vatLabel(c.code) }}</option>
                       }
                     </select>
                     <button type="button" class="btn-icon col-span-2 sm:col-span-1 justify-self-center" [disabled]="form().lines.length === 1"
@@ -175,20 +193,20 @@ function emptyForm(): RecurringInvoiceInput {
       }
 
       <div class="table-card">
-        @if (templates().length) {
+        @if (shown().length) {
           <div class="overflow-x-auto">
             <table class="data-table">
               <thead>
                 <tr>
                   <th>{{ 'recurring.name' | translate }}</th>
-                  <th>{{ 'recurring.customer' | translate }}</th>
+                  <th>{{ (vendor() ? 'recurring.supplier' : 'recurring.customer') | translate }}</th>
                   <th>{{ 'recurring.frequency' | translate }}</th>
                   <th class="col-num">{{ 'recurring.amountPerInvoice' | translate }}</th>
                   <th class="col-actions"></th>
                 </tr>
               </thead>
               <tbody>
-                @for (t of templates(); track t.id) {
+                @for (t of shown(); track t.id) {
                   <tr>
                     <td>
                       <div class="cell-title flex items-center gap-2 flex-wrap">
@@ -253,7 +271,8 @@ function emptyForm(): RecurringInvoiceInput {
             </table>
           </div>
         } @else {
-          <app-empty-state icon="autorenew" [title]="'recurring.emptyTitle' | translate" [text]="'recurring.emptyBody' | translate" />
+          <app-empty-state icon="autorenew" [title]="(vendor() ? 'recurring.emptyTitleVendor' : 'recurring.emptyTitle') | translate"
+                           [text]="(vendor() ? 'recurring.emptyBodyVendor' : 'recurring.emptyBody') | translate" />
         }
       </div>
     </div>
@@ -266,38 +285,75 @@ export class RecurringInvoicesComponent implements OnInit {
   private i18n = inject(TranslationService);
   private toast = inject(ToastService);
   private confirm = inject(ConfirmService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  protected groups = inject(LedgerGroupsStore);
 
   protected readonly frequencies = FREQUENCIES;
-  protected readonly vatRates = VAT_RATES;
+  protected readonly types: RecurringType[] = ['CUSTOMER', 'VENDOR'];
+
+  /** Customer templates (invoices) or supplier templates (bills), from ?tab=. */
+  protected type = signal<RecurringType>('CUSTOMER');
+  protected vendor = computed(() => this.type() === 'VENDOR');
 
   protected templates = signal<RecurringInvoice[]>([]);
   protected editing = signal(false);
   protected editingId = signal<string | null>(null);
   protected scheduleLocked = signal(false);
-  protected form = signal<RecurringInvoiceInput>(emptyForm());
+  protected form = signal<RecurringInvoiceInput>(emptyForm('CUSTOMER'));
   protected busy = signal(false);
   protected openId = signal<string | null>(null);
   protected history = signal<GeneratedInvoice[]>([]);
 
   protected customers = computed(() => {
     const all = this.partners.allPartners();
-    const customers = all.filter(p => p.type === 'Customer');
+    const side = this.vendor() ? 'Vendor' : 'Customer';
+    const customers = all.filter(p => p.type === side);
     return customers.length ? customers : all;
   });
+
+  /** The templates of the chosen side; templates saved before phase 3 have no type and are customer ones. */
+  protected shown = computed(() => this.templates().filter(t => (t.type ?? 'CUSTOMER') === this.type()));
 
   protected formSubtotal = computed(() =>
     this.form().lines.reduce((sum, l) => sum + (l.qty || 0) * (l.unitPrice || 0), 0));
   protected formTotal = computed(() =>
-    this.form().lines.reduce((sum, l) => sum + (l.qty || 0) * (l.unitPrice || 0) * (1 + (l.vatRate || 0)), 0));
+    this.form().lines.reduce((sum, l) => sum + (l.qty || 0) * (l.unitPrice || 0) * (1 + this.rateOf(l)), 0));
   protected canSave = computed(() => {
     const f = this.form();
     return !!f.partnerId && !!f.name.trim() && !!f.startDate && this.formSubtotal() > 0;
   });
 
+  constructor() {
+    // The sidebar opens either side through ?tab=, also while this page is already open.
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const t: RecurringType = params.get('tab') === 'VENDOR' ? 'VENDOR' : 'CUSTOMER';
+      if (t !== this.type()) {
+        this.type.set(t);
+        this.editing.set(false);
+        this.openId.set(null);
+      }
+      this.state.breadcrumbLabel.set(this.i18n.t(t === 'VENDOR' ? 'recurring.titleVendor' : 'recurring.title'));
+    });
+  }
+
   ngOnInit(): void {
-    this.state.breadcrumbLabel.set(this.i18n.t('recurring.title'));
+    this.groups.ensure();
     this.partners.load();
     this.reload();
+  }
+
+  setType(t: RecurringType): void {
+    this.router.navigate([], { queryParams: { tab: t === 'CUSTOMER' ? null : t }, replaceUrl: true });
+  }
+
+  /** A line's VAT as a fraction: its code's rate, else the stored rate. */
+  private rateOf(l: RecurringLine): number {
+    return l.vatCode ? vatFraction(this.groups.vatCodes(), l.vatCode) : (Number(l.vatRate) || 0);
+  }
+
+  setVatCode(index: number, code: string): void {
+    this.setLine(index, { vatCode: code, vatRate: vatFraction(this.groups.vatCodes(), code) });
   }
 
   protected canCreate(): boolean {
@@ -317,14 +373,16 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   startCreate(): void {
-    this.form.set(emptyForm());
+    this.form.set(emptyForm(this.type()));
     this.editingId.set(null);
     this.scheduleLocked.set(false);
     this.editing.set(true);
   }
 
   startEdit(t: RecurringInvoice): void {
+    const codes = this.groups.vatCodes();
     this.form.set({
+      type: t.type ?? 'CUSTOMER',
       partnerId: t.partnerId,
       name: t.name,
       frequency: t.frequency,
@@ -338,6 +396,7 @@ export class RecurringInvoicesComponent implements OnInit {
         qty: Number(l.qty) || 0,
         unitPrice: Number(l.unitPrice) || 0,
         vatRate: l.vatRate != null ? Number(l.vatRate) : 0.2,
+        vatCode: l.vatCode || vatCodeForRate(codes, l.vatRate != null ? Number(l.vatRate) : 0.2) || DEFAULT_VAT_CODE,
       })),
     });
     this.editingId.set(t.id);
@@ -358,7 +417,7 @@ export class RecurringInvoicesComponent implements OnInit {
   }
 
   addLine(): void {
-    this.form.update(f => ({ ...f, lines: [...f.lines, { description: '', qty: 1, unitPrice: 0, vatRate: 0.2 }] }));
+    this.form.update(f => ({ ...f, lines: [...f.lines, { description: '', qty: 1, unitPrice: 0, vatRate: 0.2, vatCode: DEFAULT_VAT_CODE }] }));
   }
 
   removeLine(index: number): void {
@@ -368,7 +427,10 @@ export class RecurringInvoicesComponent implements OnInit {
   async save(): Promise<void> {
     this.busy.set(true);
     const f = this.form();
-    const input: RecurringInvoiceInput = { ...f, name: f.name.trim(), lines: f.lines.filter(l => l.qty > 0 && l.unitPrice >= 0) };
+    const input: RecurringInvoiceInput = {
+      ...f, name: f.name.trim(), autoSend: f.type === 'VENDOR' ? false : f.autoSend,
+      lines: f.lines.filter(l => l.qty > 0 && l.unitPrice >= 0).map(l => ({ ...l, vatRate: this.rateOf(l) })),
+    };
     try {
       const id = this.editingId();
       await firstValueFrom(id ? this.api.update(id, input) : this.api.create(input));

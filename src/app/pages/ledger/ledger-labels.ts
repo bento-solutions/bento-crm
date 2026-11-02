@@ -36,6 +36,14 @@ export function sourceRoute(s: string | null | undefined): { path: string; query
     case 'EXPENSE': return { path: '/finance', query: { tab: 'Expenses' } };
     case 'BANK_LINE':
     case 'PAYMENT': return { path: '/bank', query: { tab: 'transactions' } };
+    case 'CASH': return { path: '/bank', query: { tab: 'register' } };
+    case 'DEPRECIATION':
+    case 'ASSET': return { path: '/assets', query: {} };
+    case 'VAT_SETTLEMENT': return { path: '/ledger', query: { tab: 'vat' } };
+    case 'STOCK_CHANGE':
+    case 'YEAR_END': return { path: '/ledger', query: { tab: 'closing' } };
+    case 'CUTOFF':
+    case 'CUTOFF_REVERSAL': return { path: '/ledger', query: { tab: 'cutoff' } };
     default: return null;
   }
 }
