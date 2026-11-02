@@ -49,6 +49,11 @@ export class PaymentsApi extends BaseApiService {
     return this.put('/payment-settings', { provider, includeInEmails });
   }
 
+  /** Records a payment against an invoice; the server updates the invoice status and posts it to the ledger. */
+  record(body: { partnerId: string; invoiceId: string; amount: number; paymentDate: string; method: string }): Observable<unknown> {
+    return this.post('/payments', body);
+  }
+
   /** The invoice's open link, created on first call. */
   link(invoiceId: string): Observable<PaymentLink> {
     return this.post(`/invoices/${invoiceId}/payment-link`, {});

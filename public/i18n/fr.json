@@ -2189,5 +2189,8 @@
   "bank.tx.advanceHint": "Pas encore de facture : enregistrez une avance, à affecter plus tard à une facture.",
   "bank.tx.pickPartner": "Choisir un tiers",
   "bank.tx.matchAdvance": "Rapprocher en avance",
-  "bank.tx.matchedAdvance": "Ligne rapprochée en avance"
+  "bank.tx.matchedAdvance": "Ligne rapprochée en avance",
+  "invoices": {
+    "markPaidFailed": "Le paiement n'a pas pu être enregistré."
+  }
 }
