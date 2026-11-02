@@ -24,129 +24,7 @@ import { TranslatePipe } from './pipes/translate.pipe';
 import { NativeService } from './core/services/native.service';
 import { AuthApiService, OrganizationChoice } from './core/services/auth-api.service';
 import { ToastService } from './services/toast.service';
-
-interface NavItem {
-  label: string;
-  icon: string;
-  route: string;
-  /** Backend authority required to see the item (see AUTHORITIES_BY_ROLE); with a list, any one of them. */
-  authority?: string | string[];
-  /** Live count shown next to the label. */
-  badge?: 'whatsappUnread';
-  /** A tab of the page, passed as ?tab=; the item is active only on that tab. */
-  tab?: string;
-  /** This tab is the page's default, so the page without ?tab= counts as it. */
-  defaultTab?: boolean;
-  /** Other ?tab= values of the same page that also light this entry. */
-  alsoTabs?: string[];
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-  /** A module: a heading that opens and closes its pages. Without it the items show as plain links. */
-  module?: { key: string; icon: string };
-}
-
-const NAV_SECTIONS: NavSection[] = [
-  {
-    label: 'Dashboard',
-    module: { key: 'dash', icon: 'space_dashboard' },
-    items: [
-      { label: 'Home', icon: 'home', route: '/' },
-      { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
-    ]
-  },
-  {
-    label: '',
-    items: [
-      { label: 'Inbox', icon: 'forum', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
-    ]
-  },
-  {
-    label: 'Sales',
-    module: { key: 'sales', icon: 'monetization_on' },
-    items: [
-      { label: 'Sales pipeline', icon: 'view_kanban', route: '/sales' },
-      { label: 'Marketing', icon: 'campaign', route: '/marketing' },
-    ]
-  },
-  {
-    label: 'Contacts',
-    module: { key: 'contacts', icon: 'contacts' },
-    items: [
-      { label: 'Partners', icon: 'handshake', route: '/partners', tab: 'Lead', defaultTab: true, alsoTabs: ['Prospect'] },
-      { label: 'Groups', icon: 'group_work', route: '/groups' },
-      { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
-    ]
-  },
-  {
-    label: 'Work',
-    module: { key: 'work', icon: 'assignment' },
-    items: [
-      { label: 'Tasks', icon: 'task_alt', route: '/tasks' },
-      { label: 'Tickets', icon: 'support_agent', route: '/tickets' },
-      { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
-      { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
-      { label: 'Automation', icon: 'smart_toy', route: '/automation' },
-    ]
-  },
-  {
-    label: 'Account Receivables',
-    module: { key: 'ar', icon: 'call_received' },
-    items: [
-      { label: 'Customers', icon: 'storefront', route: '/partners', tab: 'Customer' },
-      { label: 'Customer invoices', icon: 'receipt', route: '/finance', tab: 'Customer', defaultTab: true },
-      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring' },
-      { label: 'Recovery', icon: 'notifications_active', route: '/finance', tab: 'Recovery' },
-      { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
-    ]
-  },
-  {
-    label: 'Account Payables',
-    module: { key: 'ap', icon: 'call_made' },
-    items: [
-      { label: 'Suppliers', icon: 'local_shipping', route: '/partners', tab: 'Vendor' },
-      { label: 'Supplier bills', icon: 'request_quote', route: '/finance', tab: 'Vendor' },
-      { label: 'Expenses', icon: 'payments', route: '/finance', tab: 'Expenses', authority: 'PAYMENTS_READ' },
-      { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'SupplierAging' },
-      { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
-    ]
-  },
-  {
-    label: 'Cash and Bank',
-    module: { key: 'bank', icon: 'savings' },
-    items: [
-      { label: 'Cash position', icon: 'savings', route: '/bank', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
-      { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', tab: 'transactions', authority: 'PAYMENTS_READ' },
-      { label: 'Bank accounts', icon: 'account_balance', route: '/bank', tab: 'accounts', authority: 'PAYMENTS_READ' },
-      { label: 'Matching rules', icon: 'rule', route: '/bank', tab: 'rules', authority: 'PAYMENTS_READ' },
-    ]
-  },
-  {
-    label: 'General Ledger',
-    module: { key: 'gl', icon: 'menu_book' },
-    items: [
-      { label: 'Chart of accounts', icon: 'account_tree', route: '/ledger', tab: 'accounts', defaultTab: true, authority: 'LEDGER_READ' },
-      { label: 'Journal entries', icon: 'receipt_long', route: '/ledger', tab: 'entries', authority: 'LEDGER_READ' },
-      { label: 'General ledger', icon: 'menu_book', route: '/ledger', tab: 'ledger', authority: 'LEDGER_READ' },
-      { label: 'Trial balance', icon: 'balance', route: '/ledger', tab: 'trial', authority: 'LEDGER_READ' },
-      { label: 'Cost centers', icon: 'hub', route: '/ledger', tab: 'cost-centers', authority: 'LEDGER_READ' },
-      { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
-    ]
-  },
-  {
-    label: 'Inventory',
-    module: { key: 'inv', icon: 'inventory_2' },
-    items: [
-      { label: 'Stock levels', icon: 'inventory_2', route: '/inventory', tab: 'stock', defaultTab: true },
-      { label: 'Catalogue', icon: 'category', route: '/inventory', tab: 'products' },
-      { label: 'Stock movements', icon: 'swap_vert', route: '/inventory', tab: 'movements' },
-      { label: 'Stock value', icon: 'payments', route: '/inventory', tab: 'value' },
-      { label: 'Warehouses', icon: 'warehouse', route: '/settings/stock' },
-    ]
-  }
-];
+import { NAV_SECTIONS, NavItem, NavSection, moduleRoute } from './nav';
 
 const OPEN_MODULES_KEY = 'bento_open_nav_modules';
 
@@ -398,16 +276,22 @@ function readSidebarCollapsed(): boolean {
     }
 
     /* Finance modules: a heading that opens its pages, which sit indented under it. */
-    .sidebar-module { width: 100%; margin-top: 4px; background: none; border: 0; cursor: pointer; text-align: start; }
+    .sidebar-module-row { position: relative; margin-top: 4px; }
+    .sidebar-module { width: 100%; cursor: pointer; text-align: start; padding-inline-end: 32px; }
+    /* The chevron only opens or closes the list; the name opens the module's page. */
+    .module-toggle { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center;
+      width: 24px; height: 24px; border: 0; border-radius: var(--r-control); background: none; color: var(--color-text-tertiary); cursor: pointer; }
+    .module-toggle:hover { background: var(--color-surface-hover); color: var(--color-text-heading); }
+    .module-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .app-sidebar.collapsed .module-toggle { display: none; }
+    .app-sidebar.collapsed .sidebar-link.sidebar-module { padding-inline-end: 0; }
     .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 600; }
-    .sidebar-module .nav-chevron { margin-inline-start: auto; font-size: 18px; width: 18px; height: 18px; }
     /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
     .sidebar-link.sidebar-module { height: auto; min-height: 32px; padding-block: 4px; }
     .sidebar-link.sidebar-module .nav-label { white-space: normal; line-height: 1.25; }
     .sidebar-link.sidebar-sublink { padding-inline-start: 22px; height: 30px; font-size: 13px; }
     /* On the icon rail a module shows its own icon; a click opens its pages as icons below it. */
     .app-sidebar.collapsed .sidebar-link.sidebar-module { min-height: 40px; padding: 0; }
-    .app-sidebar.collapsed .sidebar-module .nav-chevron { display: none; }
     .app-sidebar.collapsed .sidebar-link.sidebar-sublink { padding: 0; height: 40px; }
 
     .app-sidebar.collapsed .sidebar-section-title + .sidebar-link,
@@ -1016,12 +900,18 @@ function readSidebarCollapsed(): boolean {
             @for (section of navSections; track section.label) {
               @if (section.module; as mod) {
                 @if (sectionVisible(section)) {
-                  <button type="button" class="sidebar-link sidebar-module" [class.has-active]="sectionActive(section)"
-                          [title]="section.label" [attr.aria-expanded]="moduleOpen(mod.key)" (click)="toggleModule(mod.key)">
-                    <mat-icon>{{ mod.icon }}</mat-icon>
-                    <span class="nav-label">{{ section.label }}</span>
-                    <mat-icon class="nav-chevron">{{ moduleOpen(mod.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </button>
+                  <div class="sidebar-module-row">
+                    <a class="sidebar-link sidebar-module" [routerLink]="moduleLink(mod.key)"
+                       [class.active]="activeRoute() === moduleLink(mod.key)" [class.has-active]="sectionActive(section)"
+                       [title]="section.label" (click)="openModule(mod.key); mobileMenuOpen.set(false)">
+                      <mat-icon>{{ mod.icon }}</mat-icon>
+                      <span class="nav-label">{{ section.label }}</span>
+                    </a>
+                    <button type="button" class="module-toggle" [attr.aria-expanded]="moduleOpen(mod.key)"
+                            [attr.aria-label]="(moduleOpen(mod.key) ? 'Collapse ' : 'Expand ') + section.label" (click)="toggleModule(mod.key)">
+                      <mat-icon>{{ moduleOpen(mod.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  </div>
                 }
               } @else if (section.label) {
                 <div class="sidebar-section-title">{{ section.label }}</div>
@@ -1747,6 +1637,15 @@ export class App implements OnInit, OnDestroy {
     return this.openModules().has(key);
   }
 
+  moduleLink(key: string): string {
+    return moduleRoute(key);
+  }
+
+  /** The module's name opens its page and its list; it never closes the list. */
+  openModule(key: string): void {
+    if (!this.moduleOpen(key)) this.toggleModule(key);
+  }
+
   toggleModule(key: string): void {
     const next = new Set(this.openModules());
     if (next.has(key)) next.delete(key); else next.add(key);
@@ -1765,7 +1664,7 @@ export class App implements OnInit, OnDestroy {
   /** Opening a page of a closed module (a link, a search result) opens the module too. */
   private revealActiveModule(): void {
     for (const s of this.navSections) {
-      if (s.module && !this.moduleOpen(s.module.key) && this.sectionActive(s)) this.toggleModule(s.module.key);
+      if (s.module && !this.moduleOpen(s.module.key) && (this.sectionActive(s) || this.activeRoute() === moduleRoute(s.module.key))) this.toggleModule(s.module.key);
     }
   }
 
