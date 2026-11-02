@@ -81,6 +81,56 @@ export interface BankTransaction {
   expenseId?: string | null;
   paymentCreated?: boolean | null;
   matchLabel?: string | null;
+  /** Phase 3: set once a person validated the line (it posts then, in ON_VALIDATION mode). */
+  validatedAt?: string | null;
+  validatedBy?: string | null;
+}
+
+export type JournalStatus = 'TO_VALIDATE' | 'VALIDATED';
+
+/** A line of the bank journal review (GET /bank/journal). */
+export interface BankJournalLine {
+  id: string;
+  date: string;
+  description?: string | null;
+  amount: number;
+  status: BankTxStatus;
+  category?: string | null;
+  partnerId?: string | null;
+  partnerName?: string | null;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
+  paymentId?: string | null;
+  expenseId?: string | null;
+  advance?: boolean | null;
+  /** The account the line will hit: the partner's, the category's, or 4497 suspense. */
+  proposedAccountCode?: string | null;
+  proposedAccountName?: string | null;
+  validatedAt?: string | null;
+}
+
+export interface BankJournalSummary {
+  toValidate: number;
+  statementBalance: number;
+  ledgerBalance: number;
+  difference: number;
+}
+
+export interface BankJournalPage extends PageResponse<BankJournalLine> {
+  summary?: BankJournalSummary | null;
+}
+
+export interface BankJournalFilter {
+  bankAccountId: string;
+  status: JournalStatus;
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface ValidateResult {
+  validated: number;
+  posted: number;
+  warnings?: { transactionId: string; message: string }[] | null;
 }
 
 export interface MatchCandidate {
@@ -201,6 +251,11 @@ export class BankApi extends BaseApiService {
     return this.post(`/bank/transactions/${id}/match`, { kind, id: targetId });
   }
 
+  /** Matches the line as an advance from a customer (money in) or to a supplier (money out): an advance payment. */
+  matchAdvance(id: string, partnerId: string): Observable<BankTransaction> {
+    return this.post(`/bank/transactions/${id}/match`, { partnerId, advance: true });
+  }
+
   unmatch(id: string): Observable<BankTransaction> {
     return this.post(`/bank/transactions/${id}/unmatch`, {});
   }
@@ -219,6 +274,23 @@ export class BankApi extends BaseApiService {
 
   categorize(): Observable<{ categorized: number }> {
     return this.slowPost('/bank/transactions/categorize', {});
+  }
+
+  // Bank journal (phase 3): lines post once validated
+  journal(f: BankJournalFilter, page = 0, size = 100): Observable<BankJournalPage> {
+    const params: Record<string, string | number> = { page, size };
+    for (const [k, v] of Object.entries(f)) {
+      if (v !== null && v !== undefined && String(v).trim() !== '') params[k] = String(v).trim();
+    }
+    return this.get('/bank/journal', params);
+  }
+
+  validate(body: { bankAccountId: string; transactionIds?: string[]; upTo?: string }): Observable<ValidateResult> {
+    return this.post('/bank/journal/validate', body);
+  }
+
+  unvalidate(transactionId: string): Observable<unknown> {
+    return this.post(`/bank/journal/${transactionId}/unvalidate`, {});
   }
 
   // Rules

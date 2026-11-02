@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -31,6 +31,11 @@ import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
+import { CreditNoteDialogComponent } from './advances/credit-note-dialog.component';
+import { AdvancesApi, OpenAdvance } from '../services/domains/advances.service';
+import { CatalogProduct, InventoryApi } from '../services/domains/inventory.service';
+import { determineVatCode, round2, vatBreakdown, vatFraction } from '../services/domains/vat';
+import { shortDate } from '../shared/bank.util';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -42,11 +47,20 @@ interface InvoiceLine {
   /** General ledger: overrides the product's posting group on this line (null = the product's). */
   productGroupId?: string | null;
   costCenterId?: string | null;
+  /** The catalog product, which drives the VAT code (general ledger phase 3). */
+  productId?: string | null;
+  vatCode?: string | null;
+  /** The code's rate as a fraction (0.20), as the API stores it. */
+  vatRate?: number | null;
+  /** The user picked the VAT code: partner or product changes no longer recompute it. Not sent. */
+  vatManual?: boolean;
 }
+
+const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent, CreditNoteDialogComponent],
   template: `
     <div class="page">
       <app-page-header [title]="(payablesSide() ? 'finance.payables' : 'finance.receivables') | translate"
@@ -150,8 +164,16 @@ interface InvoiceLine {
               <tbody>
                 @for (invoice of paginatedInvoices(); track invoice.id) {
                   <tr>
-                    <td class="whitespace-nowrap text-ink">
+                    <td class="whitespace-nowrap text-ink" [class.bg-subtle]="highlightId() === invoice.id">
                       {{ invoice.invoiceNumber || '#' + invoice.id.slice(0, 8) }}
+                      @if (invoice.kind === 'ADVANCE') { <span class="badge badge-info ms-1">{{ 'advances.badge' | translate }}</span> }
+                      @if (invoice.kind === 'CREDIT_NOTE') {
+                        <span class="badge badge-violet ms-1">{{ 'creditNotes.badge' | translate }}</span>
+                        @if (invoice.creditedInvoiceId) {
+                          <button type="button" class="block text-xs text-accent-ink hover:underline" (click)="showInvoice(invoice.creditedInvoiceId)">
+                            {{ 'creditNotes.credits' | translate: { number: invoiceNumberOf(invoice.creditedInvoiceId) } }}</button>
+                        }
+                      }
                     </td>
                     <td class="whitespace-nowrap">
                       <div class="text-sm font-medium text-ink">{{getPartnerName(invoice.partnerId)}}</div>
@@ -174,7 +196,7 @@ interface InvoiceLine {
                     </td>
                     <td class="whitespace-nowrap">
                       <span [class]="getStatusColor(invoice.status)" class="badge">
-                        {{invoice.status}}
+                        {{ invoice.status === 'Credited' ? ('creditNotes.statusCredited' | translate) : invoice.status }}
                       </span>
                     </td>
                     <td class="col-actions">
@@ -196,7 +218,11 @@ interface InvoiceLine {
                       @if (invoice.type === 'Vendor' && invoice.status !== 'Paid' && canWrite()) {
                         <button (click)="openSchedule(invoice)" class="btn-ghost btn-sm">{{ 'bills.schedule' | translate }}</button>
                       }
-                      @if (invoice.status !== 'Paid' && canWrite()) {
+                      @if (canCreditNote(invoice)) {
+                        <button (click)="creditNoteFor.set(invoice)" class="btn-ghost btn-sm">
+                          <mat-icon class="icon-sm">undo</mat-icon>{{ 'creditNotes.issue' | translate }}</button>
+                      }
+                      @if (invoice.status !== 'Paid' && invoice.status !== 'Credited' && invoice.kind !== 'CREDIT_NOTE' && canWrite()) {
                         <button (click)="markInvoicePaid(invoice)" class="btn-secondary btn-sm">Mark Paid</button>
                       }
                       @if (state.currentUserPermissions().canDeleteRecords) {
@@ -289,6 +315,9 @@ interface InvoiceLine {
                   </div>
                 </div>
               </div>
+            }
+            @if (creditNoteFor(); as inv) {
+              <app-credit-note-dialog [invoice]="inv" (created)="onCreditNote()" (closed)="creditNoteFor.set(null)" />
             }
             @if (filteredInvoices().length > 0) {
               <app-paginator
@@ -640,12 +669,12 @@ interface InvoiceLine {
               <!-- Computed Total (read-only) -->
               <div>
                 <label for="label_10" class="field-label mb-1.5">
-                  Total Amount (MAD)
+                  {{ 'vat.totalTtc' | translate }} (MAD)
                   @if (invoiceLines().length > 0) {
                     <span class="badge badge-neutral ml-1">Computed from lines</span>
                   }
                 </label>
-                <input [value]="computedTotal()" readonly type="text"
+                <input [value]="formatCurrency(netToPay())" readonly type="text"
                   class="input-field w-full cursor-not-allowed">
               </div>
             </div>
@@ -669,21 +698,22 @@ interface InvoiceLine {
               @if (invoiceLines().length > 0) {
                 <div class="rounded-xl border border-line overflow-x-auto">
                   <!-- Table header -->
-                  <div class="grid bg-surface border border-line border-b border-line px-3 py-2 min-w-[520px]"
-                       style="grid-template-columns: 1fr 1.4fr 60px 90px 90px 32px">
+                  <div class="grid bg-surface border border-line border-b border-line px-3 py-2 min-w-[680px]"
+                       [style]="lineGrid">
                     <span class="eyebrow">Item</span>
                     <span class="eyebrow">Description</span>
                     <span class="eyebrow">Qty</span>
                     <span class="eyebrow">Unit Price</span>
+                    <span class="eyebrow">{{ 'vat.column' | translate }}</span>
                     <span class="eyebrow">Total</span>
                     <span></span>
                   </div>
 
                   <!-- Line rows -->
                   @for (line of invoiceLines(); track $index; let i = $index) {
-                    <div class="border-b border-line-soft last:border-0 hover:bg-subtle transition-colors min-w-[520px]">
+                    <div class="border-b border-line-soft last:border-0 hover:bg-subtle transition-colors min-w-[680px]">
                     <div class="grid items-center gap-1.5 px-3 py-2"
-                         style="grid-template-columns: 1fr 1.4fr 60px 90px 90px 32px">
+                         [style]="lineGrid">
                       <!-- Item -->
                       <input [(ngModel)]="invoiceLines()[i].item"
                         (ngModelChange)="patchLine(i, 'item', $event)"
@@ -704,6 +734,16 @@ interface InvoiceLine {
                         (ngModelChange)="patchLine(i, 'unitPrice', +$event)"
                         type="number" min="0"
                         class="input-field w-full text-right">
+                      <!-- VAT code: determined, unless picked by hand -->
+                      <div class="flex items-center gap-1 min-w-0">
+                        <select class="input-field w-full min-w-0" [attr.aria-label]="'vat.column' | translate"
+                          [ngModel]="line.vatCode ?? null" (ngModelChange)="setLineVat(i, $event)">
+                          @for (c of groups.vatCodes(); track c.code) { <option [ngValue]="c.code">{{ groups.vatLabel(c.code) }}</option> }
+                        </select>
+                        @if (line.vatManual) {
+                          <button type="button" class="badge badge-neutral shrink-0" [title]="'vat.manualHint' | translate" (click)="resetLineVat(i)">{{ 'vat.manual' | translate }}</button>
+                        }
+                      </div>
                       <!-- Row Total (read-only) -->
                       <span class="text-xs font-semibold text-ink-2 text-right pr-1">
                         {{ formatCurrency(line.qty * line.unitPrice) }}
@@ -714,9 +754,17 @@ interface InvoiceLine {
                         <mat-icon class="icon-sm">delete_outline</mat-icon>
                       </button>
                     </div>
-                    @if (groups.enabled()) {
-                      <!-- Accounting overrides for this line (optional) -->
+                    @if (groups.enabled() || catalog().length) {
+                      <!-- Product and accounting overrides for this line (optional) -->
                       <div class="flex flex-wrap items-center gap-2 px-3 pb-2">
+                        @if (catalog().length) {
+                          <select class="input-field w-auto max-w-64" [attr.aria-label]="'vat.product' | translate"
+                            [ngModel]="line.productId ?? null" (ngModelChange)="setLineProduct(i, $event)">
+                            <option [ngValue]="null">{{ 'vat.noProduct' | translate }}</option>
+                            @for (p of catalog(); track p.id) { <option [ngValue]="p.id">{{ p.sku }} · {{ p.name }}</option> }
+                          </select>
+                        }
+                      @if (groups.enabled()) {
                         <select class="input-field w-auto" [attr.aria-label]="'ledger.groups.product' | translate"
                           [ngModel]="line.productGroupId ?? null" (ngModelChange)="patchLine(i, 'productGroupId', $event)">
                           <option [ngValue]="null">{{ 'ledger.groups.lineProductDefault' | translate }}</option>
@@ -727,17 +775,28 @@ interface InvoiceLine {
                           <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
                           @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
                         </select>
+                      }
                       </div>
                     }
                     </div>
                   }
 
                   <!-- Running total footer -->
-                  <div class="grid px-3 py-2 bg-surface border border-line border-t border-line min-w-[520px]"
-                       style="grid-template-columns: 1fr 1.4fr 60px 90px 90px 32px">
-                    <span class="col-span-4 text-xs font-semibold text-ink-3 text-right pr-2">Invoice Total:</span>
-                    <span class="text-xs font-semibold text-ink text-right pr-1">{{ formatCurrency(computedTotal()) }}</span>
-                    <span></span>
+                  <div class="px-3 py-2 bg-surface border-t border-line min-w-[680px] space-y-1 text-xs">
+                    <div class="flex justify-end gap-4"><span class="text-ink-3">{{ 'vat.subtotal' | translate }}</span>
+                      <span class="num font-semibold text-ink w-28 text-end">{{ formatCurrency(computedTotal()) }}</span></div>
+                    @for (r of vatRows(); track r.vatCode) {
+                      <div class="flex justify-end gap-4"><span class="text-ink-3">{{ groups.vatLabel(r.vatCode) }} · {{ 'vat.on' | translate: { base: formatCurrency(r.base) } }}</span>
+                        <span class="num text-ink w-28 text-end">{{ formatCurrency(r.vat) }}</span></div>
+                    }
+                    @for (d of pickedAdvances(); track d.id) {
+                      <div class="flex justify-end gap-4"><span class="text-ink-3">{{ 'advances.deductionRow' | translate: { number: d.number || '—', date: shortDate(d.date) } }}</span>
+                        <span class="num text-ink w-28 text-end">−{{ formatCurrency(d.remainingBase + d.remainingVat) }}</span></div>
+                    }
+                    <div class="flex justify-end gap-4 border-t border-line-soft pt-1">
+                      <span class="font-semibold text-ink-2">{{ (pickedAdvances().length ? 'advances.netToPay' : 'vat.totalTtc') | translate }}</span>
+                      <span class="num font-semibold text-ink w-28 text-end">{{ formatCurrency(netToPay()) }}</span></div>
+                    @for (m of vatMentions(); track m) { <p class="text-meta text-ink-3 text-end italic">{{ m }}</p> }
                   </div>
                 </div>
               } @else {
@@ -758,6 +817,25 @@ interface InvoiceLine {
                 + Add Custom Invoice Line
               </button>
             </div>
+
+            <!-- ⑤ Deduct advances (final invoice) -->
+            @if (openAdvances().length) {
+              <div class="rounded-xl border border-line p-4 space-y-2">
+                <div class="flex items-center gap-2">
+                  <mat-icon class="text-ink-2 icon-md">request_quote</mat-icon>
+                  <span class="eyebrow">{{ 'advances.deductTitle' | translate }}</span>
+                  <span class="text-xs text-ink-3 ms-auto">{{ 'advances.deductHint' | translate }}</span>
+                </div>
+                @for (a of openAdvances(); track a.id) {
+                  <label class="choice-row">
+                    <input type="checkbox" [checked]="deducted().has(a.id)" (change)="toggleDeduction(a.id)" />
+                    <span class="flex-1 text-sm text-ink">{{ a.number || '—' }} · {{ shortDate(a.date) }}</span>
+                    <span class="text-xs text-ink-3 num">{{ formatCurrency(a.remainingBase) }} + {{ formatCurrency(a.remainingVat) }}</span>
+                    <span class="badge" [class]="a.status === 'PAID' ? 'badge-success' : 'badge-neutral'">{{ ('advances.apiStatus.' + a.status) | translate }}</span>
+                  </label>
+                }
+              </div>
+            }
 
             <!-- Validation Banner -->
             @if (formValidationError()) {
@@ -818,6 +896,19 @@ export class FinanceComponent {
   scheduleDate = signal('');
   private payments = inject(PaymentsApi);
   groups = inject(LedgerGroupsStore);
+  private advancesApi = inject(AdvancesApi);
+  private inventoryApi = inject(InventoryApi);
+  readonly lineGrid = LINE_GRID;
+  readonly shortDate = shortDate;
+  /** Catalog products a line can point to (its VAT code follows the product). */
+  catalog = signal<CatalogProduct[]>([]);
+  private catalogLoaded = false;
+  creditNoteFor = signal<Invoice | null>(null);
+  /** The invoice row a credit note's link just jumped to. */
+  highlightId = signal<string | null>(null);
+  /** Advance invoices of the partner (and deal) not yet deducted, and the ones ticked for deduction. */
+  openAdvances = signal<OpenAdvance[]>([]);
+  deducted = signal<Set<string>>(new Set());
   payLinkFor = signal<Invoice | null>(null);
   payLink = signal<PaymentLink | null>(null);
   payLinkError = signal<string | null>(null);
@@ -961,6 +1052,17 @@ export class FinanceComponent {
     this.invoiceLines().reduce((sum, l) => sum + l.qty * l.unitPrice, 0)
   );
 
+  /** One row per VAT code the lines use, as the PDF prints them. */
+  vatRows = computed(() => vatBreakdown(this.groups.vatCodes(),
+    this.invoiceLines().map(l => ({ base: (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), vatCode: l.vatCode }))));
+  vatTotal = computed(() => round2(this.vatRows().reduce((s, r) => s + r.vat, 0)));
+  /** Exemption mentions of the codes in use ("Exonéré de TVA, article 92-I-1° du CGI…"). */
+  vatMentions = computed(() => [...new Set(this.vatRows().map(r => r.mention).filter((m): m is string => !!m))]);
+  pickedAdvances = computed(() => this.openAdvances().filter(a => this.deducted().has(a.id)));
+  /** Lines + VAT − the deducted advances (before VAT and VAT). */
+  netToPay = computed(() => round2(this.computedTotal() + this.vatTotal()
+    - this.pickedAdvances().reduce((s, a) => s + (Number(a.remainingBase) || 0) + (Number(a.remainingVat) || 0), 0)));
+
   // ── Invoice type filters ─────────────────────────────────────────────────
   /** Customer invoices (type === 'Customer') */
   customerInvoices = computed(() =>
@@ -1036,6 +1138,12 @@ export class FinanceComponent {
       first = false;
     });
     this.updateReminderTemplate();
+    // The posting setup or the catalog arrived: lines not set by hand get their VAT code again.
+    effect(() => {
+      this.groups.vatContext();
+      this.catalog();
+      untracked(() => this.redetermine());
+    });
     // When switching back to Manual, clear deal-bound locked fields and lines
     effect(() => {
       if (this.invoiceType() === 'Manual') {
@@ -1105,10 +1213,13 @@ export class FinanceComponent {
       qty:         l.qty,
       unitPrice:   l.unitPrice,
       type:        'service' as const,   // default; user can override per row
+      // Deal lines name their product: the catalog entry with that name or SKU gives the VAT code.
+      productId:   this.catalog().find(p => p.name === l.product || p.sku === l.product)?.id ?? null,
     }));
 
-    this.invoiceLines.set(inherited);
+    this.invoiceLines.set(inherited.map(l => this.withVat(l)));
     this.formValidationError.set('');
+    this.loadOpenAdvances();
   }
 
   /**
@@ -1181,14 +1292,104 @@ export class FinanceComponent {
 
     this.autoFilledFields.set(filled);
     this.formValidationError.set('');
+    this.redetermine();
+    this.loadOpenAdvances();
   }
 
   /** Append a blank custom line to the invoice. */
   addBlankLine() {
     this.invoiceLines.update(lines => [
       ...lines,
-      { item: '', description: '', qty: 1, unitPrice: 0, type: 'service' as const }
+      this.withVat({ item: '', description: '', qty: 1, unitPrice: 0, type: 'service' as const })
     ]);
+  }
+
+  // ── VAT per line (general ledger phase 3) ─────────────────────────────────
+
+  /** The section 1 order: line code, partner's EXEMPT business group, product, product group, TVA20. */
+  private withVat(l: InvoiceLine): InvoiceLine {
+    if (l.vatManual && l.vatCode) return { ...l, vatRate: vatFraction(this.groups.vatCodes(), l.vatCode) };
+    const partner = this.state.partners().find(p => p.id === this.newInvoiceData.partnerId);
+    const product = l.productId ? this.catalog().find(p => p.id === l.productId) ?? null : null;
+    const code = determineVatCode(this.groups.vatContext(), {
+      businessGroupId: partner?.businessGroupId ?? null, product, productGroupId: l.productGroupId ?? null,
+    });
+    return { ...l, vatCode: code, vatRate: vatFraction(this.groups.vatCodes(), code) };
+  }
+
+  private redetermine(): void {
+    if (!this.invoiceLines().length) return;
+    this.invoiceLines.update(lines => lines.map(l => this.withVat(l)));
+  }
+
+  setLineVat(i: number, code: string) {
+    this.invoiceLines.update(lines => lines.map((l, idx) => idx === i
+      ? { ...l, vatCode: code, vatRate: vatFraction(this.groups.vatCodes(), code), vatManual: true } : l));
+  }
+
+  /** The "manual" mark: back to the determined code. */
+  resetLineVat(i: number) {
+    this.invoiceLines.update(lines => lines.map((l, idx) => idx === i ? this.withVat({ ...l, vatManual: false }) : l));
+  }
+
+  setLineProduct(i: number, productId: string | null) {
+    const p = productId ? this.catalog().find(x => x.id === productId) : undefined;
+    this.invoiceLines.update(lines => lines.map((l, idx) => idx !== i ? l : this.withVat({
+      ...l,
+      productId: productId ?? null,
+      item: p && !l.item.trim() ? p.name : l.item,
+      unitPrice: p && !l.unitPrice ? Number(p.unitPrice) || 0 : l.unitPrice,
+    })));
+  }
+
+  /** Advance invoices of this partner (and deal) that a final invoice can deduct; all ticked by default. */
+  private loadOpenAdvances(): void {
+    const partnerId = this.newInvoiceData.partnerId;
+    const dealId = this.newInvoiceData.dealId || null;
+    this.openAdvances.set([]);
+    this.deducted.set(new Set());
+    if (!partnerId) return;
+    this.advancesApi.openAdvances(partnerId, dealId).subscribe({
+      next: list => {
+        if (this.newInvoiceData.partnerId !== partnerId || (this.newInvoiceData.dealId || null) !== dealId) return;
+        this.openAdvances.set(list ?? []);
+        this.deducted.set(new Set((list ?? []).map(a => a.id)));
+      },
+      error: () => { /* nothing to deduct */ },
+    });
+  }
+
+  toggleDeduction(id: string) {
+    this.deducted.update(set => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // ── Credit notes ──────────────────────────────────────────────────────────
+
+  canCreditNote(inv: Invoice): boolean {
+    return this.canCreate() && inv.kind !== 'CREDIT_NOTE' && inv.status !== 'Draft' && inv.status !== 'Credited';
+  }
+
+  onCreditNote() {
+    this.creditNoteFor.set(null);
+    this.invoicesService.load(undefined, true);
+  }
+
+  invoiceNumberOf(id: string): string {
+    const inv = this.invoicesService.getInvoiceById(id);
+    return inv?.invoiceNumber || '#' + id.slice(0, 8);
+  }
+
+  /** From a credit note: the page of the invoice it credits, with that row marked for a moment. */
+  showInvoice(id: string) {
+    const idx = this.filteredInvoices().findIndex(i => i.id === id);
+    if (idx < 0) return;
+    this.invoicesPage.set(Math.floor(idx / this.invoicesPageSize()) + 1);
+    this.highlightId.set(id);
+    setTimeout(() => { if (this.highlightId() === id) this.highlightId.set(null); }, 4000);
   }
 
   /** Remove the line at index i. */
@@ -1204,6 +1405,7 @@ export class FinanceComponent {
     this.invoiceLines.update(lines => {
       const copy = [...lines];
       copy[i] = { ...copy[i], [field]: value } as InvoiceLine;
+      if (field === 'productGroupId') copy[i] = this.withVat(copy[i]);
       return copy;
     });
   }
@@ -1263,12 +1465,29 @@ export class FinanceComponent {
       customerName:    this.newInvoiceData.customerName    || undefined,
       deliveryAddress: this.newInvoiceData.deliveryAddress || undefined,
       vatNumber:       this.newInvoiceData.vatNumber       || undefined,
-      lines:           this.invoiceLines().length > 0 ? [...this.invoiceLines()] : undefined,
+      lines:           this.invoiceLines().length > 0 ? this.invoiceLines().map(l => this.lineToApi(l)) : undefined,
+      advanceDeductions: this.openAdvances().length
+        ? this.pickedAdvances().map(a => ({ advanceInvoiceId: a.id, base: Number(a.remainingBase) || 0, vat: Number(a.remainingVat) || 0 }))
+        : undefined,
       createdBy:       this.state.currentUserId(),
     });
 
     this.invoiceModalOpen.set(false);
     this.formValidationError.set('');
+  }
+
+  /**
+   * The line as the API takes it. Without the posting setup (users who cannot read the ledger) the
+   * determined code may miss the partner's rule, so only a code picked by hand is sent and the
+   * server determines the rest.
+   */
+  private lineToApi(l: InvoiceLine) {
+    const { vatManual, ...line } = l;
+    if (!vatManual && !this.groups.vatReliable()) {
+      delete line.vatCode;
+      delete line.vatRate;
+    }
+    return line;
   }
 
   // ── Invoice list helpers ──────────────────────────────────────────────────
@@ -1310,6 +1529,7 @@ export class FinanceComponent {
       case 'Paid':    return 'badge-success';
       case 'Overdue': return 'badge-danger';
       case 'Pending': return 'badge-warning';
+      case 'Credited': return 'badge-violet';
       case 'Draft':   return 'bg-muted   text-ink-2   border-line';
       default:        return 'bg-muted   text-ink   border-line';
     }
@@ -1331,6 +1551,15 @@ export class FinanceComponent {
     this.invoiceLines.set([]);
     this.formValidationError.set('');
     this.autoFilledFields.set(new Set());
+    this.openAdvances.set([]);
+    this.deducted.set(new Set());
+    if (!this.catalogLoaded) {
+      this.catalogLoaded = true;
+      this.inventoryApi.products().subscribe({
+        next: list => this.catalog.set((list ?? []).filter(p => p.isActive !== false)),
+        error: () => { /* no catalog: lines stay free text */ },
+      });
+    }
     this.invoiceModalOpen.set(true);
   }
 

@@ -11,6 +11,7 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { Expense, ExpenseSummary, ExpensesApi, PaymentMethod } from '../services/domains/expenses.service';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { round2, vatFraction } from '../services/domains/vat';
 import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
 
 interface ExpenseForm {
@@ -20,6 +21,7 @@ interface ExpenseForm {
   description: string;
   amount: number | null;
   vatAmount: number | null;
+  vatCode: string | null;
   paymentMethod: PaymentMethod;
   vendorName: string;
   reference: string;
@@ -144,6 +146,11 @@ function isoDate(d: Date): string {
               <input class="input-field" maxlength="255" [(ngModel)]="f.description" /></label>
             <label class="block"><span class="field-label">{{ 'expenses.amountTtc' | translate }}</span>
               <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.amount" /></label>
+            <label class="block"><span class="field-label">{{ 'expenses.vatCode' | translate }}</span>
+              <select class="input-field" [ngModel]="f.vatCode" (ngModelChange)="setVatCode(f, $event)">
+                <option [ngValue]="null">{{ 'expenses.vatCodeAuto' | translate }}</option>
+                @for (c of groups.vatCodes(); track c.code) { <option [ngValue]="c.code">{{ groups.vatLabel(c.code) }}</option> }
+              </select></label>
             <label class="block"><span class="field-label">{{ 'expenses.vatIncluded' | translate }}</span>
               <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.vatAmount" />
               @if (vatTooHigh(f)) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.vatTooHigh' | translate }}</span> }</label>
@@ -153,10 +160,10 @@ function isoDate(d: Date): string {
               </select></label>
             <label class="block"><span class="field-label">{{ 'expenses.vendor' | translate }}</span>
               <input class="input-field" maxlength="255" [(ngModel)]="f.vendorName" /></label>
-            <label class="block" [class.col-span-2]="!groups.enabled()"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
+            <label class="block"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
               <input class="input-field" maxlength="100" [(ngModel)]="f.reference" /></label>
             @if (groups.enabled()) {
-              <label class="block"><span class="field-label">{{ 'ledger.costCenter' | translate }}</span>
+              <label class="block col-span-2"><span class="field-label">{{ 'ledger.costCenter' | translate }}</span>
                 <select class="input-field" [(ngModel)]="f.costCenterId">
                   <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
@@ -230,13 +237,21 @@ export class FinanceExpensesComponent implements OnInit {
   openForm(e?: Expense): void {
     this.form.set(e ? {
       id: e.id, expenseDate: e.expenseDate, category: e.category, description: e.description ?? '',
-      amount: e.amount, vatAmount: e.vatAmount ?? null, paymentMethod: e.paymentMethod,
+      amount: e.amount, vatAmount: e.vatAmount ?? null, vatCode: e.vatCode ?? null, paymentMethod: e.paymentMethod,
       vendorName: e.vendorName ?? '', reference: e.reference ?? '', costCenterId: e.costCenterId ?? null,
     } : {
       expenseDate: isoDate(new Date()), category: this.category() || 'OTHER', description: '', amount: null,
-      vatAmount: null, paymentMethod: 'CARD', vendorName: '', reference: '', costCenterId: null,
+      vatAmount: null, vatCode: null, paymentMethod: 'CARD', vendorName: '', reference: '', costCenterId: null,
     });
     this.groups.ensure(true);
+  }
+
+  /** Picking a code fills the VAT included in the amount (all-taxes-included) at its rate. */
+  setVatCode(f: ExpenseForm, code: string | null): void {
+    f.vatCode = code;
+    if (!code || f.amount === null || !(f.amount > 0)) return;
+    const r = vatFraction(this.groups.vatCodes(), code);
+    f.vatAmount = round2(f.amount * r / (1 + r));
   }
 
   vatTooHigh(f: ExpenseForm): boolean {
@@ -253,7 +268,7 @@ export class FinanceExpensesComponent implements OnInit {
     const isNew = !f.id;
     this.api.save({
       expenseDate: f.expenseDate, category: f.category, description: f.description.trim() || null,
-      amount: f.amount!, vatAmount: f.vatAmount, paymentMethod: f.paymentMethod,
+      amount: f.amount!, vatAmount: f.vatAmount, vatCode: f.vatCode, paymentMethod: f.paymentMethod,
       vendorName: f.vendorName.trim() || null, reference: f.reference.trim() || null,
       // Sent by everyone (the form starts from the expense's own value): PUT replaces the expense.
       costCenterId: f.costCenterId,

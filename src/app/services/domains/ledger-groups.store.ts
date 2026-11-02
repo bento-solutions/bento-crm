@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { CrmStateService } from '../crm-state.service';
 import { TranslationService } from '../translation.service';
 import { CostCenter, LedgerApi, PartnerGroup, PostingGroup, PostingSetup } from './ledger.service';
+import { VatCode, VatContext, findVatCode, vatCodesFrom } from './vat';
 
 /**
  * The posting groups and cost centers that business forms (partner, product, invoice line,
@@ -21,6 +22,13 @@ export class LedgerGroupsStore {
   readonly supplierGroups = computed<PartnerGroup[]>(() => (this.setup()?.partnerGroups ?? []).filter(g => g.side === 'SUPPLIER'));
   readonly businessGroups = computed<PostingGroup[]>(() => this.setup()?.businessGroups ?? []);
   readonly productGroups = computed<PostingGroup[]>(() => this.setup()?.productGroups ?? []);
+  /** The VAT codes of the posting setup, or the seeded ones when it cannot be read. */
+  readonly vatCodes = computed<VatCode[]>(() => vatCodesFrom(this.setup()?.vatSetup));
+  readonly vatContext = computed<VatContext>(() => ({
+    codes: this.vatCodes(), businessGroups: this.businessGroups(), productGroups: this.productGroups(),
+  }));
+  /** The posting setup is loaded, so VAT determination sees the groups' rules (not only the seeded codes). */
+  readonly vatReliable = computed(() => !!this.setup()?.vatSetup?.length);
 
   private setupLoaded = false;
   private centersLoaded = false;
@@ -54,6 +62,18 @@ export class LedgerGroupsStore {
     const d = groups.find(g => g.isDefault);
     const label = this.i18n.t('ledger.groups.default');
     return d ? `${label} (${d.name})` : label;
+  }
+
+  /** A VAT code as forms show it: "TVA 20 %", "Exonéré", "Export". */
+  vatLabel(code: string | null | undefined): string {
+    if (!code) return '—';
+    const key = `vat.code.${code}`;
+    const named = this.i18n.t(key);
+    if (named !== key) return named;
+    const c = findVatCode(this.vatCodes(), code);
+    if (!c) return code;
+    if (c.exempt) return c.name;
+    return this.i18n.t('vat.rateLabel', { rate: c.rate.toLocaleString('fr-MA', { maximumFractionDigits: 2 }) });
   }
 
   /** The setup page saved a change: forms opened later see it. */

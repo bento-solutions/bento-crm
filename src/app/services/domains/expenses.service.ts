@@ -11,6 +11,8 @@ export interface Expense {
   description?: string | null;
   amount: number;
   vatAmount?: number | null;
+  /** Phase 3: the VAT code whose recoverable account the VAT posts to; null with VAT = TVA20. */
+  vatCode?: string | null;
   paymentMethod: PaymentMethod;
   vendorPartnerId?: string | null;
   vendorName?: string | null;

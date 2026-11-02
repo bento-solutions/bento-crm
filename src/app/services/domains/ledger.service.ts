@@ -185,7 +185,15 @@ export interface PostingGroup {
   code: string;
   name: string;
   isDefault: boolean;
+  /** Product groups (phase 3): the VAT code their lines use, a vatSetup code. */
+  vatCode?: string | null;
+  /** Business groups (phase 3): EXEMPT lines use exemptVatCode instead of the product's code. */
+  vatRule?: VatRule | null;
+  exemptVatCode?: string | null;
 }
+
+export type VatRule = 'STANDARD' | 'EXEMPT';
+export type BankPostingMode = 'ON_VALIDATION' | 'ON_IMPORT';
 
 /** One cell of the general setup: a business group × product group pair. */
 export interface GeneralSetupRow {
@@ -208,6 +216,8 @@ export interface VatSetupRow {
   recoverableAccountId?: string | null;
   recoverableAccountCode?: string | null;
   exempt: boolean;
+  /** Printed on the invoice PDF under the totals when a line uses this code (phase 3). */
+  mention?: string | null;
 }
 
 export interface BankAccountSetup {
@@ -235,6 +245,8 @@ export interface PostingSetup {
   bankCategories?: CategorySetup[] | null;
   expenseCategories?: CategorySetup[] | null;
   startDate?: string | null;
+  /** Phase 3: bank lines post once validated (default) or as soon as they are imported. */
+  bankPostingMode?: BankPostingMode | null;
 }
 
 /** What posts a document: the source types of automatic entries. */
@@ -347,7 +359,8 @@ export class LedgerApi extends BaseApiService {
     return this.post(`/ledger/posting-setup/${kind}`, body);
   }
 
-  updateGroup(kind: 'business-groups' | 'product-groups', id: string, body: { name?: string; isDefault?: boolean }): Observable<PostingSetup> {
+  updateGroup(kind: 'business-groups' | 'product-groups', id: string,
+              body: { name?: string; isDefault?: boolean; vatCode?: string | null; vatRule?: VatRule; exemptVatCode?: string | null }): Observable<PostingSetup> {
     return this.put(`/ledger/posting-setup/${kind}/${id}`, body);
   }
 
@@ -359,7 +372,7 @@ export class LedgerApi extends BaseApiService {
     return this.put(`/ledger/posting-setup/general/${id}`, body);
   }
 
-  updateVatSetup(id: string, body: { collectedAccountId: string | null; recoverableAccountId: string | null }): Observable<PostingSetup> {
+  updateVatSetup(id: string, body: { collectedAccountId: string | null; recoverableAccountId: string | null; mention?: string | null }): Observable<PostingSetup> {
     return this.put(`/ledger/posting-setup/vat/${id}`, body);
   }
 
@@ -377,6 +390,10 @@ export class LedgerApi extends BaseApiService {
 
   updateStartDate(startDate: string): Observable<PostingSetup> {
     return this.put('/ledger/posting-setup/start-date', { startDate });
+  }
+
+  updateBankPostingMode(mode: BankPostingMode): Observable<PostingSetup> {
+    return this.put('/ledger/posting-setup/bank-posting-mode', { mode });
   }
 
   /** Posts every document dated on or after the start date that has no live entry yet (admin). */

@@ -95,6 +95,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Cash position', icon: 'savings', route: '/bank', hint: 'Balances across banks and cash', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
       { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', hint: 'Statement lines and their matches', tab: 'transactions', authority: 'PAYMENTS_READ' },
+      { label: 'Bank journal', icon: 'fact_check', route: '/bank', hint: 'Review and validate lines before they post', tab: 'journal', authority: 'PAYMENTS_READ' },
       { label: 'Bank accounts', icon: 'account_balance', route: '/bank', hint: 'Accounts, RIBs and statements', tab: 'accounts', authority: 'PAYMENTS_READ' },
       { label: 'Matching rules', icon: 'rule', route: '/bank', hint: 'How lines match invoices automatically', tab: 'rules', authority: 'PAYMENTS_READ' },
     ]

@@ -11,9 +11,10 @@ import { BankCashComponent } from './bank/bank-cash.component';
 import { BankTransactionsComponent } from './bank/bank-transactions.component';
 import { BankAccountsComponent } from './bank/bank-accounts.component';
 import { BankRulesComponent } from './bank/bank-rules.component';
+import { BankJournalComponent } from './bank/bank-journal.component';
 
-type Tab = 'cash' | 'transactions' | 'accounts' | 'rules';
-const TABS: Tab[] = ['cash', 'transactions', 'accounts', 'rules'];
+type Tab = 'cash' | 'transactions' | 'journal' | 'accounts' | 'rules';
+const TABS: Tab[] = ['cash', 'transactions', 'journal', 'accounts', 'rules'];
 
 /**
  * Bank: cash position and forecast, statement lines and their reconciliation, the bank accounts
@@ -21,7 +22,7 @@ const TABS: Tab[] = ['cash', 'transactions', 'accounts', 'rules'];
  */
 @Component({
   selector: 'app-bank',
-  imports: [MatIconModule, TranslatePipe, PageHeaderComponent, BankCashComponent, BankTransactionsComponent, BankAccountsComponent, BankRulesComponent],
+  imports: [MatIconModule, TranslatePipe, PageHeaderComponent, BankCashComponent, BankTransactionsComponent, BankAccountsComponent, BankRulesComponent, BankJournalComponent],
   template: `
     <div class="page">
       <app-page-header [title]="'bank.title' | translate" [subtitle]="'bank.subtitle' | translate" />
@@ -37,6 +38,7 @@ const TABS: Tab[] = ['cash', 'transactions', 'accounts', 'rules'];
       @switch (tab()) {
         @case ('cash') { <app-bank-cash (openLines)="openLines($event)" /> }
         @case ('transactions') { <app-bank-transactions [initialFilter]="txFilter()" /> }
+        @case ('journal') { <app-bank-journal /> }
         @case ('accounts') { <app-bank-accounts /> }
         @case ('rules') { <app-bank-rules /> }
       }
@@ -52,6 +54,7 @@ export class BankComponent implements OnInit {
   readonly tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'cash', label: 'bank.tab.cash', icon: 'savings' },
     { key: 'transactions', label: 'bank.tab.transactions', icon: 'receipt_long' },
+    { key: 'journal', label: 'bank.tab.journal', icon: 'fact_check' },
     { key: 'accounts', label: 'bank.tab.accounts', icon: 'account_balance' },
     { key: 'rules', label: 'bank.tab.rules', icon: 'rule' },
   ];

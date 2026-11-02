@@ -9,10 +9,11 @@ import { CreatedByBadgeComponent } from '../shared/created-by-badge.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { UserPickerComponent } from '../shared/user-picker.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
+import { AdvancesPanelComponent } from './advances/advances-panel.component';
 
 @Component({
   selector: 'app-deal-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent, UserPickerComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent, UserPickerComponent, AdvancesPanelComponent],
   template: `
     <div class="page max-w-5xl mx-auto">
       <a routerLink="/sales" class="page-back">
@@ -450,6 +451,12 @@ import { ConfirmService } from '../shared/ui/confirm.service';
             </div>
 
           </div>
+        </div>
+
+        <!-- Advance invoices (acomptes) of this deal -->
+        <div class="card p-5">
+          <app-advances-panel [partnerId]="deal.partnerId" [dealId]="deal.id" [baseAmount]="deal.amount || 0"
+                              [sourceLabel]="(deal.dealNumber || deal.title) + ' · ' + getPartnerName(deal.partnerId)" />
         </div>
 
         <!-- Footer Actions -->

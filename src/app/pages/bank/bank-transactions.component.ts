@@ -99,7 +99,8 @@ interface CategoryForm {
                     <span class="chip">{{ category(t.category) }}</span>
                     @if (t.category && t.categorySource) { <div class="text-meta text-ink-3 mt-0.5">{{ ('bank.source.' + t.categorySource) | translate }}</div> }
                   </td>
-                  <td><span class="badge" [class]="statusBadge(t.status)">{{ ('bank.tx.statusName.' + t.status) | translate }}</span></td>
+                  <td class="whitespace-nowrap"><span class="badge" [class]="statusBadge(t.status)">{{ ('bank.tx.statusName.' + t.status) | translate }}</span>
+                    @if (t.validatedAt) { <mat-icon class="icon-sm text-success-ink align-middle ms-1" [title]="'bank.journal.validatedOn' | translate: { date: date(t.validatedAt) }">check_circle</mat-icon> }</td>
                   <td class="max-w-56">
                     @if (t.status === 'MATCHED') {
                       <div class="text-sm text-ink truncate">{{ t.invoiceNumber || t.matchLabel || '—' }}</div>
@@ -211,6 +212,18 @@ interface CategoryForm {
                     <p class="text-sm text-ink-3">{{ 'bank.tx.noInvoiceFound' | translate }}</p>
                   }
                 }
+                <!-- No invoice yet: an advance from the customer (money in) or to the supplier (money out). -->
+                <div class="rounded-lg border border-line p-3 space-y-2">
+                  <div class="text-sm font-medium text-ink">{{ (t.amount >= 0 ? 'bank.tx.advanceFromCustomer' : 'bank.tx.advanceToSupplier') | translate }}</div>
+                  <p class="text-xs text-ink-3">{{ 'bank.tx.advanceHint' | translate }}</p>
+                  <div class="flex gap-2">
+                    <select class="input-field flex-1 min-w-0" [attr.aria-label]="'bank.journal.partner' | translate" [ngModel]="advancePartnerId()" (ngModelChange)="advancePartnerId.set($event)">
+                      <option value="">{{ 'bank.tx.pickPartner' | translate }}</option>
+                      @for (p of advancePartners(t); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                    </select>
+                    <button class="btn-primary btn-sm shrink-0" [disabled]="busy() || !advancePartnerId()" (click)="matchAdvance(t)">{{ 'bank.tx.matchAdvance' | translate }}</button>
+                  </div>
+                </div>
                 <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="ignore(t)"><mat-icon>visibility_off</mat-icon>{{ 'bank.tx.ignore' | translate }}</button>
               }
             </section>
@@ -305,6 +318,7 @@ export class BankTransactionsComponent implements OnInit {
   searching = signal(false);
   searched = signal(false);
   catForm = signal<CategoryForm | null>(null);
+  advancePartnerId = signal('');
 
   canWrite(): boolean { return this.state.hasAuthority('PAYMENTS_WRITE'); }
 
@@ -316,6 +330,7 @@ export class BankTransactionsComponent implements OnInit {
     }
     this.api.accounts().subscribe({ next: a => this.accounts.set(a ?? []), error: () => { /* names fall back to "—" */ } });
     this.api.categories().subscribe({ next: c => this.categories.set(c ?? []), error: e => this.fail(e) });
+    this.state.loadPartners();
     this.load();
   }
 
@@ -366,8 +381,25 @@ export class BankTransactionsComponent implements OnInit {
     if (t.status === 'UNMATCHED') this.loadCandidates(t);
   }
 
+  /** Customers for money in, suppliers for money out. */
+  advancePartners(t: BankTransaction) {
+    const type = t.amount >= 0 ? 'Customer' : 'Vendor';
+    return this.state.partners().filter(p => p.type === type).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  matchAdvance(t: BankTransaction): void {
+    const partnerId = this.advancePartnerId();
+    if (!partnerId) return;
+    this.busy.set(true);
+    this.api.matchAdvance(t.id, partnerId).subscribe({
+      next: updated => this.done(updated, 'bank.tx.matchedAdvance'),
+      error: e => this.fail(e),
+    });
+  }
+
   private resetSearch(): void {
     this.invoiceQuery.set('');
+    this.advancePartnerId.set('');
     this.searchResults.set([]);
     this.searched.set(false);
   }
