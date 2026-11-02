@@ -287,7 +287,7 @@ const SEARCH_ITEMS: SearchItem[] = [
     /* Finance modules: a heading that opens its pages, which sit indented under it. */
     .sidebar-module-row { position: relative; margin-top: 4px; }
     .sidebar-module { width: 100%; cursor: pointer; text-align: start; padding-inline-end: 32px; }
-    /* The chevron only opens or closes the list; the name opens the module's page. */
+    /* The name opens the module's page; only the chevron opens or closes its list. */
     .module-toggle { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center;
       width: 24px; height: 24px; border: 0; border-radius: var(--r-control); background: none; color: var(--color-text-tertiary); cursor: pointer; }
     .module-toggle:hover { background: var(--color-surface-hover); color: var(--color-text-heading); }
@@ -881,7 +881,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                   <div class="sidebar-module-row">
                     <a class="sidebar-link sidebar-module" [routerLink]="moduleLink(mod.key)"
                        [class.active]="activeRoute() === moduleLink(mod.key)" [class.has-active]="sectionActive(section)"
-                       [title]="section.label" (click)="openModule(mod.key); mobileMenuOpen.set(false)">
+                       [title]="section.label" (click)="mobileMenuOpen.set(false)">
                       <mat-icon>{{ mod.icon }}</mat-icon>
                       <span class="nav-label">{{ section.label }}</span>
                     </a>
@@ -1550,11 +1550,6 @@ export class App implements OnInit, OnDestroy {
     return moduleRoute(key);
   }
 
-  /** The module's name opens its page and its list; it never closes the list. */
-  openModule(key: string): void {
-    if (!this.moduleOpen(key)) this.toggleModule(key);
-  }
-
   toggleModule(key: string): void {
     const next = new Set(this.openModules());
     if (next.has(key)) next.delete(key); else next.add(key);
@@ -1573,7 +1568,7 @@ export class App implements OnInit, OnDestroy {
   /** Opening a page of a closed module (a link, a search result) opens the module too. */
   private revealActiveModule(): void {
     for (const s of this.navSections) {
-      if (s.module && !this.moduleOpen(s.module.key) && (this.sectionActive(s) || this.activeRoute() === moduleRoute(s.module.key))) this.toggleModule(s.module.key);
+      if (s.module && !this.moduleOpen(s.module.key) && this.sectionActive(s)) this.toggleModule(s.module.key);
     }
   }
 
