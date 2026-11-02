@@ -2216,5 +2216,8 @@
   "bank.tx.advanceHint": "No invoice yet: record it as an advance, to apply to an invoice later.",
   "bank.tx.pickPartner": "Choose a partner",
   "bank.tx.matchAdvance": "Match as advance",
-  "bank.tx.matchedAdvance": "Line matched as an advance"
+  "bank.tx.matchedAdvance": "Line matched as an advance",
+  "invoices": {
+    "markPaidFailed": "Could not record the payment."
+  }
 }

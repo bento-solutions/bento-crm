@@ -36,8 +36,8 @@ function isoDate(d: Date): string {
 
         <fieldset class="space-y-3" [disabled]="busy()">
           <div class="segmented" role="group" [attr.aria-label]="'advances.mode' | translate">
-            <button type="button" class="segmented__item" [class.is-active]="mode() === 'amount'" [attr.aria-pressed]="mode() === 'amount'" (click)="mode.set('amount')">{{ 'advances.byAmount' | translate }}</button>
-            <button type="button" class="segmented__item" [class.is-active]="mode() === 'percent'" [attr.aria-pressed]="mode() === 'percent'" (click)="mode.set('percent')">{{ 'advances.byPercent' | translate }}</button>
+            <button type="button" class="segmented__item" [class.is-active]="mode() === 'amount'" [attr.aria-pressed]="mode() === 'amount'" (click)="setMode('amount')">{{ 'advances.byAmount' | translate }}</button>
+            <button type="button" class="segmented__item" [class.is-active]="mode() === 'percent'" [attr.aria-pressed]="mode() === 'percent'" (click)="setMode('percent')">{{ 'advances.byPercent' | translate }}</button>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -142,6 +142,13 @@ export class AdvanceInvoiceDialogComponent implements OnInit {
     this.groups.ensure();
     if (!this.baseAmount()) this.mode.set('amount');
     if (this.mode() === 'amount') this.value.set(null);
+  }
+
+  /** Switching between amount and percentage clears the value: 30 % is not 30 MAD. */
+  setMode(m: 'amount' | 'percent'): void {
+    if (this.mode() === m) return;
+    this.mode.set(m);
+    this.value.set(null);
   }
 
   valid(): boolean {

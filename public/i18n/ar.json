@@ -2216,5 +2216,8 @@
   "bank.tx.advanceHint": "لا فاتورة بعد: سجلها كدفعة مسبقة لتخصيصها لاحقًا لفاتورة.",
   "bank.tx.pickPartner": "اختر شريكًا",
   "bank.tx.matchAdvance": "مطابقة كدفعة مسبقة",
-  "bank.tx.matchedAdvance": "تمت مطابقة السطر كدفعة مسبقة"
+  "bank.tx.matchedAdvance": "تمت مطابقة السطر كدفعة مسبقة",
+  "invoices": {
+    "markPaidFailed": "تعذر تسجيل الدفعة."
+  }
 }

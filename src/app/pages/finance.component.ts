@@ -999,7 +999,19 @@ export class FinanceComponent {
 
   markInvoicePaid(invoice: Invoice) {
     if (!this.canWrite()) return;
-    this.invoicesService.updateInvoice(invoice.id, { ...invoice, status: 'Paid' });
+    // A payment for the open balance, not a bare status change, so the ledger settles the invoice too.
+    const due = Math.round((Math.max(0, (invoice.amount || 0) - (invoice.amountPaid || 0))) * 100) / 100;
+    if (!(due > 0) || !invoice.partnerId) {
+      this.invoicesService.updateInvoice(invoice.id, { ...invoice, status: 'Paid' });
+      return;
+    }
+    this.payments.record({
+      partnerId: invoice.partnerId, invoiceId: invoice.id, amount: due,
+      paymentDate: new Date().toISOString().slice(0, 10), method: 'BANK_TRANSFER',
+    }).subscribe({
+      next: () => this.invoicesService.load(undefined, true),
+      error: () => this.toast.show(this.translation.t('invoices.markPaidFailed'), { type: 'error' }),
+    });
   }
 
   attachmentsInvoice = signal<Invoice | null>(null);
