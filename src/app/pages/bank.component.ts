@@ -12,17 +12,18 @@ import { BankTransactionsComponent } from './bank/bank-transactions.component';
 import { BankAccountsComponent } from './bank/bank-accounts.component';
 import { BankRulesComponent } from './bank/bank-rules.component';
 import { BankJournalComponent } from './bank/bank-journal.component';
+import { BankRegisterComponent } from './bank/bank-register.component';
 
-type Tab = 'cash' | 'transactions' | 'journal' | 'accounts' | 'rules';
-const TABS: Tab[] = ['cash', 'transactions', 'journal', 'accounts', 'rules'];
+type Tab = 'cash' | 'transactions' | 'journal' | 'register' | 'accounts' | 'rules';
+const TABS: Tab[] = ['cash', 'transactions', 'journal', 'register', 'accounts', 'rules'];
 
 /**
  * Bank: cash position and forecast, statement lines and their reconciliation, the bank accounts
- * with their statement imports, and the categorization rules.
+ * with their statement imports, the cash register (caisse) and the categorization rules.
  */
 @Component({
   selector: 'app-bank',
-  imports: [MatIconModule, TranslatePipe, PageHeaderComponent, BankCashComponent, BankTransactionsComponent, BankAccountsComponent, BankRulesComponent, BankJournalComponent],
+  imports: [MatIconModule, TranslatePipe, PageHeaderComponent, BankCashComponent, BankTransactionsComponent, BankAccountsComponent, BankRulesComponent, BankJournalComponent, BankRegisterComponent],
   template: `
     <div class="page">
       <app-page-header [title]="'bank.title' | translate" [subtitle]="'bank.subtitle' | translate" />
@@ -39,6 +40,7 @@ const TABS: Tab[] = ['cash', 'transactions', 'journal', 'accounts', 'rules'];
         @case ('cash') { <app-bank-cash (openLines)="openLines($event)" /> }
         @case ('transactions') { <app-bank-transactions [initialFilter]="txFilter()" /> }
         @case ('journal') { <app-bank-journal /> }
+        @case ('register') { <app-bank-register /> }
         @case ('accounts') { <app-bank-accounts /> }
         @case ('rules') { <app-bank-rules /> }
       }
@@ -55,6 +57,7 @@ export class BankComponent implements OnInit {
     { key: 'cash', label: 'bank.tab.cash', icon: 'savings' },
     { key: 'transactions', label: 'bank.tab.transactions', icon: 'receipt_long' },
     { key: 'journal', label: 'bank.tab.journal', icon: 'fact_check' },
+    { key: 'register', label: 'bank.tab.register', icon: 'point_of_sale' },
     { key: 'accounts', label: 'bank.tab.accounts', icon: 'account_balance' },
     { key: 'rules', label: 'bank.tab.rules', icon: 'rule' },
   ];

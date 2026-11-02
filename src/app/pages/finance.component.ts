@@ -32,6 +32,7 @@ import { ToastService } from '../services/toast.service';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
 import { CreditNoteDialogComponent } from './advances/credit-note-dialog.component';
+import { AssetDialogComponent } from './assets/asset-dialog.component';
 import { AdvancesApi, OpenAdvance } from '../services/domains/advances.service';
 import { CatalogProduct, InventoryApi } from '../services/domains/inventory.service';
 import { determineVatCode, round2, vatBreakdown, vatFraction } from '../services/domains/vat';
@@ -60,7 +61,7 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent, CreditNoteDialogComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent, CreditNoteDialogComponent, AssetDialogComponent],
   template: `
     <div class="page">
       <app-page-header [title]="(payablesSide() ? 'finance.payables' : 'finance.receivables') | translate"
@@ -222,6 +223,10 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
                         <button (click)="creditNoteFor.set(invoice)" class="btn-ghost btn-sm">
                           <mat-icon class="icon-sm">undo</mat-icon>{{ 'creditNotes.issue' | translate }}</button>
                       }
+                      @if (canCreateAsset(invoice)) {
+                        <button (click)="assetFor.set(invoice)" class="btn-ghost btn-sm" [title]="'assets.createFromBillHint' | translate">
+                          <mat-icon class="icon-sm">inventory</mat-icon>{{ 'assets.createFromBill' | translate }}</button>
+                      }
                       @if (invoice.status !== 'Paid' && invoice.status !== 'Credited' && invoice.kind !== 'CREDIT_NOTE' && canWrite()) {
                         <button (click)="markInvoicePaid(invoice)" class="btn-secondary btn-sm">Mark Paid</button>
                       }
@@ -318,6 +323,9 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
             }
             @if (creditNoteFor(); as inv) {
               <app-credit-note-dialog [invoice]="inv" (created)="onCreditNote()" (closed)="creditNoteFor.set(null)" />
+            }
+            @if (assetFor(); as bill) {
+              <app-asset-dialog [bill]="bill" (saved)="onAssetCreated()" (closed)="assetFor.set(null)" />
             }
             @if (filteredInvoices().length > 0) {
               <app-paginator
@@ -904,6 +912,8 @@ export class FinanceComponent {
   catalog = signal<CatalogProduct[]>([]);
   private catalogLoaded = false;
   creditNoteFor = signal<Invoice | null>(null);
+  /** A supplier bill a fixed asset is being created from (one of its lines). */
+  assetFor = signal<Invoice | null>(null);
   /** The invoice row a credit note's link just jumped to. */
   highlightId = signal<string | null>(null);
   /** Advance invoices of the partner (and deal) not yet deducted, and the ones ticked for deduction. */
@@ -1383,6 +1393,16 @@ export class FinanceComponent {
 
   canCreditNote(inv: Invoice): boolean {
     return this.canCreate() && inv.kind !== 'CREDIT_NOTE' && inv.status !== 'Draft' && inv.status !== 'Credited';
+  }
+
+  /** "Create fixed asset" on a supplier bill's lines (general ledger phase 3). */
+  canCreateAsset(inv: Invoice): boolean {
+    return inv.type === 'Vendor' && inv.kind !== 'CREDIT_NOTE' && !!inv.lines?.length && this.state.hasAuthority('LEDGER_WRITE');
+  }
+
+  onAssetCreated() {
+    this.assetFor.set(null);
+    this.invoicesService.load(undefined, true);
   }
 
   onCreditNote() {

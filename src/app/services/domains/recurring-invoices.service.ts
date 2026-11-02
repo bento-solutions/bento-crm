@@ -4,6 +4,8 @@ import { BaseApiService } from '../../core/services/base-api.service';
 
 export type RecurringFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type RecurringStatus = 'ACTIVE' | 'PAUSED' | 'ENDED';
+/** Phase 3: CUSTOMER templates generate invoices, VENDOR templates supplier bills (status SENT, posted in AC). */
+export type RecurringType = 'CUSTOMER' | 'VENDOR';
 
 export interface RecurringLine {
   description: string;
@@ -11,10 +13,14 @@ export interface RecurringLine {
   unitPrice: number;
   /** 0.2 = 20 % */
   vatRate: number;
+  /** Phase 3: the line's VAT code (a posting-setup code); vatRate follows it. */
+  vatCode?: string | null;
 }
 
 export interface RecurringInvoice {
   id: string;
+  /** Missing on templates saved before phase 3: CUSTOMER. */
+  type?: RecurringType | null;
   partnerId: string;
   name: string;
   frequency: RecurringFrequency;
@@ -41,6 +47,7 @@ export interface RecurringInvoice {
 }
 
 export interface RecurringInvoiceInput {
+  type: RecurringType;
   partnerId: string;
   name: string;
   frequency: RecurringFrequency;

@@ -73,7 +73,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Customers', icon: 'storefront', route: '/partners', hint: 'Every customer account', tab: 'Customer' },
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', hint: 'Quotes, invoices and payments received', tab: 'Customer', defaultTab: true },
-      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule' },
+      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule', tab: 'CUSTOMER', defaultTab: true },
       { label: 'Recovery', icon: 'notifications_active', route: '/finance', hint: 'Overdue invoices and reminders', tab: 'Recovery' },
       { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What customers owe, by age', tab: 'Aging' },
     ]
@@ -84,6 +84,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Suppliers', icon: 'local_shipping', route: '/partners', hint: 'Every supplier account', tab: 'Vendor' },
       { label: 'Supplier bills', icon: 'request_quote', route: '/finance', hint: 'Bills to pay and payments made', tab: 'Vendor' },
+      { label: 'Recurring bills', icon: 'event_repeat', route: '/finance/recurring', hint: 'Supplier bills generated on a schedule', tab: 'VENDOR' },
       { label: 'Expenses', icon: 'payments', route: '/finance', hint: 'Expense claims and receipts', tab: 'Expenses', authority: 'PAYMENTS_READ' },
       { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What you owe, by age', tab: 'SupplierAging' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', hint: 'Bills and receipts received by email', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
@@ -96,6 +97,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Cash position', icon: 'savings', route: '/bank', hint: 'Balances across banks and cash', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
       { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', hint: 'Statement lines and their matches', tab: 'transactions', authority: 'PAYMENTS_READ' },
       { label: 'Bank journal', icon: 'fact_check', route: '/bank', hint: 'Review and validate lines before they post', tab: 'journal', authority: 'PAYMENTS_READ' },
+      { label: 'Cash register', icon: 'point_of_sale', route: '/bank', hint: 'Cash on hand, its movements and new ones', tab: 'register', authority: 'PAYMENTS_READ' },
       { label: 'Bank accounts', icon: 'account_balance', route: '/bank', hint: 'Accounts, RIBs and statements', tab: 'accounts', authority: 'PAYMENTS_READ' },
       { label: 'Matching rules', icon: 'rule', route: '/bank', hint: 'How lines match invoices automatically', tab: 'rules', authority: 'PAYMENTS_READ' },
     ]
@@ -110,6 +112,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Trial balance', icon: 'balance', route: '/ledger', hint: 'Debit and credit per account', tab: 'trial', authority: 'LEDGER_READ' },
       { label: 'Cost centers', icon: 'hub', route: '/ledger', hint: 'Analytic codes for entry lines', tab: 'cost-centers', authority: 'LEDGER_READ' },
       { label: 'Posting setup', icon: 'tune', route: '/ledger', hint: 'Accounts that invoices, bills, payments and expenses post to', tab: 'setup', authority: 'LEDGER_READ' },
+      { label: 'Closing', icon: 'event_available', route: '/ledger', hint: 'Lock date, closing checklist, stock change and year-end', tab: 'closing', authority: 'LEDGER_READ' },
+      { label: 'VAT', icon: 'percent', route: '/ledger', hint: 'VAT collected and recoverable per period, and its settlement', tab: 'vat', authority: 'LEDGER_READ' },
+      { label: 'Cut-off', icon: 'content_cut', route: '/ledger', hint: 'Accruals and prepayments (FNP, FAE, CCA, PCA) at a date', tab: 'cutoff', authority: 'LEDGER_READ' },
+      { label: 'Fixed assets', icon: 'inventory', route: '/assets', hint: 'Assets, depreciation schedules and the register', authority: 'LEDGER_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', hint: 'TVA, IS, IR and CNSS deadlines', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   },
