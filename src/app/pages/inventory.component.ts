@@ -1,7 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { ToastService } from '../services/toast.service';
@@ -417,7 +418,24 @@ export class InventoryComponent implements OnInit {
     this.reload();
   }
 
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  constructor() {
+    // The sidebar opens each tab through ?tab=, also while the page is open.
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const q = params.get('tab') as Tab | null;
+      const t = q && this.tabs.some(x => x.key === q) ? q : 'stock';
+      if (t !== this.tab()) this.show(t);
+    });
+  }
+
   setTab(t: Tab): void {
+    this.show(t);
+    this.router.navigate([], { relativeTo: this.route, queryParams: { tab: t === 'stock' ? null : t }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  private show(t: Tab): void {
     this.tab.set(t);
     if (t === 'movements') this.loadMovements();
   }

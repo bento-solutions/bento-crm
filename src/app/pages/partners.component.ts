@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService, Lead, LeadActivity, LeadAttachment, CrmUser } from '../services/crm-state.service';
 import { PartnersService, Partner } from '../services/domains/partners.service';
@@ -1044,6 +1045,7 @@ export class PartnersComponent {
   partnersService = inject(PartnersService);
   api = inject(ApiService);
   router = inject(Router);
+  private route = inject(ActivatedRoute);
   uploading = signal(false);
   activeTab = signal<'Lead' | 'Customer' | 'Prospect' | 'Vendor'>('Lead');
   showCreateModal = signal(false);
@@ -1144,6 +1146,26 @@ export class PartnersComponent {
         this.activeTab.set(tab as 'Lead' | 'Customer' | 'Prospect' | 'Vendor');
         this.state.breadcrumbLabel.set(tab === 'Lead' ? 'Leads' : tab === 'Customer' ? 'Customers' : tab === 'Prospect' ? 'Prospects' : 'Vendors');
         this.state.navigateTab.set(null);
+      }
+    });
+    // The sidebar opens Customers and Suppliers through ?tab=; the page's own tabs write it back.
+    const TABS = ['Lead', 'Customer', 'Prospect', 'Vendor'] as const;
+    let urlTab: string | null = null;
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const q = params.get('tab');
+      const t = (TABS as readonly string[]).includes(q ?? '') ? q as typeof TABS[number] : 'Lead';
+      urlTab = t;
+      if (t !== this.activeTab()) {
+        this.activeTab.set(t);
+        this.partnersPage.set(1);
+        this.state.breadcrumbLabel.set(t === 'Lead' ? 'Leads' : t === 'Customer' ? 'Customers' : t === 'Prospect' ? 'Prospects' : 'Vendors');
+      }
+    });
+    effect(() => {
+      const t = this.activeTab();
+      if (urlTab !== null && t !== urlTab) {
+        urlTab = t;
+        this.router.navigate([], { relativeTo: this.route, queryParams: { tab: t === 'Lead' ? null : t }, queryParamsHandling: 'merge', replaceUrl: true });
       }
     });
     const label = this.activeTab() === 'Lead' ? 'Leads' : this.activeTab() === 'Customer' ? 'Customers' : this.activeTab() === 'Prospect' ? 'Prospects' : 'Vendors';

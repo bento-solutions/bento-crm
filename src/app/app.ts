@@ -31,58 +31,126 @@ interface NavItem {
   authority?: string | string[];
   /** Live count shown next to the label. */
   badge?: 'whatsappUnread';
+  /** A tab of the page, passed as ?tab=; the item is active only on that tab. */
+  tab?: string;
+  /** This tab is the page's default, so the page without ?tab= counts as it. */
+  defaultTab?: boolean;
+  /** Other ?tab= values of the same page that also light this entry. */
+  alsoTabs?: string[];
 }
 
 interface NavSection {
   label: string;
   items: NavItem[];
+  /** A module: a heading that opens and closes its pages. Without it the items show as plain links. */
+  module?: { key: string; icon: string };
 }
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Overview',
+    label: 'Dashboard',
+    module: { key: 'dash', icon: 'space_dashboard' },
     items: [
-      { label: 'Dashboard', icon: 'home', route: '/' },
+      { label: 'Home', icon: 'home', route: '/' },
       { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
     ]
   },
   {
-    label: 'Sales',
+    label: '',
     items: [
-      { label: 'Sales Pipeline', icon: 'monetization_on', route: '/sales' },
       { label: 'Inbox', icon: 'forum', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
+    ]
+  },
+  {
+    label: 'Sales',
+    module: { key: 'sales', icon: 'monetization_on' },
+    items: [
+      { label: 'Sales pipeline', icon: 'view_kanban', route: '/sales' },
       { label: 'Marketing', icon: 'campaign', route: '/marketing' },
     ]
   },
   {
-    label: 'Operations',
+    label: 'Contacts',
+    module: { key: 'contacts', icon: 'contacts' },
     items: [
-      { label: 'Tasks', icon: 'task_alt', route: '/tasks' },
-      { label: 'Tickets', icon: 'support_agent', route: '/tickets' },
-      { label: 'Automation', icon: 'smart_toy', route: '/automation' },
-      { label: 'Inventory', icon: 'inventory_2', route: '/inventory' },
-    ]
-  },
-  {
-    label: 'Clients',
-    items: [
-      { label: 'Partners', icon: 'handshake', route: '/partners' },
+      { label: 'Partners', icon: 'handshake', route: '/partners', tab: 'Lead', defaultTab: true, alsoTabs: ['Prospect'] },
       { label: 'Groups', icon: 'group_work', route: '/groups' },
-      { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
-      { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
       { label: 'Documents', icon: 'folder_open', route: '/drive', authority: 'FILES_READ' },
     ]
   },
   {
-    label: 'Accounting',
+    label: 'Work',
+    module: { key: 'work', icon: 'assignment' },
     items: [
-      { label: 'Finance', icon: 'receipt_long', route: '/finance' },
+      { label: 'Tasks', icon: 'task_alt', route: '/tasks' },
+      { label: 'Tickets', icon: 'support_agent', route: '/tickets' },
+      { label: 'Missions', icon: 'work', route: '/missions', authority: 'PARTNERS_READ' },
+      { label: 'Document checklists', icon: 'checklist', route: '/checklists', authority: 'PARTNERS_READ' },
+      { label: 'Automation', icon: 'smart_toy', route: '/automation' },
+    ]
+  },
+  {
+    label: 'Account Receivables',
+    module: { key: 'ar', icon: 'call_received' },
+    items: [
+      { label: 'Customers', icon: 'storefront', route: '/partners', tab: 'Customer' },
+      { label: 'Customer invoices', icon: 'receipt', route: '/finance', tab: 'Customer', defaultTab: true },
+      { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring' },
+      { label: 'Recovery', icon: 'notifications_active', route: '/finance', tab: 'Recovery' },
+      { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'Aging' },
+    ]
+  },
+  {
+    label: 'Account Payables',
+    module: { key: 'ap', icon: 'call_made' },
+    items: [
+      { label: 'Suppliers', icon: 'local_shipping', route: '/partners', tab: 'Vendor' },
+      { label: 'Supplier bills', icon: 'request_quote', route: '/finance', tab: 'Vendor' },
+      { label: 'Expenses', icon: 'payments', route: '/finance', tab: 'Expenses', authority: 'PAYMENTS_READ' },
+      { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', tab: 'SupplierAging' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
-      { label: 'Bank', icon: 'savings', route: '/bank', authority: 'PAYMENTS_READ' },
+    ]
+  },
+  {
+    label: 'Cash and Bank',
+    module: { key: 'bank', icon: 'savings' },
+    items: [
+      { label: 'Cash position', icon: 'savings', route: '/bank', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
+      { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', tab: 'transactions', authority: 'PAYMENTS_READ' },
+      { label: 'Bank accounts', icon: 'account_balance', route: '/bank', tab: 'accounts', authority: 'PAYMENTS_READ' },
+      { label: 'Matching rules', icon: 'rule', route: '/bank', tab: 'rules', authority: 'PAYMENTS_READ' },
+    ]
+  },
+  {
+    label: 'General Ledger',
+    module: { key: 'gl', icon: 'menu_book' },
+    items: [
+      { label: 'Chart of accounts', icon: 'account_tree', route: '/ledger', tab: 'accounts', defaultTab: true, authority: 'LEDGER_READ' },
+      { label: 'Journal entries', icon: 'receipt_long', route: '/ledger', tab: 'entries', authority: 'LEDGER_READ' },
+      { label: 'General ledger', icon: 'menu_book', route: '/ledger', tab: 'ledger', authority: 'LEDGER_READ' },
+      { label: 'Trial balance', icon: 'balance', route: '/ledger', tab: 'trial', authority: 'LEDGER_READ' },
+      { label: 'Cost centers', icon: 'hub', route: '/ledger', tab: 'cost-centers', authority: 'LEDGER_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
+    ]
+  },
+  {
+    label: 'Inventory',
+    module: { key: 'inv', icon: 'inventory_2' },
+    items: [
+      { label: 'Stock levels', icon: 'inventory_2', route: '/inventory', tab: 'stock', defaultTab: true },
+      { label: 'Catalogue', icon: 'category', route: '/inventory', tab: 'products' },
+      { label: 'Stock movements', icon: 'swap_vert', route: '/inventory', tab: 'movements' },
+      { label: 'Stock value', icon: 'payments', route: '/inventory', tab: 'value' },
+      { label: 'Warehouses', icon: 'warehouse', route: '/settings/stock' },
     ]
   }
 ];
+
+const OPEN_MODULES_KEY = 'bento_open_nav_modules';
+
+function readOpenModules(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(OPEN_MODULES_KEY) ?? '[]')); } catch { return new Set(); }
+}
 
 interface SearchItem {
   mainMenu: string;
@@ -165,6 +233,11 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', action: 'Bank accounts, statement import, reconciliation and cash forecast', keywords: 'bank cash accounts statements reconciliation forecast treasury' },
   { mainMenu: 'Tax calendar', mainIcon: 'event_note', mainRoute: '/tax-calendar', action: 'TVA, IS, IR and CNSS deadlines for the company and its clients', keywords: 'tax calendar deadlines tva vat is ir cnss declarations impots fiscal' },
+  { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'Chart of accounts', subIcon: 'account_tree', tab: 'accounts', action: 'PCGE chart of accounts by class, with balances', keywords: 'ledger accounting chart of accounts plan comptable pcge accounts classes' },
+  { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'Journal entries', subIcon: 'receipt_long', tab: 'entries', action: 'Post, browse and reverse journal entries', keywords: 'ledger journal entries ecritures od manual entry reverse contrepasser accounting' },
+  { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'General ledger', subIcon: 'menu_book', tab: 'ledger', action: 'Lines and running balance per account over a period', keywords: 'general ledger grand livre account lines balance accounting' },
+  { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'Trial balance', subIcon: 'balance', tab: 'trial', action: 'Opening, period and closing debit and credit per account', keywords: 'trial balance balance generale debit credit accounting' },
+  { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'Cost centers', subIcon: 'hub', tab: 'cost-centers', action: 'Analytic cost centers for entry lines', keywords: 'cost centers centres de couts analytic accounting missions' },
   { mainMenu: 'Document checklists', mainIcon: 'checklist', mainRoute: '/checklists', action: 'Documents to collect from clients, with reminders', keywords: 'documents checklist pieces a fournir collect reminders relance clients portal' },
   { mainMenu: 'Missions', mainIcon: 'work', mainRoute: '/missions', action: 'Client missions, deliverables and rebillable costs (débours)', keywords: 'missions deliverables costs debours disbursements rebill clients engagements' },
   { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
@@ -331,6 +404,24 @@ const SEARCH_ITEMS: SearchItem[] = [
 
     .sidebar-section-title:first-child {
       padding-top: 8px;
+    }
+
+    /* Finance modules: a heading that opens its pages, which sit indented under it. */
+    .sidebar-module { width: 100%; margin-top: 4px; background: none; border: 0; cursor: pointer; text-align: start; }
+    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 600; }
+    .sidebar-module .nav-chevron { margin-inline-start: auto; font-size: 18px; width: 18px; height: 18px; }
+    /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
+    .sidebar-link.sidebar-module { height: auto; min-height: 32px; padding-block: 4px; }
+    .sidebar-link.sidebar-module .nav-label { white-space: normal; line-height: 1.25; }
+    .sidebar-link.sidebar-sublink { padding-inline-start: 22px; height: 30px; font-size: 13px; }
+    /* On the icon rail a module shows its own icon; a click opens its pages as icons below it. */
+    .app-sidebar.collapsed .sidebar-link.sidebar-module { min-height: 40px; padding: 0; }
+    .app-sidebar.collapsed .sidebar-module .nav-chevron { display: none; }
+    .app-sidebar.collapsed .sidebar-link.sidebar-sublink { padding: 0; height: 40px; }
+
+    .app-sidebar.collapsed .sidebar-section-title + .sidebar-link,
+    .app-sidebar.collapsed .sidebar-section-title:not(:first-child) {
+      margin-top: 4px;
     }
 
     .sidebar-link {
@@ -901,12 +992,25 @@ const SEARCH_ITEMS: SearchItem[] = [
           <!-- Navigation -->
           <nav class="sidebar-nav">
             @for (section of navSections; track section.label) {
-              <div class="sidebar-section-title">{{ section.label }}</div>
-              @for (item of section.items; track item.route) {
-                @if (canSee(item)) {
+              @if (section.module; as mod) {
+                @if (sectionVisible(section)) {
+                  <button type="button" class="sidebar-link sidebar-module" [class.has-active]="sectionActive(section)"
+                          [title]="section.label" [attr.aria-expanded]="moduleOpen(mod.key)" (click)="toggleModule(mod.key)">
+                    <mat-icon>{{ mod.icon }}</mat-icon>
+                    <span class="nav-label">{{ section.label }}</span>
+                    <mat-icon class="nav-chevron">{{ moduleOpen(mod.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                }
+              } @else if (section.label) {
+                <div class="sidebar-section-title">{{ section.label }}</div>
+              }
+              @for (item of section.items; track item.label) {
+                @if (canSee(item) && (!section.module || moduleOpen(section.module.key))) {
                   <a
                     [routerLink]="item.route"
+                    [queryParams]="item.tab && !item.defaultTab ? { tab: item.tab } : null"
                     class="sidebar-link"
+                    [class.sidebar-sublink]="!!section.module"
                     [class.active]="isNavActive(item)"
                     [title]="item.label"
                     (click)="mobileMenuOpen.set(false)"
@@ -1544,18 +1648,53 @@ export class App implements OnInit, OnDestroy {
 
   /** Tracks which primary route is currently active */
   activeRoute = signal<string>('/');
+  /** The ?tab= of the current page, so a module's page that is a tab can light up. */
+  activeTab = signal<string | null>(null);
+  private openModules = signal<Set<string>>(readOpenModules());
+
+  moduleOpen(key: string): boolean {
+    return this.openModules().has(key);
+  }
+
+  toggleModule(key: string): void {
+    const next = new Set(this.openModules());
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.openModules.set(next);
+    try { localStorage.setItem(OPEN_MODULES_KEY, JSON.stringify([...next])); } catch { /* private mode */ }
+  }
+
+  sectionVisible(section: NavSection): boolean {
+    return section.items.some(i => this.canSee(i));
+  }
+
+  sectionActive(section: NavSection): boolean {
+    return section.items.some(i => this.isNavActive(i));
+  }
+
+  /** Opening a page of a closed module (a link, a search result) opens the module too. */
+  private revealActiveModule(): void {
+    for (const s of this.navSections) {
+      if (s.module && !this.moduleOpen(s.module.key) && this.sectionActive(s)) this.toggleModule(s.module.key);
+    }
+  }
+
+  private trackUrl(url: string): void {
+    const [path, query] = url.split('?');
+    this.activeRoute.set(path);
+    this.activeTab.set(new URLSearchParams(query ?? '').get('tab'));
+    this.revealActiveModule();
+  }
 
   private routerSub: Subscription | null = null;
   private notifPollSub: Subscription | null = null;
 
   ngOnInit() {
-    this.activeRoute.set(this.router.url.split('?')[0]);
+    this.trackUrl(this.router.url);
 
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: NavigationEnd) => {
-        const newRoute = e.urlAfterRedirects.split('?')[0];
-        this.activeRoute.set(newRoute);
+        this.trackUrl(e.urlAfterRedirects);
         this.state.breadcrumbLabel.set(null);
       });
 
@@ -1587,8 +1726,12 @@ export class App implements OnInit, OnDestroy {
   isNavActive(item: NavItem): boolean {
     const route = this.activeRoute();
     if (item.route === '/') return route === '/';
-    // A whole path segment, so /inbox does not also light up for /inbox-documents.
-    return route === item.route || route.startsWith(item.route + '/');
+    if (item.tab) {
+      const tab = this.activeTab();
+      return route === item.route && (tab === item.tab || (!!tab && !!item.alsoTabs?.includes(tab)) || (!tab && !!item.defaultTab));
+    }
+    // Whole path segments only: '/inbox' must not light up on '/inbox-documents'.
+    return route === item.route || route.startsWith(item.route + '/') || route.startsWith(item.route + '?');
   }
 
   onNotificationOpened() {
