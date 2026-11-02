@@ -29,6 +29,8 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
+import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -37,11 +39,14 @@ interface InvoiceLine {
   qty: number;
   unitPrice: number;
   type: 'software' | 'hardware' | 'service';
+  /** General ledger: overrides the product's posting group on this line (null = the product's). */
+  productGroupId?: string | null;
+  costCenterId?: string | null;
 }
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent],
   template: `
     <div class="page">
       <app-page-header [title]="(payablesSide() ? 'finance.payables' : 'finance.receivables') | translate"
@@ -177,6 +182,9 @@ interface InvoiceLine {
                       <button (click)="downloadPdf(invoice)" title="Download PDF" aria-label="Download PDF" class="btn-icon btn-sm">
                         <mat-icon class="icon-sm">picture_as_pdf</mat-icon>
                       </button>
+                      @if (invoice.status !== 'Draft' && groups.enabled()) {
+                        <app-ledger-entry-link [compact]="true" [sourceType]="invoice.type === 'Vendor' ? 'BILL' : 'INVOICE'" [sourceId]="invoice.id" />
+                      }
                       <button (click)="openInvoiceAttachments(invoice)" title="Attachments" aria-label="Attachments" class="btn-icon btn-sm">
                         <mat-icon class="icon-sm">attach_file</mat-icon>
                       </button>
@@ -673,7 +681,8 @@ interface InvoiceLine {
 
                   <!-- Line rows -->
                   @for (line of invoiceLines(); track $index; let i = $index) {
-                    <div class="grid items-center gap-1.5 px-3 py-2 border-b border-line-soft last:border-0 hover:bg-subtle transition-colors min-w-[520px]"
+                    <div class="border-b border-line-soft last:border-0 hover:bg-subtle transition-colors min-w-[520px]">
+                    <div class="grid items-center gap-1.5 px-3 py-2"
                          style="grid-template-columns: 1fr 1.4fr 60px 90px 90px 32px">
                       <!-- Item -->
                       <input [(ngModel)]="invoiceLines()[i].item"
@@ -704,6 +713,22 @@ interface InvoiceLine {
                         class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted-strong text-ink-4 hover:text-ink transition-colors">
                         <mat-icon class="icon-sm">delete_outline</mat-icon>
                       </button>
+                    </div>
+                    @if (groups.enabled()) {
+                      <!-- Accounting overrides for this line (optional) -->
+                      <div class="flex flex-wrap items-center gap-2 px-3 pb-2">
+                        <select class="input-field w-auto" [attr.aria-label]="'ledger.groups.product' | translate"
+                          [ngModel]="line.productGroupId ?? null" (ngModelChange)="patchLine(i, 'productGroupId', $event)">
+                          <option [ngValue]="null">{{ 'ledger.groups.lineProductDefault' | translate }}</option>
+                          @for (g of groups.productGroups(); track g.id) { <option [ngValue]="g.id">{{ g.code }} · {{ g.name }}</option> }
+                        </select>
+                        <select class="input-field w-auto" [attr.aria-label]="'ledger.costCenter' | translate"
+                          [ngModel]="line.costCenterId ?? null" (ngModelChange)="patchLine(i, 'costCenterId', $event)">
+                          <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
+                          @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
+                        </select>
+                      </div>
+                    }
                     </div>
                   }
 
@@ -792,6 +817,7 @@ export class FinanceComponent {
   scheduling = signal<Invoice | null>(null);
   scheduleDate = signal('');
   private payments = inject(PaymentsApi);
+  groups = inject(LedgerGroupsStore);
   payLinkFor = signal<Invoice | null>(null);
   payLink = signal<PaymentLink | null>(null);
   payLinkError = signal<string | null>(null);
@@ -1174,7 +1200,7 @@ export class FinanceComponent {
    * Patch a single field on a line (Angular @for loops give us a snapshot,
    * so we must use update + spread to trigger change detection).
    */
-  patchLine(i: number, field: keyof InvoiceLine, value: string | number) {
+  patchLine(i: number, field: keyof InvoiceLine, value: string | number | null) {
     this.invoiceLines.update(lines => {
       const copy = [...lines];
       copy[i] = { ...copy[i], [field]: value } as InvoiceLine;
@@ -1298,6 +1324,7 @@ export class FinanceComponent {
   openCreateInvoiceModal() {
     if (!this.canCreate()) return;
     this.newInvoiceData = this.blankForm();
+    this.groups.ensure(true);
     // Default the type based on the active sidebar tab
     this.newInvoiceData.type = this.activeTab() === 'Vendor' ? 'Vendor' : 'Customer';
     this.invoiceType.set('Manual');

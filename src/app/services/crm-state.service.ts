@@ -717,6 +717,10 @@ export interface Partner {
    * ("Valid Leads", "Lost Prospects"…) on a campaign's recipient picker.
    */
   stage?: string;
+  /** Posting groups (general ledger); null or absent = the organization's default group. */
+  customerGroupId?: string | null;
+  supplierGroupId?: string | null;
+  businessGroupId?: string | null;
 }
 
 export interface Task {
@@ -925,7 +929,11 @@ export interface Invoice {
   deliveryAddress?: string;   // Full delivery location
   vatNumber?: string;         // VAT registration string
   // Line items (inherited from deal + custom additions)
-  lines?: { item: string; description?: string; qty: number; unitPrice: number; type: 'software' | 'hardware' | 'service' }[];
+  lines?: {
+    item: string; description?: string; qty: number; unitPrice: number; type: 'software' | 'hardware' | 'service';
+    /** General ledger overrides, both optional. */
+    productGroupId?: string | null; costCenterId?: string | null;
+  }[];
 }
 
 export interface Campaign {
@@ -1390,7 +1398,11 @@ export class CrmStateService {
       source: dto.source ? CrmStateService.PARTNER_SOURCE_FROM_BACKEND[dto.source] : undefined,
       assignedTo: dto.assigned_to_user_id,
       createdBy: dto.created_by,
-      createdAt: dto.created_at ? new Date(dto.created_at).toISOString().split('T')[0] : ''
+      createdAt: dto.created_at ? new Date(dto.created_at).toISOString().split('T')[0] : '',
+      // Posting groups: camelCase per the ledger contract, snake_case like the rest of this DTO.
+      customerGroupId: dto.customerGroupId ?? dto.customer_group_id ?? null,
+      supplierGroupId: dto.supplierGroupId ?? dto.supplier_group_id ?? null,
+      businessGroupId: dto.businessGroupId ?? dto.business_group_id ?? null,
     };
   }
 
@@ -1407,7 +1419,11 @@ export class CrmStateService {
       city: partner.city,
       score: partner.score,
       source: this.leadSourceToPartnerSource(partner.source),
-      assigned_to_user_id: partner.assignedTo || undefined
+      assigned_to_user_id: partner.assignedTo || undefined,
+      // Only sent once known, so a partner saved by a user who never saw the fields keeps its groups.
+      customerGroupId: partner.customerGroupId,
+      supplierGroupId: partner.supplierGroupId,
+      businessGroupId: partner.businessGroupId,
     };
   }
 

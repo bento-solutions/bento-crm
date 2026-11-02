@@ -18,6 +18,8 @@ export interface CatalogProduct {
   isActive?: boolean;
   trackStock?: boolean;
   reorderLevel?: number | null;
+  /** Posting group (general ledger); null = GOODS for stocked products, SERVICES otherwise. */
+  productGroupId?: string | null;
 }
 
 export interface Warehouse {

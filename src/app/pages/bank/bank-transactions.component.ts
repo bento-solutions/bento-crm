@@ -12,6 +12,7 @@ import {
 } from '../../services/domains/bank.service';
 import { amountClass, formatMoney, maskAccountNumber, shortDate } from '../../shared/bank.util';
 import { categoryLabel, errorDetail } from './bank-labels';
+import { LedgerEntryLinkComponent } from '../ledger/ledger-entry-link.component';
 
 const PAGE_SIZE = 50;
 
@@ -27,7 +28,7 @@ interface CategoryForm {
  */
 @Component({
   selector: 'app-bank-transactions',
-  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent, LedgerEntryLinkComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -147,6 +148,12 @@ interface CategoryForm {
               <dt class="text-ink-3">{{ 'bank.tx.balanceAfter' | translate }}</dt><dd class="text-ink num">{{ money(t.balanceAfter) }}</dd>
             }
           </dl>
+
+          <!-- Journal entries the line (categorized) or its payment (matched) posted -->
+          <div class="flex flex-wrap gap-2">
+            <app-ledger-entry-link sourceType="BANK_LINE" [sourceId]="t.id" />
+            @if (t.paymentId) { <app-ledger-entry-link sourceType="PAYMENT" [sourceId]="t.paymentId" /> }
+          </div>
 
           <!-- Reconciliation -->
           @if (t.status === 'UNMATCHED') {

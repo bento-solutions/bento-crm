@@ -10,6 +10,8 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { AttachmentsComponent } from '../shared/attachments.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { Expense, ExpenseSummary, ExpensesApi, PaymentMethod } from '../services/domains/expenses.service';
+import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
 
 interface ExpenseForm {
   id?: string;
@@ -21,6 +23,7 @@ interface ExpenseForm {
   paymentMethod: PaymentMethod;
   vendorName: string;
   reference: string;
+  costCenterId: string | null;
 }
 
 const DEFAULT_CATEGORIES = ['TRAVEL', 'FUEL', 'MEALS', 'OFFICE', 'RENT', 'UTILITIES', 'TELECOM', 'SOFTWARE',
@@ -36,7 +39,7 @@ function isoDate(d: Date): string {
  */
 @Component({
   selector: 'app-finance-expenses',
-  imports: [FormsModule, MatIconModule, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -150,8 +153,15 @@ function isoDate(d: Date): string {
               </select></label>
             <label class="block"><span class="field-label">{{ 'expenses.vendor' | translate }}</span>
               <input class="input-field" maxlength="255" [(ngModel)]="f.vendorName" /></label>
-            <label class="block col-span-2"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
+            <label class="block" [class.col-span-2]="!groups.enabled()"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
               <input class="input-field" maxlength="100" [(ngModel)]="f.reference" /></label>
+            @if (groups.enabled()) {
+              <label class="block"><span class="field-label">{{ 'ledger.costCenter' | translate }}</span>
+                <select class="input-field" [(ngModel)]="f.costCenterId">
+                  <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
+                  @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
+                </select></label>
+            }
           </fieldset>
           <div class="mt-4">
             <span class="field-label">{{ 'expenses.receipt' | translate }}</span>
@@ -162,6 +172,7 @@ function isoDate(d: Date): string {
             }
           </div>
           <div class="modal-footer">
+            @if (f.id) { <div class="me-auto"><app-ledger-entry-link sourceType="EXPENSE" [sourceId]="f.id" /></div> }
             <button class="btn-secondary" (click)="form.set(null)">{{ (f.id ? 'expenses.close' : 'expenses.cancel') | translate }}</button>
             @if (f.id ? canWrite() : canCreate()) {
               <button class="btn-primary" [disabled]="busy() || !valid(f)" (click)="save(f)">{{ 'expenses.save' | translate }}</button>
@@ -178,6 +189,7 @@ export class FinanceExpensesComponent implements OnInit {
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
   private confirm = inject(ConfirmService);
+  groups = inject(LedgerGroupsStore);
 
   readonly methods: PaymentMethod[] = ['CARD', 'CASH', 'BANK_TRANSFER', 'CHECK', 'DIRECT_DEBIT', 'OTHER'];
 
@@ -219,11 +231,12 @@ export class FinanceExpensesComponent implements OnInit {
     this.form.set(e ? {
       id: e.id, expenseDate: e.expenseDate, category: e.category, description: e.description ?? '',
       amount: e.amount, vatAmount: e.vatAmount ?? null, paymentMethod: e.paymentMethod,
-      vendorName: e.vendorName ?? '', reference: e.reference ?? '',
+      vendorName: e.vendorName ?? '', reference: e.reference ?? '', costCenterId: e.costCenterId ?? null,
     } : {
       expenseDate: isoDate(new Date()), category: this.category() || 'OTHER', description: '', amount: null,
-      vatAmount: null, paymentMethod: 'CARD', vendorName: '', reference: '',
+      vatAmount: null, paymentMethod: 'CARD', vendorName: '', reference: '', costCenterId: null,
     });
+    this.groups.ensure(true);
   }
 
   vatTooHigh(f: ExpenseForm): boolean {
@@ -242,6 +255,8 @@ export class FinanceExpensesComponent implements OnInit {
       expenseDate: f.expenseDate, category: f.category, description: f.description.trim() || null,
       amount: f.amount!, vatAmount: f.vatAmount, paymentMethod: f.paymentMethod,
       vendorName: f.vendorName.trim() || null, reference: f.reference.trim() || null,
+      // Sent by everyone (the form starts from the expense's own value): PUT replaces the expense.
+      costCenterId: f.costCenterId,
     }, f.id).subscribe({
       next: saved => {
         this.busy.set(false);

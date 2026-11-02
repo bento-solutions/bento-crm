@@ -13,6 +13,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import {
   CatalogProduct, InventoryApi, MovementType, StockLevel, StockMovement, Valuation, Warehouse,
 } from '../services/domains/inventory.service';
+import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 
 type Tab = 'stock' | 'products' | 'movements' | 'value';
 type MoveKind = 'receive' | 'issue' | 'transfer';
@@ -27,6 +28,8 @@ interface ProductForm {
   vatPercent: number | null;
   trackStock: boolean;
   reorderLevel: number | null;
+  /** Posting group (general ledger); null = GOODS for stocked products, SERVICES otherwise. */
+  productGroupId: string | null;
 }
 
 /**
@@ -249,6 +252,14 @@ interface ProductForm {
               <input type="number" min="0" max="100" step="0.1" class="input-field" [(ngModel)]="f.vatPercent" /></label>
             <label class="block"><span class="field-label">{{ 'inventory.reorderAt' | translate }}</span>
               <input type="number" min="0" step="1" class="input-field" [(ngModel)]="f.reorderLevel" [disabled]="!f.trackStock" /></label>
+            @if (groups.enabled()) {
+              <label class="block col-span-2"><span class="field-label">{{ 'ledger.groups.product' | translate }}</span>
+                <select class="input-field" [(ngModel)]="f.productGroupId">
+                  <option [ngValue]="null">{{ 'ledger.groups.productDefault' | translate }}</option>
+                  @for (g of groups.productGroups(); track g.id) { <option [ngValue]="g.id">{{ g.code }} · {{ g.name }}</option> }
+                </select>
+                <span class="field-hint">{{ 'ledger.groups.productHint' | translate }}</span></label>
+            }
             <div class="col-span-2 flex items-start gap-3 mt-1">
               <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="f.trackStock"
                       [attr.aria-label]="'inventory.trackStock' | translate" (click)="f.trackStock = !f.trackStock"></button>
@@ -359,6 +370,7 @@ export class InventoryComponent implements OnInit {
   private toast = inject(ToastService);
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
+  groups = inject(LedgerGroupsStore);
 
   readonly tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'stock', label: 'inventory.tabStock', icon: 'inventory_2' },
@@ -463,8 +475,9 @@ export class InventoryComponent implements OnInit {
     this.productForm.set(p ? {
       id: p.id, sku: p.sku, name: p.name, category: p.category ?? '', unitPrice: p.unitPrice, costPrice: p.costPrice ?? null,
       vatPercent: p.taxRate !== null && p.taxRate !== undefined ? Math.round(p.taxRate * 1000) / 10 : 20,
-      trackStock: !!p.trackStock, reorderLevel: p.reorderLevel ?? null,
-    } : { sku: '', name: '', category: '', unitPrice: null, costPrice: null, vatPercent: 20, trackStock: true, reorderLevel: null });
+      trackStock: !!p.trackStock, reorderLevel: p.reorderLevel ?? null, productGroupId: p.productGroupId ?? null,
+    } : { sku: '', name: '', category: '', unitPrice: null, costPrice: null, vatPercent: 20, trackStock: true, reorderLevel: null, productGroupId: null });
+    this.groups.ensure();
   }
 
   saveProduct(f: ProductForm): void {
@@ -475,6 +488,8 @@ export class InventoryComponent implements OnInit {
       taxRate: f.vatPercent !== null && f.vatPercent !== undefined ? Number(f.vatPercent) / 100 : null,
       trackStock: f.trackStock, reorderLevel: f.trackStock && f.reorderLevel !== null ? Number(f.reorderLevel) : null,
       isActive: true,
+      // The form starts from the product's own group, so users who do not see the field keep it.
+      productGroupId: f.productGroupId,
     }, f.id).subscribe({
       next: () => this.done('inventory.productSaved', () => this.productForm.set(null)),
       error: e => this.fail(e),

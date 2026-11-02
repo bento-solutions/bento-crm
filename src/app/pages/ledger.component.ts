@@ -11,18 +11,20 @@ import { LedgerEntriesComponent } from './ledger/ledger-entries.component';
 import { LedgerGeneralComponent } from './ledger/ledger-general.component';
 import { LedgerTrialComponent } from './ledger/ledger-trial.component';
 import { LedgerCostCentersComponent } from './ledger/ledger-cost-centers.component';
+import { LedgerSetupComponent } from './ledger/ledger-setup.component';
 
-type Tab = 'accounts' | 'entries' | 'ledger' | 'trial' | 'cost-centers';
-const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers'];
+type Tab = 'accounts' | 'entries' | 'ledger' | 'trial' | 'cost-centers' | 'setup';
+const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', 'setup'];
 
 /**
  * General Ledger: the chart of accounts (PCGE), journal entries, the general ledger, the trial
- * balance and the cost centers.
+ * balance, the cost centers and the posting setup. ?tab=entries&entry=<id> opens one entry (the
+ * "View journal entry" link of invoices, bills, payments and expenses).
  */
 @Component({
   selector: 'app-ledger',
   imports: [MatIconModule, TranslatePipe, PageHeaderComponent, LedgerAccountsComponent, LedgerEntriesComponent,
-    LedgerGeneralComponent, LedgerTrialComponent, LedgerCostCentersComponent],
+    LedgerGeneralComponent, LedgerTrialComponent, LedgerCostCentersComponent, LedgerSetupComponent],
   template: `
     <div class="page">
       <app-page-header [title]="'ledger.title' | translate" [subtitle]="'ledger.subtitle' | translate" />
@@ -37,10 +39,11 @@ const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers'];
 
       @switch (tab()) {
         @case ('accounts') { <app-ledger-accounts /> }
-        @case ('entries') { <app-ledger-entries [openEntryId]="entryId()" /> }
+        @case ('entries') { <app-ledger-entries [openEntryId]="entryId()" (closed)="entryClosed()" /> }
         @case ('ledger') { <app-ledger-general (openEntry)="openEntry($event)" /> }
         @case ('trial') { <app-ledger-trial /> }
         @case ('cost-centers') { <app-ledger-cost-centers /> }
+        @case ('setup') { <app-ledger-setup /> }
       }
     </div>
   `,
@@ -57,6 +60,7 @@ export class LedgerComponent implements OnInit {
     { key: 'ledger', label: 'ledger.tab.ledger', icon: 'menu_book' },
     { key: 'trial', label: 'ledger.tab.trial', icon: 'balance' },
     { key: 'cost-centers', label: 'ledger.tab.costCenters', icon: 'hub' },
+    { key: 'setup', label: 'ledger.tab.setup', icon: 'tune' },
   ];
 
   tab = signal<Tab>('accounts');
@@ -72,9 +76,12 @@ export class LedgerComponent implements OnInit {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
       const q = params.get('tab') as Tab | null;
       const t = q && TABS.includes(q) ? q : 'accounts';
+      const entry = t === 'entries' ? params.get('entry') : null;
       if (t !== this.tab()) {
-        this.entryId.set(null);
+        this.entryId.set(entry);
         this.tab.set(t);
+      } else if (entry && entry !== this.entryId()) {
+        this.entryId.set(entry);
       }
     });
   }
@@ -88,5 +95,13 @@ export class LedgerComponent implements OnInit {
   openEntry(id: string): void {
     this.setTab('entries');
     this.entryId.set(id);
+  }
+
+  /** The entry's panel was closed: drop ?entry= so a reload does not open it again. */
+  entryClosed(): void {
+    this.entryId.set(null);
+    if (this.route.snapshot.queryParamMap.get('entry')) {
+      this.router.navigate([], { queryParams: { entry: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
   }
 }

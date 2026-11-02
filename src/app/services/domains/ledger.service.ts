@@ -98,6 +98,8 @@ export interface EntryFilter {
   partnerId?: string | null;
   costCenterId?: string | null;
   q?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
 }
 
 export interface GeneralLedgerFilter {
@@ -162,6 +164,93 @@ export interface TrialBalance {
   to: string;
   rows?: TrialBalanceRow[] | null;
   totals?: TrialBalanceAmounts | null;
+}
+
+// Posting setup (phase 2): the groups and accounts automatic postings use.
+export type PartnerGroupSide = 'CUSTOMER' | 'SUPPLIER';
+
+export interface PartnerGroup {
+  id: string;
+  code: string;
+  name: string;
+  side: PartnerGroupSide;
+  accountId?: string | null;
+  accountCode?: string | null;
+  isDefault: boolean;
+}
+
+/** A business group (MAROC, EXPORT…) or a product group (GOODS, SERVICES…). */
+export interface PostingGroup {
+  id: string;
+  code: string;
+  name: string;
+  isDefault: boolean;
+}
+
+/** One cell of the general setup: a business group × product group pair. */
+export interface GeneralSetupRow {
+  id: string;
+  businessGroupId: string;
+  productGroupId: string;
+  salesAccountId?: string | null;
+  salesAccountCode?: string | null;
+  purchaseAccountId?: string | null;
+  purchaseAccountCode?: string | null;
+}
+
+export interface VatSetupRow {
+  id: string;
+  code: string;
+  name: string;
+  rate: number;
+  collectedAccountId?: string | null;
+  collectedAccountCode?: string | null;
+  recoverableAccountId?: string | null;
+  recoverableAccountCode?: string | null;
+  exempt: boolean;
+}
+
+export interface BankAccountSetup {
+  bankAccountId: string;
+  bankAccountName: string;
+  accountId?: string | null;
+  accountCode?: string | null;
+}
+
+export interface CategorySetup {
+  category: string;
+  accountId?: string | null;
+  accountCode?: string | null;
+}
+
+export interface PostingSetup {
+  partnerGroups?: PartnerGroup[] | null;
+  businessGroups?: PostingGroup[] | null;
+  productGroups?: PostingGroup[] | null;
+  generalSetup?: GeneralSetupRow[] | null;
+  vatSetup?: VatSetupRow[] | null;
+  bankAccounts?: BankAccountSetup[] | null;
+  cashAccountId?: string | null;
+  cashAccountCode?: string | null;
+  bankCategories?: CategorySetup[] | null;
+  expenseCategories?: CategorySetup[] | null;
+  startDate?: string | null;
+}
+
+/** What posts a document: the source types of automatic entries. */
+export type PostingSourceType = 'INVOICE' | 'BILL' | 'PAYMENT' | 'EXPENSE' | 'BANK_LINE';
+
+export interface RepostError {
+  sourceType: string;
+  sourceId: string;
+  label?: string | null;
+  message?: string | null;
+}
+
+export interface RepostResult {
+  posted: number;
+  skipped: number;
+  errors?: RepostError[] | null;
 }
 
 /** Copies the set, non-blank values of a filter into query parameters. */
@@ -230,6 +319,69 @@ export class LedgerApi extends BaseApiService {
 
   reverseEntry(id: string, body: { entryDate?: string | null; description?: string | null }): Observable<Entry> {
     return this.post(`/ledger/entries/${id}/reverse`, body);
+  }
+
+  /** The live entry a document posted; 404 when it has none (not posted yet, or before the posting start date). */
+  sourceEntry(sourceType: string, sourceId: string): Observable<Entry> {
+    return this.get(`/ledger/source/${encodeURIComponent(sourceType)}/${encodeURIComponent(sourceId)}`);
+  }
+
+  // Posting setup (each write returns the whole setup)
+  postingSetup(): Observable<PostingSetup> {
+    return this.get('/ledger/posting-setup');
+  }
+
+  createPartnerGroup(body: { code: string; name: string; side: PartnerGroupSide; accountId: string }): Observable<PostingSetup> {
+    return this.post('/ledger/posting-setup/partner-groups', body);
+  }
+
+  updatePartnerGroup(id: string, body: { name?: string; accountId?: string; isDefault?: boolean }): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/partner-groups/${id}`, body);
+  }
+
+  deletePartnerGroup(id: string): Observable<PostingSetup> {
+    return this.delete(`/ledger/posting-setup/partner-groups/${id}`);
+  }
+
+  createGroup(kind: 'business-groups' | 'product-groups', body: { code: string; name: string }): Observable<PostingSetup> {
+    return this.post(`/ledger/posting-setup/${kind}`, body);
+  }
+
+  updateGroup(kind: 'business-groups' | 'product-groups', id: string, body: { name?: string; isDefault?: boolean }): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/${kind}/${id}`, body);
+  }
+
+  deleteGroup(kind: 'business-groups' | 'product-groups', id: string): Observable<PostingSetup> {
+    return this.delete(`/ledger/posting-setup/${kind}/${id}`);
+  }
+
+  updateGeneralSetup(id: string, body: { salesAccountId: string | null; purchaseAccountId: string | null }): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/general/${id}`, body);
+  }
+
+  updateVatSetup(id: string, body: { collectedAccountId: string | null; recoverableAccountId: string | null }): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/vat/${id}`, body);
+  }
+
+  updateBankSetup(bankAccountId: string, accountId: string): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/bank/${bankAccountId}`, { accountId });
+  }
+
+  updateCashSetup(accountId: string): Observable<PostingSetup> {
+    return this.put('/ledger/posting-setup/cash', { accountId });
+  }
+
+  updateCategorySetup(kind: 'bank-categories' | 'expense-categories', category: string, accountId: string): Observable<PostingSetup> {
+    return this.put(`/ledger/posting-setup/${kind}/${encodeURIComponent(category)}`, { accountId });
+  }
+
+  updateStartDate(startDate: string): Observable<PostingSetup> {
+    return this.put('/ledger/posting-setup/start-date', { startDate });
+  }
+
+  /** Posts every document dated on or after the start date that has no live entry yet (admin). */
+  repost(): Observable<RepostResult> {
+    return this.post('/ledger/repost', {});
   }
 
   // Reports
