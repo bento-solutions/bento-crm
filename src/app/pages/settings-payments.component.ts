@@ -16,39 +16,38 @@ import { PaymentProvider, PaymentsApi } from '../services/domains/payments.servi
   selector: 'app-settings-payments',
   imports: [MatIconModule, TranslatePipe, PageHeaderComponent],
   template: `
-    <div class="space-y-6 max-w-3xl">
+    <div class="page max-w-3xl">
       <app-page-header size="section" [title]="'payments.title' | translate" [subtitle]="'payments.subtitle' | translate" />
 
       <section class="card">
         <div class="card-body space-y-5">
           <div role="radiogroup" [attr.aria-label]="'payments.provider' | translate" class="space-y-2">
             @for (p of providers; track p) {
-              <label class="flex items-start gap-3 rounded-lg border border-line p-3"
-                     [class.opacity-50]="!isAvailable(p)">
+              <label class="choice-row" [class.opacity-50]="!isAvailable(p)">
                 <input type="radio" name="provider" class="mt-1" [value]="p" [checked]="provider() === p"
                        [disabled]="!canWrite() || !isAvailable(p)" (change)="provider.set(p)" />
                 <span>
-                  <span class="text-sm font-medium text-ink block">{{ 'payments.provider.' + p | translate }}</span>
-                  <span class="text-xs text-ink-3">{{ (isAvailable(p) ? 'payments.providerHint.' + p : 'payments.unavailable.' + p) | translate }}</span>
+                  <span class="row-title">{{ 'payments.provider.' + p | translate }}</span>
+                  <span class="row-hint">{{ (isAvailable(p) ? 'payments.providerHint.' + p : 'payments.unavailable.' + p) | translate }}</span>
                 </span>
               </label>
             }
           </div>
 
-          <div class="flex items-start gap-3">
-            <button type="button" role="switch" class="switch mt-0.5 shrink-0" [attr.aria-checked]="includeInEmails()"
+          <label class="switch-row" for="payments-in-emails">
+            <button type="button" id="payments-in-emails" role="switch" class="switch" [attr.aria-checked]="includeInEmails()"
                     [disabled]="!canWrite() || provider() === 'NONE'" [attr.aria-label]="'payments.inEmails' | translate"
                     (click)="includeInEmails.set(!includeInEmails())"></button>
             <span>
-              <span class="text-sm font-medium text-ink block">{{ 'payments.inEmails' | translate }}</span>
-              <span class="text-xs text-ink-3">{{ 'payments.inEmailsHint' | translate }}</span>
+              <span class="row-title">{{ 'payments.inEmails' | translate }}</span>
+              <span class="row-hint">{{ 'payments.inEmailsHint' | translate }}</span>
             </span>
-          </div>
+          </label>
 
-          <div class="alert alert-info text-xs">{{ 'payments.howItWorks' | translate }}</div>
+          <div class="alert alert-info">{{ 'payments.howItWorks' | translate }}</div>
         </div>
         @if (canWrite()) {
-          <div class="card-footer flex justify-end">
+          <div class="card-footer">
             <button type="button" class="btn-primary" [disabled]="busy()" (click)="save()">{{ 'payments.save' | translate }}</button>
           </div>
         }

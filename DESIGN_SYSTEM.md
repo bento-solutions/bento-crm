@@ -86,13 +86,15 @@ Material Symbols Outlined (line icons, weight 350, drawn through the `mat-icon` 
 | KPI | `<app-stat-card label value icon tone hint>` inside `.stat-grid` |
 | Empty / zero data | `<app-empty-state icon title text>` (+ projected actions) |
 | Buttons | `.btn-primary` · `.btn-secondary` · `.btn-ghost` · `.btn-danger` · `.btn-danger-soft` · `.btn-icon` (+ `.btn-sm`, `.btn-lg`, `.btn-block`) |
-| Form | `.field-label` + `.input-field` (inputs, selects, textareas) · `.search-field` · `.pill-select` (inline-edit status) · `.choice-row` · `.switch` |
+| Form | `.field` > `.field-label` + `.input-field` (inputs, selects, textareas) + `.field-hint` / `.field-error` · `.search-field` · `.pill-select` (inline-edit status) · `.color-input` |
+| Choices | `.choice-row` (radio or checkbox with a title and hint) · `.switch-row` > `.switch` (on/off with a title and hint) · `.choice-chip` (multi-select pills) · `.row-title` / `.row-hint` for the text inside them |
+| Form actions | `.card-footer` for a one-card form · `.form-actions` for a form spread over several cards (stays in reach while scrolling) |
 | Status | `.badge` + `.badge-success/warning/danger/info/violet/accent/neutral` · `.count-pill` |
-| Section switching | `.tabs` + `.tab` (`is-active`) — pill tabs in a white track, navigation between sections |
+| Section switching | `.tabs` + `.tab` (`is-active`) — underlined tabs, up to about six sections. More than that: `.settings-layout` with `.sub-nav-item` (grouped list on large screens, a jump `<select>` below 1024px) |
 | View switching | `.segmented` + `.segmented__item` — table/board, currency, sub-sections |
 | Filters | `.toolbar` with `.search-field`, selects, `.toolbar__count`, `.toolbar__spacer` |
 | Tables | `.table-card` > `table.data-table` (`.col-actions`, `.col-num`, `.row-empty`, `.cell-title`, `.cell-sub`) |
-| Cards | `.card` (`.card-header` / `.card-title` / `.card-body` / `.card-footer`) |
+| Cards | `.card` (`.card-header` / `.card-title` / `.card-body` / `.card-footer`) · `.list-row` (`__main`, `__actions`) for rows inside a card that wrap on phones · `.code-block` for a value to copy |
 | Banners | `.alert` + `-info/-success/-warning/-danger` |
 | Overlays | `.modal-backdrop` > `.modal modal-sm/md/lg/xl` (`.modal-header`, `.modal-title`, `.modal-footer`); `.drawer`; `.menu` / `.menu-item` |
 | Confirmations | `ConfirmService.ask({ title, message, danger })` — never `confirm()` |

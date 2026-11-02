@@ -11,265 +11,156 @@ import { errorMessage } from '../shared/error-message.util';
 import { MatIconModule } from '@angular/material/icon';
 import { PaginatorComponent } from '../shared/paginator.component';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PaginatorComponent, PageHeaderComponent],
-  styles: [`
-    .panel {
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transition: max-height var(--transition-fast), opacity var(--transition-fast);
-    }
-    .panel.open {
-      max-height: 800px;
-      opacity: 1;
-    }
-  `],
+  imports: [CommonModule, FormsModule, RouterLink, UserAvatarComponent, RoleBadgeComponent, MatIconModule, PaginatorComponent, PageHeaderComponent, EmptyStateComponent],
   template: `
     <div class="page">
       <app-page-header size="section" title="Users" subtitle="Invite teammates, assign roles and manage account access">
         @if (canWrite()) {
           <button actions (click)="openAddPanel()" class="btn-primary">
             <mat-icon>mail</mat-icon>
-            Invite User
+            Invite user
           </button>
         }
       </app-page-header>
 
       <!-- Add/Edit User Panel (Inline) -->
-      <div [class.open]="showAddPanel()" class="panel card">
-        <div class="p-5 space-y-4">
-          <h3 class="card-title">
-            {{ panelTitle() }}
-          </h3>
-          @if (!editingUser() && !editingInvitation()) {
-            <p class="text-meta text-ink-3 -mt-2 leading-relaxed">
-              We'll email an invitation link. The role and team you pick here are applied the
-              moment they accept — they set their own password and never receive one from us.
-            </p>
-          }
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Display Name -->
-            <div>
-              <label for="display_name" class="field-label mb-1.5">
-                Display Name{{ isInviteMode() ? '' : ' *' }}
-              </label>
-              <input id="display_name"
-                [(ngModel)]="formDisplayName"
-                type="text"
-                placeholder="e.g. Amina Alaoui"
-                class="input-field w-full"
-              />
-            </div>
-
-            <!-- Email -->
-            <div>
-              <label for="email_address" class="field-label mb-1.5">Email address *</label>
-              <input id="email_address"
-                [(ngModel)]="formEmail"
-                [disabled]="!!editingUser() || !!editingInvitation()"
-                type="email"
-                placeholder="e.g. a.alaoui@acg.ma"
-                class="input-field w-full"
-              />
-            </div>
-
-            <!-- Job Title -->
-            <div>
-              <label for="job_title" class="field-label mb-1.5">Job Title</label>
-              <input id="job_title"
-                [(ngModel)]="formJobTitle"
-                type="text"
-                placeholder="e.g. Accountant Specialist"
-                class="input-field w-full"
-              />
-            </div>
-
-            <!-- Phone. Hidden when inviting: an invitation carries no phone number -- the
-                 invitee supplies their own on the acceptance form -- so a value typed here
-                 would be silently discarded. -->
-            <div [hidden]="isInviteMode()">
-              <label for="phone_number" class="field-label mb-1.5">Phone number</label>
-              <input id="phone_number"
-                [(ngModel)]="formPhone"
-                type="text"
-                placeholder="e.g. +212-661-234567"
-                class="input-field w-full"
-              />
-            </div>
-
-            <!-- Role Dropdown -->
-            <div>
-              <label for="system_role" class="field-label mb-1.5">System Role</label>
-              <select id="system_role"
-                [(ngModel)]="formRoleId"
-                class="input-field w-full cursor-pointer font-semibold"
-              >
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="salesperson">Sales (Salesperson)</option>
-                <option value="support">Support</option>
-                <option value="viewer">Viewer</option>
-              </select>
-            </div>
-
-            <!-- Team Dropdown -->
-            <div>
-              <label for="team_assignment" class="field-label mb-1.5">Team Assignment</label>
-              <select id="team_assignment"
-                [(ngModel)]="formTeamId"
-                class="input-field w-full cursor-pointer font-semibold"
-              >
-                <option value="">Unassigned</option>
-                @for (team of state.teams(); track team.id) {
-                  <option [value]="team.id">{{ team.name }} ({{ team.department }})</option>
-                }
-              </select>
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-2 pt-2 border-t border-line-soft">
-            <button
-              (click)="closeAddPanel()"
-              class="btn-secondary btn-sm"
-            >
-              Cancel
-            </button>
-            <button
-              (click)="saveUser()"
-              [disabled]="!canSubmit()"
-              class="btn-primary btn-sm"
-            >
-              {{ submitLabel() }}
-            </button>
+      @if (showAddPanel()) {
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">{{ panelTitle() }}</h3>
+            @if (!editingUser() && !editingInvitation()) {
+              <p class="row-hint">
+                We'll email an invitation link. The role and team you pick here are applied the
+                moment they accept — they set their own password and never receive one from us.
+              </p>
+            }
           </div>
         </div>
-      </div>
+
+        <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="field">
+            <span class="field-label">Display name{{ isInviteMode() ? '' : ' *' }}</span>
+            <input [(ngModel)]="formDisplayName" type="text" placeholder="e.g. Amina Alaoui" class="input-field" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Email address *</span>
+            <input
+              [(ngModel)]="formEmail"
+              [disabled]="!!editingUser() || !!editingInvitation()"
+              type="email"
+              placeholder="e.g. a.alaoui@acg.ma"
+              class="input-field"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Job title</span>
+            <input [(ngModel)]="formJobTitle" type="text" placeholder="e.g. Accountant specialist" class="input-field" />
+          </label>
+
+          <!-- Phone. Hidden when inviting: an invitation carries no phone number -- the
+               invitee supplies their own on the acceptance form -- so a value typed here
+               would be silently discarded. -->
+          @if (!isInviteMode()) {
+            <label class="field">
+              <span class="field-label">Phone number</span>
+              <input [(ngModel)]="formPhone" type="text" placeholder="e.g. +212-661-234567" class="input-field" />
+            </label>
+          }
+
+          <label class="field">
+            <span class="field-label">System role</span>
+            <select [(ngModel)]="formRoleId" class="input-field">
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="salesperson">Sales (Salesperson)</option>
+              <option value="support">Support</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Team assignment</span>
+            <select [(ngModel)]="formTeamId" class="input-field">
+              <option value="">Unassigned</option>
+              @for (team of state.teams(); track team.id) {
+                <option [value]="team.id">{{ team.name }} ({{ team.department }})</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="card-footer">
+          <button (click)="closeAddPanel()" class="btn-secondary">Cancel</button>
+          <button (click)="saveUser()" [disabled]="!canSubmit()" class="btn-primary">{{ submitLabel() }}</button>
+        </div>
+      </section>
+      }
 
       <!-- Pending invitations. Only rendered when there are any, so an organization that
            never invites anyone doesn't carry a permanently empty table. -->
       @if (canRead() && visibleInvitations().length > 0) {
         <div class="card overflow-hidden">
-          <div class="card-header">
+          <div class="card-header flex-wrap">
             <div class="flex items-center gap-2">
-              <mat-icon class="text-ink-3 icon-sm">mail</mat-icon>
               <h3 class="card-title">Invitations</h3>
               <span class="badge badge-neutral">
                 {{ pendingCount() }} pending
               </span>
             </div>
             <label for="show_resolved_invites" class="inline-flex items-center gap-2 cursor-pointer select-none">
-              <input id="show_resolved_invites"
-        type="checkbox"
-        [(ngModel)]="showResolvedInvitations"
-        
-       />
-              <span class="text-xs font-semibold text-ink-2">Show accepted &amp; revoked</span>
+              <input id="show_resolved_invites" type="checkbox" [(ngModel)]="showResolvedInvitations" />
+              <span class="text-xs text-ink-2">Show accepted and revoked</span>
             </label>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Pre-assigned role</th>
-                  <th>Team</th>
-                  <th>Status</th>
-                  <th>Invited by</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (invite of visibleInvitations(); track invite.id) {
-                  <tr>
-                    <td class="whitespace-nowrap">
-                      <span class="text-xs text-ink font-medium font-mono block">{{ invite.email }}</span>
-                      @if (invite.display_name) {
-                        <span class="text-meta text-ink-3 block font-medium mt-0.5">{{ invite.display_name }}</span>
-                      }
-                    </td>
+          @for (invite of visibleInvitations(); track invite.id) {
+            <div class="list-row">
+              <div class="list-row__main">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="row-title t-mono break-all">{{ invite.email }}</span>
+                  <app-role-badge [roleId]="roleIdOf(invite)"></app-role-badge>
+                  <span [class]="invitationStatusClass(invite.status)" class="badge">
+                    {{ invitationStatusLabel(invite.status) }}
+                  </span>
+                </div>
+                <span class="row-hint">
+                  @if (invite.display_name) { {{ invite.display_name }} · }
+                  @if (invite.team_id) { {{ getTeamName(invite.team_id) }} · }
+                  {{ invitationSubtext(invite) }}
+                  @if (invite.invited_by_name) { · Invited by {{ invite.invited_by_name }} }
+                </span>
+              </div>
 
-                    <td class="whitespace-nowrap">
-                      <app-role-badge [roleId]="roleIdOf(invite)"></app-role-badge>
-                    </td>
-
-                    <td class="whitespace-nowrap text-ink-2">
-                      {{ getTeamName(invite.team_id) }}
-                    </td>
-
-                    <td class="whitespace-nowrap">
-                      <div class="flex flex-col gap-1">
-                        <span [class]="invitationStatusClass(invite.status)"
-                          class="badge w-fit">
-                          {{ invitationStatusLabel(invite.status) }}
-                        </span>
-                        <span class="text-meta text-ink-3 font-medium">{{ invitationSubtext(invite) }}</span>
-                      </div>
-                    </td>
-
-                    <td class="whitespace-nowrap text-ink-2">
-                      {{ invite.invited_by_name || '—' }}
-                    </td>
-
-                    <td class="whitespace-nowrap text-right">
-                      @if (canWrite() && isOutstanding(invite)) {
-                        <div class="flex items-center justify-end gap-2">
-                          <button
-                            (click)="copyInvitationLink(invite)"
-                            title="Copy invitation link"
-                            class="btn-secondary btn-sm"
-                          >
-                            <mat-icon class="icon-xs">content_copy</mat-icon>
-                            {{ copiedInviteId() === invite.id ? 'Copied' : 'Copy link' }}
-                          </button>
-                          <button
-                            (click)="editInvitation(invite)"
-                            class="btn-secondary btn-sm"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            (click)="resendInvitation(invite.id)"
-                            class="btn-secondary btn-sm"
-                          >
-                            Resend
-                          </button>
-                          @if (revokeConfirmId() === invite.id) {
-                            <button
-                              (click)="executeRevoke(invite.id)"
-                              class="btn-primary btn-sm"
-                            >
-                              Confirm revoke
-                            </button>
-                            <button
-                              (click)="revokeConfirmId.set(null)"
-                              class="text-ink-3 hover:text-ink-2 px-1 text-meta font-semibold cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          } @else {
-                            <button
-                              (click)="revokeConfirmId.set(invite.id)"
-                              class="btn-secondary btn-sm"
-                            >
-                              Revoke
-                            </button>
-                          }
-                        </div>
-                      } @else {
-                        <span class="text-meta text-ink-4 font-semibold">—</span>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+              @if (canWrite() && isOutstanding(invite)) {
+                <div class="list-row__actions">
+                  <button
+                    (click)="copyInvitationLink(invite)"
+                    title="Copy invitation link"
+                    class="btn-secondary btn-sm"
+                  >
+                    <mat-icon class="icon-xs">content_copy</mat-icon>
+                    {{ copiedInviteId() === invite.id ? 'Copied' : 'Copy link' }}
+                  </button>
+                  <button (click)="editInvitation(invite)" class="btn-ghost btn-sm">Edit</button>
+                  <button (click)="resendInvitation(invite.id)" class="btn-ghost btn-sm">Resend</button>
+                  @if (revokeConfirmId() === invite.id) {
+                    <button (click)="executeRevoke(invite.id)" class="btn-danger btn-sm">Confirm revoke</button>
+                    <button (click)="revokeConfirmId.set(null)" class="btn-ghost btn-sm">Cancel</button>
+                  } @else {
+                    <button (click)="revokeConfirmId.set(invite.id)" class="btn-ghost btn-sm">Revoke</button>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
       }
 
@@ -280,7 +171,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <input [(ngModel)]="searchTerm" type="search" placeholder="Search by name or email…" aria-label="Search users" class="input-field" />
         </label>
         <select [(ngModel)]="selectedRole" class="input-field" aria-label="Filter by role">
-          <option value="all">All Roles</option>
+          <option value="all">All roles</option>
           <option value="admin">Admin</option>
           <option value="manager">Manager</option>
           <option value="salesperson">Sales</option>
@@ -288,7 +179,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
           <option value="viewer">Viewer</option>
         </select>
         <select [(ngModel)]="selectedTeam" class="input-field" aria-label="Filter by team">
-          <option value="all">All Teams</option>
+          <option value="all">All teams</option>
           <option value="unassigned">Unassigned</option>
           @for (t of state.teams(); track t.id) {
             <option [value]="t.id">{{ t.name }}</option>
@@ -296,21 +187,21 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
         </select>
         <label for="label_6" class="inline-flex items-center gap-2 cursor-pointer select-none toolbar__spacer">
           <input id="label_6" type="checkbox" [(ngModel)]="showInactive" />
-          <span class="text-xs font-medium text-ink-2">Show inactive accounts</span>
+          <span class="text-xs text-ink-2">Show inactive accounts</span>
         </label>
       </div>
 
       <!-- Table / User List -->
-      <div class="card overflow-x-auto">
+      <div class="table-card">
         <table class="data-table">
           <thead>
             <tr>
-              <th>User details</th>
-              <th>Email</th>
-              <th>System Role</th>
-              <th>Team</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>User</th>
+              <th class="hidden lg:table-cell">Email</th>
+              <th>Role</th>
+              <th class="hidden md:table-cell">Team</th>
+              <th class="hidden sm:table-cell">Status</th>
+              <th class="col-actions"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -318,22 +209,23 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
               <!-- Standard row -->
               <tr>
                 <!-- Avatar + Name -->
-                <td class="whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <a [routerLink]="['/settings/users', user.id]" class="hover:opacity-85 transition-opacity">
-                      <app-user-avatar [userId]="user.id" [size]="36"></app-user-avatar>
+                <td>
+                  <div class="flex items-center gap-3 min-w-0">
+                    <a [routerLink]="['/settings/users', user.id]" class="shrink-0 hover:opacity-85 transition-opacity" tabindex="-1" aria-hidden="true">
+                      <app-user-avatar [userId]="user.id" [size]="32"></app-user-avatar>
                     </a>
-                    <div>
-                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link font-semibold text-xs text-ink hover:text-ink block transition-colors">
+                    <div class="min-w-0">
+                      <a [routerLink]="['/settings/users', user.id]" class="table-name-link cell-title block">
                         {{ user.displayName }}
                       </a>
-                      <span class="text-meta text-ink-3 block font-medium mt-0.5">{{ user.jobTitle || 'No title' }}</span>
+                      <div class="cell-sub lg:hidden break-all">{{ user.email }}</div>
+                      <div class="cell-sub hidden lg:block">{{ user.jobTitle || 'No title' }}</div>
                     </div>
                   </div>
                 </td>
 
                 <!-- Email -->
-                <td class="whitespace-nowrap text-ink-2 font-mono">
+                <td class="hidden lg:table-cell whitespace-nowrap cell-muted t-mono">
                   {{ user.email }}
                 </td>
 
@@ -356,7 +248,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                         <option value="viewer">Viewer</option>
                       </select>
                       @if (roleErrorUserId() === user.id) {
-                        <p class="text-meta text-ink leading-tight font-medium">{{ roleErrorMessage() }}</p>
+                        <p class="field-error">{{ roleErrorMessage() }}</p>
                       }
                     </div>
                   } @else {
@@ -365,14 +257,14 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                 </td>
 
                 <!-- Team -->
-                <td class="whitespace-nowrap text-ink-2">
+                <td class="hidden md:table-cell whitespace-nowrap cell-muted">
                   {{ getTeamName(user.teamId) }}
                 </td>
 
                 <!-- Status -->
-                <td class="whitespace-nowrap">
+                <td class="hidden sm:table-cell whitespace-nowrap">
                   <span
-                    [class]="user.isActive ? 'badge-success' : 'bg-muted text-ink-3 border-line'"
+                    [class]="user.isActive ? 'badge-success' : 'badge-neutral'"
                     class="badge"
                   >
                     {{ user.isActive ? 'Active' : 'Inactive' }}
@@ -380,7 +272,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                 </td>
 
                 <!-- Actions Menu -->
-                <td class="whitespace-nowrap text-right relative">
+                <td class="col-actions relative">
                   @if (canWrite()) {
                   <button
                     (click)="toggleMenu(user.id, $event)"
@@ -400,14 +292,14 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                         class="menu-item"
                       >
                         <mat-icon class="text-ink-4 icon-sm">edit</mat-icon>
-                        Edit Details
+                        Edit details
                       </button>
                       <button
                         (click)="startRoleEdit(user.id)"
                         class="menu-item"
                       >
                         <mat-icon class="text-ink-4 icon-sm">swap_horiz</mat-icon>
-                        Change Role
+                        Change role
                       </button>
                       @if (user.isActive && user.id !== state.currentUserId()) {
                         <button
@@ -427,14 +319,14 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
               @if (deactivateConfirmUserId() === user.id) {
                 <tr>
                   <td colspan="6" class="border-t border-line">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2 text-ink text-xs font-semibold">
-                        <mat-icon class="text-ink-2 icon-sm">warning</mat-icon>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                      <div class="flex items-center gap-2 text-sm text-ink">
+                        <mat-icon class="text-danger icon-sm">warning</mat-icon>
                         <span>Deactivate {{ user.displayName }}? This cannot be undone.</span>
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div class="flex flex-wrap items-center gap-2">
                         @if (deactivateErrorMessage()) {
-                          <span class="text-meta text-ink font-semibold mr-2">{{ deactivateErrorMessage() }}</span>
+                          <span class="field-error">{{ deactivateErrorMessage() }}</span>
                         }
                         <button
                           (click)="cancelDeactivate()"
@@ -444,9 +336,9 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
                         </button>
                         <button
                           (click)="executeDeactivate(user.id)"
-                          class="btn-primary btn-sm"
+                          class="btn-danger btn-sm"
                         >
-                          Confirm Deactivation
+                          Confirm deactivation
                         </button>
                       </div>
                     </div>
@@ -456,20 +348,10 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
             } @empty {
               <!-- Empty state row -->
               <tr>
-                <td colspan="6" class="text-center">
-                  <div class="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
-                    <div class="w-12 h-12 bg-muted text-ink-3 rounded-full flex items-center justify-center">
-                      <mat-icon class="icon-lg">group_off</mat-icon>
-                    </div>
-                    <p class="text-xs font-semibold text-ink">No users match your filters</p>
-                    <p class="text-meta text-ink-3">Try adjusting your filters, query string or toggle settings to locate the user.</p>
-                    <button
-                      (click)="clearFilters()"
-                      class="bg-muted text-ink hover:bg-muted-strong border border-line px-3 py-1.5 rounded-lg text-meta font-semibold transition-colors cursor-pointer"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
+                <td colspan="6" class="row-empty">
+                  <app-empty-state icon="group_off" title="No users match your filters" text="Try adjusting your filters or search to locate the user.">
+                    <button (click)="clearFilters()" class="btn-secondary btn-sm">Clear filters</button>
+                  </app-empty-state>
                 </td>
               </tr>
             }
@@ -666,7 +548,7 @@ export class UsersComponent {
   }
 
   panelTitle(): string {
-    if (this.editingUser()) return 'Edit User details';
+    if (this.editingUser()) return 'Edit user details';
     if (this.editingInvitation()) return 'Edit pending invitation';
     return 'Invite a user by email';
   }

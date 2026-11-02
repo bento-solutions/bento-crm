@@ -1449,7 +1449,8 @@ export class CrmStateService {
     this.api.getGroups().subscribe({
       next: (groups) => {
         if (groups && groups.length > 0) {
-          this.groups.set(groups);
+          // The API sends no member list, and the screens read it unguarded.
+          this.groups.set(groups.map((g: CrmGroup) => ({ ...g, memberUserIds: g.memberUserIds ?? [] })));
         }
       },
       error: (err) => {

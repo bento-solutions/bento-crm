@@ -582,6 +582,8 @@ mat-icon.mat-icon { color: revert-layer; }
 .icon-chip .mat-icon, .tone-icon .mat-icon { color: inherit; }
 .tab .mat-icon { color: var(--color-text-tertiary); }
 .tab.is-active .mat-icon, .tab[aria-selected='true'] .mat-icon { color: var(--color-primary); }
+.sub-nav-item .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; color: var(--color-text-tertiary); }
+.sub-nav-item:hover .mat-icon, .sub-nav-item.is-active .mat-icon { color: var(--color-text-primary); }
 .search-field > .mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; }
 :where(.btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .btn-danger-soft, .btn-icon) > .mat-icon:not([class*='icon-']) {
   font-size: 16px; width: 16px; height: 16px; line-height: 16px;
@@ -841,6 +843,25 @@ mat-icon.mat-icon { color: revert-layer; }
     background: var(--color-surface-active); color: var(--color-text-primary);
   }
 
+  /* Settings: grouped sections beside the content on large screens, one jump menu below that. */
+  .settings-layout { display: flex; flex-direction: column; gap: var(--section-gap); min-width: 0; }
+  .settings-content { flex: 1 1 auto; min-width: 0; }
+  .settings-content > router-outlet { display: none; }
+  .settings-content > :not(router-outlet) { display: block; min-width: 0; }
+  .settings-nav { display: none; }
+  .settings-nav__group { display: flex; flex-direction: column; gap: 2px; }
+  @media (min-width: 1024px) {
+    .settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+    .settings-jump { display: none; }
+    .settings-nav {
+      position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px;
+      max-height: calc(100dvh - 32px); overflow-y: auto; scrollbar-width: none;
+    }
+    .settings-nav::-webkit-scrollbar { display: none; }
+    .settings-nav .section-label { margin-bottom: 4px; }
+    .settings-nav .sub-nav-item { padding-block: 6px; }
+  }
+
   /* ── Toolbar (search + filters + view switcher) ── */
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .toolbar .input-field:not(.search-field .input-field), .toolbar .select-field, .toolbar select.input-field { width: auto; min-width: 140px; }
@@ -857,6 +878,8 @@ mat-icon.mat-icon { color: revert-layer; }
     border-radius: var(--r-card); box-shadow: var(--shadow-xs);
     overflow-x: auto; max-width: 100%;
   }
+  /* A row's open menu must not be clipped by, or scroll inside, a table with few rows. */
+  .table-card:has(.menu) { overflow: visible; }
   .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
   .data-table > thead > tr > th {
     padding: 10px 12px; text-align: start; white-space: nowrap;
@@ -1161,6 +1184,60 @@ mat-icon.mat-icon { color: revert-layer; }
   }
   .choice-row:hover { border-color: var(--color-border-strong); }
   .choice-row:has(input:checked) { border-color: var(--color-primary); background: var(--color-accent-light); }
+  .choice-row:has(input:disabled) { cursor: not-allowed; }
+
+  /* An on/off setting: the switch, then its title and a one-line explanation. */
+  .switch-row { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+  .switch-row > .switch { margin-top: 2px; }
+  .switch-row:has(.switch:disabled) { cursor: not-allowed; }
+
+  /* Title and explanation inside a .choice-row, .switch-row or .list-row. */
+  .row-title { display: block; font-size: 14px; line-height: 1.4; font-weight: 500; color: var(--color-text-primary); }
+  .row-hint { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--color-text-tertiary); }
+
+  /* A multi-select pill: selection is the accent tint, not a row of primary buttons. */
+  .choice-chip {
+    display: inline-flex; align-items: center; height: var(--control-height-sm); padding-inline: 10px;
+    font-family: inherit; font-size: 12px; font-weight: 500; line-height: 1; white-space: nowrap;
+    color: var(--color-text-secondary); background: var(--color-surface);
+    border: 1px solid var(--color-border-strong); border-radius: var(--r-control); cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  }
+  .choice-chip:hover:not(:disabled) { color: var(--color-text-primary); background: var(--color-surface-hover); }
+  .choice-chip[aria-pressed='true'], .choice-chip[aria-pressed='true']:hover:not(:disabled) {
+    background: var(--color-accent-light); border-color: var(--color-accent-border); color: var(--color-accent-text);
+  }
+  .choice-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Rows inside a card: title and meta on one side, actions on the other; wraps on phones. */
+  .list-row {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+    padding: 12px var(--card-padding); border-top: 1px solid var(--color-border-light);
+  }
+  .list-row:first-child { border-top: 0; }
+  .list-row__main { flex: 1 1 200px; min-width: 0; }
+  .list-row__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-inline-start: auto; }
+
+  /* A value to copy: an address, a token, a command. */
+  .code-block {
+    flex: 1 1 auto; min-width: 0; padding: 8px 12px;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.5; word-break: break-all;
+    color: var(--color-text-primary); background: var(--color-subtle);
+    border: 1px solid var(--color-border); border-radius: var(--r-control);
+  }
+
+  .color-input {
+    flex-shrink: 0; width: 44px; height: var(--control-height); padding: 2px; cursor: pointer;
+    background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--r-control);
+  }
+  .color-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* The save row of a long form: stays in reach at the bottom of the screen until the form ends. */
+  .form-actions {
+    position: sticky; bottom: 0; z-index: 5; margin-top: -12px; padding-block: 12px;
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border);
+  }
 
   /* ── Misc ─────────────────────────────────── */
   .kbd {

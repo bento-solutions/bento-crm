@@ -7,6 +7,7 @@ import { CATEGORY_COLORS, CategoriesService, Category, CategoryColor } from '../
 import { CrmStateService } from '../services/crm-state.service';
 import { ToastService } from '../services/toast.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
+import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 import { CategoryPillComponent } from '../shared/ui/category-pill.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 
@@ -17,7 +18,7 @@ import { ConfirmService } from '../shared/ui/confirm.service';
  */
 @Component({
   selector: 'app-settings-categories',
-  imports: [FormsModule, MatIconModule, PageHeaderComponent, CategoryPillComponent],
+  imports: [FormsModule, MatIconModule, PageHeaderComponent, EmptyStateComponent, CategoryPillComponent],
   template: `
     <div class="page max-w-3xl">
       <app-page-header size="section" title="Categories" subtitle="One-word coloured labels that say which product a ticket or task belongs to">
@@ -30,52 +31,61 @@ import { ConfirmService } from '../shared/ui/confirm.service';
       </app-page-header>
 
       @if (editing() !== null) {
-        <section class="card p-5 space-y-4">
-          <div class="flex flex-wrap items-start gap-4">
-            <div class="grow basis-56">
-              <label for="category_name" class="field-label mb-1.5">Name</label>
-              <input id="category_name" class="input-field w-full" maxlength="24" placeholder="e.g. Orthoflow" autocomplete="off"
-                     [ngModel]="name()" (ngModelChange)="name.set($event)" (keydown.enter)="save()" />
-              <p class="text-xs mt-1" [class]="nameError() ? 'text-danger-ink' : 'text-ink-3'">
-                {{ nameError() || 'One word, up to 24 characters.' }}
-              </p>
-            </div>
-            <div>
-              <span class="field-label mb-1.5 block">Colour</span>
-              <div class="flex items-center gap-2" role="radiogroup" aria-label="Colour">
-                @for (c of colors; track c) {
-                  <button type="button" role="radio" class="tone swatch" [attr.data-tone]="c" [attr.aria-checked]="color() === c"
-                          [class.is-selected]="color() === c" [attr.aria-label]="c" [title]="c" (click)="color.set(c)"></button>
-                }
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title">{{ editing() === 'new' ? 'New category' : 'Edit category' }}</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
+              <label class="field grow basis-56">
+                <span class="field-label">Name</span>
+                <input class="input-field" maxlength="24" placeholder="e.g. Orthoflow" autocomplete="off"
+                       [ngModel]="name()" (ngModelChange)="name.set($event)" (keydown.enter)="save()" />
+                <span [class]="nameError() ? 'field-error' : 'field-hint'">
+                  {{ nameError() || 'One word, up to 24 characters.' }}
+                </span>
+              </label>
+              <div class="field">
+                <span class="field-label">Colour</span>
+                <div class="flex flex-wrap items-center gap-2 h-9" role="radiogroup" aria-label="Colour">
+                  @for (c of colors; track c) {
+                    <button type="button" role="radio" class="tone swatch" [attr.data-tone]="c" [attr.aria-checked]="color() === c"
+                            [class.is-selected]="color() === c" [attr.aria-label]="c" [title]="c" (click)="color.set(c)"></button>
+                  }
+                </div>
+              </div>
+              <div class="field">
+                <span class="field-label">Preview</span>
+                <span class="flex items-center h-9">
+                  <span class="category-pill tone" [attr.data-tone]="color()">
+                    <span class="category-pill__dot" aria-hidden="true"></span>
+                    <span class="category-pill__name">{{ name().trim() || 'Category' }}</span>
+                  </span>
+                </span>
               </div>
             </div>
-            <div>
-              <span class="field-label mb-1.5 block">Preview</span>
-              <span class="category-pill tone" [attr.data-tone]="color()">
-                <span class="category-pill__dot" aria-hidden="true"></span>
-                <span class="category-pill__name">{{ name().trim() || 'Category' }}</span>
-              </span>
-            </div>
+
+            @if (serverError()) {
+              <div class="alert alert-danger" role="alert">{{ serverError() }}</div>
+            }
           </div>
-
-          @if (serverError()) {
-            <div class="alert alert-danger" role="alert">{{ serverError() }}</div>
-          }
-
-          <div class="flex gap-2">
+          <div class="card-footer">
+            <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
             <button type="button" class="btn-primary" [disabled]="busy() || !!nameError() || !name().trim()" (click)="save()">
               {{ editing() === 'new' ? 'Create category' : 'Save changes' }}
             </button>
-            <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
           </div>
         </section>
       }
 
-      <section class="card p-5">
-        <h3 class="card-title mb-2">All categories</h3>
+      <section class="card">
+        <div class="card-header">
+          <h3 class="card-title">All categories</h3>
+          <span class="count-pill">{{ categories.categories().length }}</span>
+        </div>
         @for (c of categories.categories(); track c.id) {
-          <div class="border-t border-line-soft first:border-t-0 flex flex-wrap items-center justify-between gap-3 py-3">
-            <div class="flex items-center gap-4 min-w-0">
+          <div class="list-row">
+            <div class="list-row__main flex flex-wrap items-center gap-x-4 gap-y-1">
               <app-category-pill [category]="c" />
               <span class="text-xs text-ink-3">
                 {{ c.ticketCount ?? 0 }} ticket{{ (c.ticketCount ?? 0) === 1 ? '' : 's' }} ·
@@ -83,18 +93,16 @@ import { ConfirmService } from '../shared/ui/confirm.service';
               </span>
             </div>
             @if (canWrite()) {
-              <div class="flex items-center gap-2 shrink-0">
-                <button type="button" class="btn-secondary btn-sm" (click)="startEdit(c)">
-                  <mat-icon class="icon-sm">edit</mat-icon> Edit
-                </button>
-                <button type="button" class="btn-danger-soft btn-sm" (click)="remove(c)">
-                  <mat-icon class="icon-sm">delete</mat-icon> Delete
+              <div class="list-row__actions">
+                <button type="button" class="btn-secondary btn-sm" (click)="startEdit(c)">Edit</button>
+                <button type="button" class="btn-icon btn-sm btn-danger-hover" (click)="remove(c)" title="Delete" [attr.aria-label]="'Delete ' + c.name">
+                  <mat-icon class="icon-sm">delete</mat-icon>
                 </button>
               </div>
             }
           </div>
         } @empty {
-          <p class="text-xs text-ink-3">No categories yet. Create one to start labelling tickets and tasks.</p>
+          <app-empty-state icon="label" title="No categories yet" text="Create one to start labelling tickets and tasks." />
         }
       </section>
     </div>
