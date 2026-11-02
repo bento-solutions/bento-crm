@@ -335,7 +335,8 @@ export interface Customer360View {
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed';
 export type ProposalStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 export type DealStage = 'New' | 'Proposal sent' | 'Confirmed' | 'Awaiting Invoicing' | 'Invoiced' | 'Closed Won' | 'Closed Lost' | ProposalStage;
-export type InvoiceStatus = 'Pending' | 'Paid' | 'Overdue' | 'Draft';
+export type InvoiceStatus = 'Pending' | 'Paid' | 'Overdue' | 'Draft' | 'Credited';
+export type InvoiceKind = 'INVOICE' | 'ADVANCE' | 'CREDIT_NOTE';
 export type CampaignType = 'WhatsApp' | 'SMS' | 'Email';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -929,11 +930,37 @@ export interface Invoice {
   deliveryAddress?: string;   // Full delivery location
   vatNumber?: string;         // VAT registration string
   // Line items (inherited from deal + custom additions)
-  lines?: {
-    item: string; description?: string; qty: number; unitPrice: number; type: 'software' | 'hardware' | 'service';
-    /** General ledger overrides, both optional. */
-    productGroupId?: string | null; costCenterId?: string | null;
-  }[];
+  lines?: InvoiceLineData[];
+  /** General ledger phase 3: a normal invoice, an advance invoice (acompte) or a credit note (avoir). */
+  kind?: InvoiceKind;
+  sourceProposalId?: string;
+  /** Credit notes: the invoice they correct. */
+  creditedInvoiceId?: string;
+  vatBreakdown?: InvoiceVatRow[];
+  /** Final invoices: the advance invoices deducted from them. */
+  advanceDeductions?: AdvanceDeduction[];
+}
+
+export interface InvoiceLineData {
+  item: string; description?: string; qty: number; unitPrice: number; type: 'software' | 'hardware' | 'service';
+  /** General ledger overrides, both optional. */
+  productGroupId?: string | null; costCenterId?: string | null;
+  /** Phase 3: the catalog product, the VAT code and its rate as a fraction (0.20). */
+  productId?: string | null; vatCode?: string | null; vatRate?: number | null;
+}
+
+export interface InvoiceVatRow {
+  vatCode: string;
+  rate: number;
+  base: number;
+  vat: number;
+  mention?: string | null;
+}
+
+export interface AdvanceDeduction {
+  advanceInvoiceId: string;
+  base: number;
+  vat: number;
 }
 
 export interface Campaign {

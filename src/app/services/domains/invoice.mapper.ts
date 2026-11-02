@@ -1,4 +1,4 @@
-import { Invoice, InvoiceStatus } from '../crm-state.service';
+import { AdvanceDeduction, Invoice, InvoiceKind, InvoiceStatus, InvoiceVatRow } from '../crm-state.service';
 
 /**
  * Anti-corruption layer between the invoice API contract and the frontend `Invoice` model.
@@ -32,6 +32,11 @@ export interface InvoiceResponse {
   lines?: Invoice['lines'];
   scheduledPaymentDate?: string | null;
   amountPaid?: number | string | null;
+  kind?: string | null;
+  sourceProposalId?: string | null;
+  creditedInvoiceId?: string | null;
+  vatBreakdown?: InvoiceVatRow[] | null;
+  advanceDeductions?: AdvanceDeduction[] | null;
 }
 
 const TYPE_FROM_API: Record<string, 'Customer' | 'Vendor'> = {
@@ -53,6 +58,7 @@ const STATUS_FROM_API: Record<string, InvoiceStatus> = {
   PARTIALLY_PAID: 'Pending',
   PAID: 'Paid',
   OVERDUE: 'Overdue',
+  CREDITED: 'Credited',
 };
 
 const STATUS_TO_API: Record<InvoiceStatus, string> = {
@@ -60,6 +66,7 @@ const STATUS_TO_API: Record<InvoiceStatus, string> = {
   Pending: 'SENT',
   Paid: 'PAID',
   Overdue: 'OVERDUE',
+  Credited: 'CREDITED',
 };
 
 function statusFromApi(dto: InvoiceResponse): InvoiceStatus {
@@ -74,7 +81,7 @@ function localToday(): string {
 
 /** What is still owed on an invoice: its total minus what has been paid against it. */
 export function remainingAmount(invoice: Invoice): number {
-  if (invoice.status === 'Paid') return 0;
+  if (invoice.status === 'Paid' || invoice.status === 'Credited') return 0;
   return Math.max(0, (invoice.amount || 0) - (invoice.amountPaid || 0));
 }
 
@@ -104,6 +111,11 @@ export function invoiceFromApi(dto: InvoiceResponse): Invoice {
     deliveryAddress: dto.deliveryAddress ?? undefined,
     vatNumber: dto.vatNumber ?? undefined,
     lines: dto.lines ?? undefined,
+    kind: (dto.kind as InvoiceKind | null | undefined) ?? 'INVOICE',
+    sourceProposalId: dto.sourceProposalId ?? undefined,
+    creditedInvoiceId: dto.creditedInvoiceId ?? undefined,
+    vatBreakdown: (dto.vatBreakdown ?? undefined)?.map(r => ({ ...r, rate: Number(r.rate), base: Number(r.base), vat: Number(r.vat) })),
+    advanceDeductions: dto.advanceDeductions ?? undefined,
   };
 }
 
@@ -133,5 +145,7 @@ export function invoiceToApi(invoice: Partial<Invoice>): Record<string, unknown>
   if (invoice.deliveryAddress !== undefined) payload['deliveryAddress'] = invoice.deliveryAddress;
   if (invoice.vatNumber !== undefined) payload['vatNumber'] = invoice.vatNumber;
   if (invoice.lines !== undefined) payload['lines'] = invoice.lines;
+  if (invoice.kind !== undefined && invoice.kind !== 'INVOICE') payload['kind'] = invoice.kind;
+  if (invoice.advanceDeductions !== undefined) payload['advanceDeductions'] = invoice.advanceDeductions;
   return payload;
 }

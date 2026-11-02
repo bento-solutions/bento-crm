@@ -20,6 +20,8 @@ export interface CatalogProduct {
   reorderLevel?: number | null;
   /** Posting group (general ledger); null = GOODS for stocked products, SERVICES otherwise. */
   productGroupId?: string | null;
+  /** Phase 3: the product's VAT code; null = its product group's code. taxRate follows it on save. */
+  vatCode?: string | null;
 }
 
 export interface Warehouse {

@@ -9,7 +9,7 @@ import { CrmStateService } from '../../services/crm-state.service';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ConfirmService } from '../../shared/ui/confirm.service';
 import {
-  GeneralSetupRow, LedgerAccount, LedgerApi, PartnerGroup, PartnerGroupSide, PostingGroup, PostingSetup, RepostResult, VatSetupRow,
+  BankPostingMode, GeneralSetupRow, LedgerAccount, LedgerApi, PartnerGroup, PartnerGroupSide, PostingGroup, PostingSetup, RepostResult, VatRule, VatSetupRow,
 } from '../../services/domains/ledger.service';
 import { LedgerGroupsStore } from '../../services/domains/ledger-groups.store';
 import { shortDate } from '../../shared/bank.util';
@@ -167,6 +167,7 @@ interface GroupForm {
                       <thead><tr>
                         <th>{{ 'ledger.code' | translate }}</th>
                         <th>{{ 'ledger.setup.name' | translate }}</th>
+                        <th>{{ (k === 'product-groups' ? 'ledger.setup.vatCode' : 'ledger.setup.vatRule') | translate }}</th>
                         <th class="col-actions"></th>
                       </tr></thead>
                       <tbody>
@@ -175,6 +176,29 @@ interface GroupForm {
                             <td class="num cell-title whitespace-nowrap">{{ g.code }}
                               @if (g.isDefault) { <span class="badge badge-accent ms-1">{{ 'ledger.setup.default' | translate }}</span> }</td>
                             <td class="min-w-32 text-ink">{{ g.name }}</td>
+                            <td class="min-w-40">
+                              @if (k === 'product-groups') {
+                                <select class="input-field" [disabled]="!canWrite() || busy()" [attr.aria-label]="('ledger.setup.vatCode' | translate) + ' · ' + g.code"
+                                        [ngModel]="g.vatCode ?? null" (ngModelChange)="setGroupVat(k, g, { vatCode: $event })">
+                                  <option [ngValue]="null">{{ 'ledger.setup.vatCodeDefault' | translate }}</option>
+                                  @for (c of vatCodes(); track c.code) { <option [ngValue]="c.code">{{ vatLabel(c.code) }}</option> }
+                                </select>
+                              } @else {
+                                <div class="flex flex-wrap gap-2">
+                                  <select class="input-field w-auto" [disabled]="!canWrite() || busy()" [attr.aria-label]="('ledger.setup.vatRule' | translate) + ' · ' + g.code"
+                                          [ngModel]="g.vatRule ?? 'STANDARD'" (ngModelChange)="setGroupVat(k, g, { vatRule: $event, exemptVatCode: $event === 'EXEMPT' ? (g.exemptVatCode ?? firstExemptCode()) : null })">
+                                    <option value="STANDARD">{{ 'ledger.setup.vatRule.STANDARD' | translate }}</option>
+                                    <option value="EXEMPT">{{ 'ledger.setup.vatRule.EXEMPT' | translate }}</option>
+                                  </select>
+                                  @if (g.vatRule === 'EXEMPT') {
+                                    <select class="input-field w-auto" [disabled]="!canWrite() || busy()" [attr.aria-label]="('ledger.setup.exemptVatCode' | translate) + ' · ' + g.code"
+                                            [ngModel]="g.exemptVatCode ?? null" (ngModelChange)="setGroupVat(k, g, { vatRule: 'EXEMPT', exemptVatCode: $event })">
+                                      @for (c of vatCodes(); track c.code) { <option [ngValue]="c.code">{{ vatLabel(c.code) }}</option> }
+                                    </select>
+                                  }
+                                </div>
+                              }
+                            </td>
                             <td class="col-actions whitespace-nowrap">
                               @if (canWrite()) {
                                 <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="editGroup(k, g)">{{ 'ledger.rename' | translate }}</button>
@@ -186,7 +210,7 @@ interface GroupForm {
                             </td>
                           </tr>
                         } @empty {
-                          <tr><td colspan="3" class="row-empty text-sm text-ink-3">{{ 'ledger.setup.noGroup' | translate }}</td></tr>
+                          <tr><td colspan="4" class="row-empty text-sm text-ink-3">{{ 'ledger.setup.noGroup' | translate }}</td></tr>
                         }
                       </tbody>
                     </table>
@@ -259,6 +283,7 @@ interface GroupForm {
                     <th class="col-num">{{ 'ledger.setup.rate' | translate }}</th>
                     <th>{{ 'ledger.setup.collected' | translate }}</th>
                     <th>{{ 'ledger.setup.recoverable' | translate }}</th>
+                    <th>{{ 'ledger.setup.mention' | translate }}</th>
                   </tr></thead>
                   <tbody>
                     @for (v of s.vatSetup ?? []; track v.id) {
@@ -281,9 +306,14 @@ interface GroupForm {
                                                [ariaLabel]="('ledger.setup.recoverable' | translate) + ' · ' + v.code" [disabled]="!canWrite() || busy()" />
                           </td>
                         }
+                        <td class="min-w-64">
+                          <input class="input-field" maxlength="255" [disabled]="!canWrite() || busy()" [placeholder]="'ledger.setup.mentionHint' | translate"
+                                 [attr.aria-label]="('ledger.setup.mention' | translate) + ' · ' + v.code"
+                                 [ngModel]="v.mention ?? ''" (change)="setMention(v, $any($event.target).value)" />
+                        </td>
                       </tr>
                     } @empty {
-                      <tr><td colspan="5" class="row-empty text-sm text-ink-3">{{ 'ledger.setup.noVat' | translate }}</td></tr>
+                      <tr><td colspan="6" class="row-empty text-sm text-ink-3">{{ 'ledger.setup.noVat' | translate }}</td></tr>
                     }
                   </tbody>
                 </table>
@@ -292,6 +322,26 @@ interface GroupForm {
           }
 
           @case ('bank') {
+            <div class="card mb-4">
+              <div class="card-body space-y-3">
+                <div>
+                  <h3 class="card-title">{{ 'ledger.setup.bankPosting' | translate }}</h3>
+                  <p class="text-xs text-ink-3">{{ 'ledger.setup.bankPostingHint' | translate }}</p>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" [attr.aria-label]="'ledger.setup.bankPosting' | translate">
+                  @for (m of bankModes; track m) {
+                    <button type="button" role="radio" class="option-card option-card--row text-start" [class.is-selected]="bankMode() === m"
+                            [attr.aria-checked]="bankMode() === m" [disabled]="!canWrite() || busy()" (click)="setBankMode(m)">
+                      <mat-icon class="shrink-0">{{ m === 'ON_VALIDATION' ? 'fact_check' : 'bolt' }}</mat-icon>
+                      <span>
+                        <span class="block">{{ ('ledger.setup.bankMode.' + m) | translate }}</span>
+                        <span class="text-xs font-normal text-ink-3">{{ ('ledger.setup.bankModeHint.' + m) | translate }}</span>
+                      </span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
             <div class="table-card">
               <div class="px-5 py-3 border-b border-line">
                 <h3 class="card-title">{{ 'ledger.setup.bank' | translate }}</h3>
@@ -419,6 +469,7 @@ export class LedgerSetupComponent implements OnInit {
   readonly sides: PartnerGroupSide[] = ['CUSTOMER', 'SUPPLIER'];
   readonly groupKinds: GroupKind[] = ['business-groups', 'product-groups'];
   readonly categoryKinds: ('bank-categories' | 'expense-categories')[] = ['bank-categories', 'expense-categories'];
+  readonly bankModes: BankPostingMode[] = ['ON_VALIDATION', 'ON_IMPORT'];
 
   setup = signal<PostingSetup | null>(null);
   accounts = signal<LedgerAccount[]>([]);
@@ -435,6 +486,9 @@ export class LedgerSetupComponent implements OnInit {
     for (const r of this.setup()?.generalSetup ?? []) m.set(`${r.businessGroupId}|${r.productGroupId}`, r);
     return m;
   });
+
+  vatCodes = computed(() => this.setup()?.vatSetup ?? []);
+  bankMode = computed<BankPostingMode>(() => this.setup()?.bankPostingMode ?? 'ON_VALIDATION');
 
   canWrite(): boolean { return this.state.hasAuthority('LEDGER_WRITE'); }
   canClose(): boolean { return this.state.hasAuthority('LEDGER_CLOSE'); }
@@ -487,6 +541,38 @@ export class LedgerSetupComponent implements OnInit {
     const next = { collectedAccountId: v.collectedAccountId ?? null, recoverableAccountId: v.recoverableAccountId ?? null, ...patch };
     if (next.collectedAccountId === (v.collectedAccountId ?? null) && next.recoverableAccountId === (v.recoverableAccountId ?? null)) return;
     this.write(this.api.updateVatSetup(v.id, next));
+  }
+
+  setMention(v: VatSetupRow, value: string): void {
+    const mention = value.trim() || null;
+    if (mention === (v.mention ?? null)) return;
+    this.write(this.api.updateVatSetup(v.id, {
+      collectedAccountId: v.collectedAccountId ?? null, recoverableAccountId: v.recoverableAccountId ?? null, mention,
+    }));
+  }
+
+  setGroupVat(kind: GroupKind, g: PostingGroup, patch: { vatCode?: string | null; vatRule?: VatRule; exemptVatCode?: string | null }): void {
+    if (kind === 'product-groups') {
+      if ((patch.vatCode ?? null) === (g.vatCode ?? null)) return;
+      this.write(this.api.updateGroup(kind, g.id, { vatCode: patch.vatCode ?? null }));
+      return;
+    }
+    const vatRule = patch.vatRule ?? g.vatRule ?? 'STANDARD';
+    const exemptVatCode = vatRule === 'EXEMPT' ? (patch.exemptVatCode ?? g.exemptVatCode ?? null) : null;
+    if (vatRule === (g.vatRule ?? 'STANDARD') && exemptVatCode === (g.exemptVatCode ?? null)) return;
+    this.write(this.api.updateGroup(kind, g.id, { vatRule, exemptVatCode }));
+  }
+
+  /** The code an EXEMPT business group starts with. */
+  firstExemptCode(): string | null {
+    const codes = this.vatCodes();
+    return codes.find(c => c.code === 'EXPORT')?.code ?? codes.find(c => c.exempt)?.code ?? null;
+  }
+
+  vatLabel(code: string): string { return this.store.vatLabel(code); }
+
+  setBankMode(mode: BankPostingMode): void {
+    if (mode !== this.bankMode()) this.write(this.api.updateBankPostingMode(mode));
   }
 
   setBank(bankAccountId: string, accountId: string | null): void {

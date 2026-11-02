@@ -27,12 +27,13 @@ import { StatCardComponent } from '../shared/ui/stat-card.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { ToastService } from '../services/toast.service';
 import { csvCell } from '../shared/csv.util';
+import { AdvancesPanelComponent } from './advances/advances-panel.component';
 
 export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Proposal Sent' | 'Negotiation' | 'Won / Lost';
 
 @Component({
   selector: 'app-sales',
-  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, RouterLink, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, SalesPipelineBoardComponent, TranslatePipe, UserPickerComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent, AdvancesPanelComponent],
   template: `
     <!--
       eslint-disable @angular-eslint/template/label-has-associated-control --
@@ -1700,6 +1701,12 @@ export type SalesStage = 'New Lead' | 'Qualified' | 'Meeting Scheduled' | 'Propo
                       </p>
                     }
                   </div>
+                </div>
+              }
+
+              @if (prop.status !== 'Draft') {
+                <div class="border-t border-line-soft pt-3">
+                  <app-advances-panel [partnerId]="prop.partnerId" [proposalId]="prop.id" [baseAmount]="prop.amount || 0" [sourceLabel]="prop.title" />
                 </div>
               }
 

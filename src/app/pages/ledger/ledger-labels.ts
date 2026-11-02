@@ -29,7 +29,9 @@ export const ACCOUNT_CLASSES = [1, 2, 3, 4, 5, 6, 7, 8];
 /** Where the document behind an automatic entry lives, for the source link; null when it has no screen. */
 export function sourceRoute(s: string | null | undefined): { path: string; query: Record<string, string> } | null {
   switch (s) {
-    case 'INVOICE': return { path: '/finance', query: {} };
+    case 'INVOICE':
+    case 'ADVANCE':
+    case 'CREDIT_NOTE': return { path: '/finance', query: {} };
     case 'BILL': return { path: '/finance', query: { tab: 'Vendor' } };
     case 'EXPENSE': return { path: '/finance', query: { tab: 'Expenses' } };
     case 'BANK_LINE':

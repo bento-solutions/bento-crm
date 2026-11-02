@@ -7,6 +7,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { ApiService } from '../services/api.service';
 import { ClientChecklistsComponent } from './checklists/client-checklists.component';
 import { ClientPortalAccessComponent } from './checklists/client-portal-access.component';
+import { OpenAdvancesComponent } from './advances/open-advances.component';
 import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.component';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 import {
@@ -29,7 +30,7 @@ const JOB_TITLES = [
 
 @Component({
   selector: 'app-customer-card',
-  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent, LedgerPartnerGroupsComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent, LedgerPartnerGroupsComponent, OpenAdvancesComponent],
   template: `
     <div class="page max-w-7xl mx-auto pb-12">
 
@@ -337,6 +338,11 @@ const JOB_TITLES = [
           </table>
         </div>
       </section>
+
+      <!-- General ledger: advance invoices and advance payments not used yet. -->
+      @if (clientId() && isExisting()) {
+        <app-open-advances [partnerId]="clientId()" />
+      }
 
       <!-- Practice: documents asked from this client, and who can sign in to the client portal. -->
       @if (clientId() && (isExisting() || isCustomer()) && state.hasAuthority('PARTNERS_READ')) {

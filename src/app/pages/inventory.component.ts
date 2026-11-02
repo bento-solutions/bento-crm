@@ -14,6 +14,7 @@ import {
   CatalogProduct, InventoryApi, MovementType, StockLevel, StockMovement, Valuation, Warehouse,
 } from '../services/domains/inventory.service';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { determineVatCode, vatCodeForRate, vatFraction } from '../services/domains/vat';
 
 type Tab = 'stock' | 'products' | 'movements' | 'value';
 type MoveKind = 'receive' | 'issue' | 'transfer';
@@ -25,7 +26,8 @@ interface ProductForm {
   category: string;
   unitPrice: number | null;
   costPrice: number | null;
-  vatPercent: number | null;
+  /** null = the product group's code. */
+  vatCode: string | null;
   trackStock: boolean;
   reorderLevel: number | null;
   /** Posting group (general ledger); null = GOODS for stocked products, SERVICES otherwise. */
@@ -142,7 +144,7 @@ interface ProductForm {
                   <td class="cell-muted">{{ p.category || '—' }}</td>
                   <td class="col-num num">{{ money(p.unitPrice) }}</td>
                   <td class="col-num num cell-muted">{{ p.costPrice !== null && p.costPrice !== undefined ? money(p.costPrice) : '—' }}</td>
-                  <td class="col-num num cell-muted">{{ percent(p.taxRate) }}</td>
+                  <td class="col-num num cell-muted">{{ p.vatCode ? groups.vatLabel(p.vatCode) : percent(p.taxRate) }}</td>
                   <td>
                     @if (p.trackStock) { <span class="badge badge-success">{{ 'inventory.tracked' | translate }}</span> }
                     @else { <span class="badge badge-neutral">{{ 'inventory.notTracked' | translate }}</span> }
@@ -248,8 +250,11 @@ interface ProductForm {
               <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.unitPrice" /></label>
             <label class="block"><span class="field-label">{{ 'inventory.cost' | translate }}</span>
               <input type="number" min="0" step="0.01" class="input-field" [(ngModel)]="f.costPrice" /></label>
-            <label class="block"><span class="field-label">{{ 'inventory.vatPercent' | translate }}</span>
-              <input type="number" min="0" max="100" step="0.1" class="input-field" [(ngModel)]="f.vatPercent" /></label>
+            <label class="block"><span class="field-label">{{ 'inventory.vatCode' | translate }}</span>
+              <select class="input-field" [(ngModel)]="f.vatCode">
+                <option [ngValue]="null">{{ 'inventory.vatFromGroup' | translate: { code: groups.vatLabel(groupVatCode(f)) } }}</option>
+                @for (c of groups.vatCodes(); track c.code) { <option [ngValue]="c.code">{{ groups.vatLabel(c.code) }}</option> }
+              </select></label>
             <label class="block"><span class="field-label">{{ 'inventory.reorderAt' | translate }}</span>
               <input type="number" min="0" step="1" class="input-field" [(ngModel)]="f.reorderLevel" [disabled]="!f.trackStock" /></label>
             @if (groups.enabled()) {
@@ -427,6 +432,7 @@ export class InventoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.state.breadcrumbLabel.set(this.i18n.t('inventory.title'));
+    this.groups.ensure();
     this.reload();
   }
 
@@ -474,9 +480,9 @@ export class InventoryComponent implements OnInit {
   openProduct(p?: CatalogProduct): void {
     this.productForm.set(p ? {
       id: p.id, sku: p.sku, name: p.name, category: p.category ?? '', unitPrice: p.unitPrice, costPrice: p.costPrice ?? null,
-      vatPercent: p.taxRate !== null && p.taxRate !== undefined ? Math.round(p.taxRate * 1000) / 10 : 20,
+      vatCode: p.vatCode ?? this.legacyVatCode(p),
       trackStock: !!p.trackStock, reorderLevel: p.reorderLevel ?? null, productGroupId: p.productGroupId ?? null,
-    } : { sku: '', name: '', category: '', unitPrice: null, costPrice: null, vatPercent: 20, trackStock: true, reorderLevel: null, productGroupId: null });
+    } : { sku: '', name: '', category: '', unitPrice: null, costPrice: null, vatCode: null, trackStock: true, reorderLevel: null, productGroupId: null });
     this.groups.ensure();
   }
 
@@ -485,7 +491,9 @@ export class InventoryComponent implements OnInit {
     this.api.saveProduct({
       sku: f.sku.trim(), name: f.name.trim(), category: f.category.trim() || null, unitPrice: Number(f.unitPrice),
       costPrice: f.costPrice !== null && f.costPrice !== undefined ? Number(f.costPrice) : null,
-      taxRate: f.vatPercent !== null && f.vatPercent !== undefined ? Number(f.vatPercent) / 100 : null,
+      vatCode: f.vatCode,
+      // The server keeps taxRate in sync with the code; sent too for the lines that still read it.
+      taxRate: vatFraction(this.groups.vatCodes(), f.vatCode ?? this.groupVatCode(f)),
       trackStock: f.trackStock, reorderLevel: f.trackStock && f.reorderLevel !== null ? Number(f.reorderLevel) : null,
       isActive: true,
       // The form starts from the product's own group, so users who do not see the field keep it.
@@ -597,6 +605,19 @@ export class InventoryComponent implements OnInit {
 
   signed(v: number): string {
     return (v > 0 ? '+' : '') + this.qty(v);
+  }
+
+  /** The code a product without its own gets: its product group's. */
+  groupVatCode(f: { productGroupId: string | null }): string {
+    return determineVatCode(this.groups.vatContext(), { productGroupId: f.productGroupId });
+  }
+
+  /** A product saved before VAT codes: keep its rate when it differs from its group's code. */
+  private legacyVatCode(p: CatalogProduct): string | null {
+    if (p.taxRate === null || p.taxRate === undefined) return null;
+    const codes = this.groups.vatCodes();
+    if (Math.abs(vatFraction(codes, this.groupVatCode({ productGroupId: p.productGroupId ?? null })) - Number(p.taxRate)) < 0.0001) return null;
+    return vatCodeForRate(codes, p.taxRate);
   }
 
   percent(rate: number | null | undefined): string {
