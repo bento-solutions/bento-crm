@@ -18,7 +18,8 @@ import { LedgerCutoffComponent } from './ledger/ledger-cutoff.component';
 import { LedgerPayrollComponent } from './ledger/ledger-payroll.component';
 
 type Tab = 'accounts' | 'entries' | 'ledger' | 'trial' | 'cost-centers' | 'setup' | 'closing' | 'vat' | 'payroll' | 'cutoff';
-const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', 'setup', 'closing', 'vat', 'payroll', 'cutoff'];
+// 'payroll' is built but hidden until its API ships (postponed by the user).
+const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', 'setup', 'closing', 'vat', 'cutoff'];
 
 /**
  * General Ledger: the chart of accounts (PCGE), journal entries, the general ledger, the trial
@@ -72,7 +73,6 @@ export class LedgerComponent implements OnInit {
     { key: 'setup', label: 'ledger.tab.setup', icon: 'tune' },
     { key: 'closing', label: 'ledger.tab.closing', icon: 'event_available' },
     { key: 'vat', label: 'ledger.tab.vat', icon: 'percent' },
-    { key: 'payroll', label: 'ledger.tab.payroll', icon: 'badge' },
     { key: 'cutoff', label: 'ledger.tab.cutoff', icon: 'content_cut' },
   ];
 
