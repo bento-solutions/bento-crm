@@ -813,6 +813,8 @@ export interface Deal {
   stage: DealStage;
   comments?: string;
   proposalId?: string;
+  /** Phase 3C: the missions made for this deal. */
+  missionIds?: string[];
   createdBy?: string;
   createdAt: string;
   orderLines?: ProposalLine[];

@@ -15,20 +15,21 @@ import { LedgerSetupComponent } from './ledger/ledger-setup.component';
 import { LedgerClosingComponent } from './ledger/ledger-closing.component';
 import { LedgerVatComponent } from './ledger/ledger-vat.component';
 import { LedgerCutoffComponent } from './ledger/ledger-cutoff.component';
+import { LedgerPayrollComponent } from './ledger/ledger-payroll.component';
 
-type Tab = 'accounts' | 'entries' | 'ledger' | 'trial' | 'cost-centers' | 'setup' | 'closing' | 'vat' | 'cutoff';
-const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', 'setup', 'closing', 'vat', 'cutoff'];
+type Tab = 'accounts' | 'entries' | 'ledger' | 'trial' | 'cost-centers' | 'setup' | 'closing' | 'vat' | 'payroll' | 'cutoff';
+const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', 'setup', 'closing', 'vat', 'payroll', 'cutoff'];
 
 /**
  * General Ledger: the chart of accounts (PCGE), journal entries, the general ledger, the trial
- * balance, the cost centers, the posting setup, and the closing, VAT and cut-off tabs (phase 3). ?tab=entries&entry=<id> opens one entry (the
+ * balance, the cost centers, the posting setup, and the closing, VAT, payroll and cut-off tabs (phase 3). ?tab=entries&entry=<id> opens one entry (the
  * "View journal entry" link of invoices, bills, payments and expenses).
  */
 @Component({
   selector: 'app-ledger',
   imports: [MatIconModule, TranslatePipe, PageHeaderComponent, LedgerAccountsComponent, LedgerEntriesComponent,
     LedgerGeneralComponent, LedgerTrialComponent, LedgerCostCentersComponent, LedgerSetupComponent,
-    LedgerClosingComponent, LedgerVatComponent, LedgerCutoffComponent],
+    LedgerClosingComponent, LedgerVatComponent, LedgerCutoffComponent, LedgerPayrollComponent],
   template: `
     <div class="page">
       <app-page-header [title]="'ledger.title' | translate" [subtitle]="'ledger.subtitle' | translate" />
@@ -50,6 +51,7 @@ const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'cost-centers', '
         @case ('setup') { <app-ledger-setup /> }
         @case ('closing') { <app-ledger-closing /> }
         @case ('vat') { <app-ledger-vat /> }
+        @case ('payroll') { <app-ledger-payroll /> }
         @case ('cutoff') { <app-ledger-cutoff /> }
       }
     </div>
@@ -70,6 +72,7 @@ export class LedgerComponent implements OnInit {
     { key: 'setup', label: 'ledger.tab.setup', icon: 'tune' },
     { key: 'closing', label: 'ledger.tab.closing', icon: 'event_available' },
     { key: 'vat', label: 'ledger.tab.vat', icon: 'percent' },
+    { key: 'payroll', label: 'ledger.tab.payroll', icon: 'badge' },
     { key: 'cutoff', label: 'ledger.tab.cutoff', icon: 'content_cut' },
   ];
 

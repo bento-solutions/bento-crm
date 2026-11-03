@@ -22,6 +22,8 @@ export interface MissionSummary {
   feeAmount?: number | null;
   assignedUserId?: string | null;
   assignedUserName?: string | null;
+  /** Phase 3C: the deal the mission was made for. */
+  dealId?: string | null;
   deliverables: number;
   delivered: number;
   unbilledDisbursements?: number | null;
@@ -72,6 +74,24 @@ export interface MissionRequest {
   dueDate?: string | null;
   feeAmount?: number | null;
   assignedUserId?: string | null;
+  dealId?: string | null;
+}
+
+export type MissionDocumentType = 'PROPOSAL' | 'DEAL' | 'DELIVERY_NOTE' | 'INVOICE' | 'ADVANCE' | 'BILL' | 'EXPENSE';
+
+/** GET /missions/{id}/summary: what was quoted, invoiced and spent, and the documents behind it. */
+export interface MissionFinancials {
+  missionId: string;
+  dealId?: string | null;
+  proposalId?: string | null;
+  costCenterId?: string | null;
+  quoted?: number | null;
+  invoiced?: number | null;
+  advances?: number | null;
+  costs?: { accountCode: string; accountName?: string | null; amount: number }[] | null;
+  costsTotal?: number | null;
+  margin?: number | null;
+  documents?: { type: MissionDocumentType; id: string; number?: string | null; date?: string | null; amount?: number | null; status?: string | null }[] | null;
 }
 
 export interface DeliverableRequest {
@@ -110,11 +130,21 @@ export interface BillResult {
 /** Client missions, their deliverables and rebillable costs (backend: MissionController). */
 @Injectable({ providedIn: 'root' })
 export class MissionApi extends BaseApiService {
-  list(partnerId?: string | null, status?: MissionStatus | null): Observable<MissionSummary[]> {
+  list(partnerId?: string | null, status?: MissionStatus | null, dealId?: string | null): Observable<MissionSummary[]> {
     const params: Record<string, string> = {};
     if (partnerId) params['partnerId'] = partnerId;
     if (status) params['status'] = status;
+    if (dealId) params['dealId'] = dealId;
     return this.get('/missions', params);
+  }
+
+  /** POST /deals/{id}/mission: a PLANNED mission (and its cost center) from the deal. */
+  createForDeal(dealId: string): Observable<MissionDetail | MissionSummary> {
+    return this.post(`/deals/${dealId}/mission`, {});
+  }
+
+  summary(id: string): Observable<MissionFinancials> {
+    return this.get(`/missions/${id}/summary`);
   }
 
   detail(id: string): Observable<MissionDetail> {

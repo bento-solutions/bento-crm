@@ -42,6 +42,8 @@ export function sourceRoute(s: string | null | undefined): { path: string; query
     case 'VAT_SETTLEMENT': return { path: '/ledger', query: { tab: 'vat' } };
     case 'STOCK_CHANGE':
     case 'YEAR_END': return { path: '/ledger', query: { tab: 'closing' } };
+    case 'PAYROLL': return { path: '/ledger', query: { tab: 'payroll' } };
+    case 'DELIVERY_NOTE': return { path: '/finance/delivery-notes', query: {} };
     case 'CUTOFF':
     case 'CUTOFF_REVERSAL': return { path: '/ledger', query: { tab: 'cutoff' } };
     default: return null;

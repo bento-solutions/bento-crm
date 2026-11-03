@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnInit, computed, inject, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -15,6 +16,7 @@ import {
 import { formatMoney, shortDate } from '../../shared/bank.util';
 import { progressPercent, vatPercent } from '../../shared/practice.util';
 import { errorDetail } from '../bank/bank-labels';
+import { MissionSummaryPanelComponent } from './mission-summary-panel.component';
 
 interface MissionForm {
   id?: string;
@@ -26,6 +28,7 @@ interface MissionForm {
   dueDate: string;
   feeAmount: number | null;
   assignedUserId: string | null;
+  dealId: string | null;
 }
 
 interface DeliverableEdit {
@@ -40,7 +43,7 @@ interface DeliverableEdit {
  */
 @Component({
   selector: 'app-mission-list',
-  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent],
+  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, EmptyStateComponent, MissionSummaryPanelComponent],
   template: `
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
@@ -130,10 +133,20 @@ interface DeliverableEdit {
             <dt class="text-ink-3">{{ 'missions.dueDate' | translate }}</dt><dd class="text-ink" [class.text-danger-ink]="d.mission.overdue">{{ date(d.mission.dueDate) }}</dd>
             <dt class="text-ink-3">{{ 'missions.fee' | translate }}</dt><dd class="text-ink num">{{ d.mission.feeAmount !== null && d.mission.feeAmount !== undefined ? money(d.mission.feeAmount) : '—' }}</dd>
             <dt class="text-ink-3">{{ 'missions.assignedTo' | translate }}</dt><dd class="text-ink">{{ d.mission.assignedUserName || '—' }}</dd>
+            <dt class="text-ink-3">{{ 'missions.deal' | translate }}</dt>
+            <dd class="text-ink">
+              @if (d.mission.dealId) {
+                <a class="text-accent-ink hover:underline inline-flex items-center gap-1" [routerLink]="['/sales/deals', d.mission.dealId]"><mat-icon class="icon-xs">handshake</mat-icon>{{ 'missions.openDeal' | translate }}</a>
+              } @else { — }
+            </dd>
           </dl>
           @if (d.description) {
             <p class="text-sm text-ink-2 whitespace-pre-line break-words">{{ d.description }}</p>
           }
+
+          <div class="border-t border-line pt-4">
+            <app-mission-summary-panel [missionId]="d.mission.id" />
+          </div>
 
           <!-- Deliverables -->
           <section class="space-y-2 border-t border-line pt-4">
@@ -308,6 +321,8 @@ export class MissionListComponent implements OnInit {
 
   /** Asks the page to show the Costs tab for this mission. */
   openCosts = output<DisbursementQuery>();
+  /** A mission to open on arrival (?mission= from a deal page). */
+  openMissionId = input<string | null>(null);
 
   private fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -330,6 +345,13 @@ export class MissionListComponent implements OnInit {
 
   canWrite(): boolean { return this.state.hasAuthority('PARTNERS_WRITE'); }
 
+  constructor() {
+    effect(() => {
+      const id = this.openMissionId();
+      if (id) untracked(() => this.api.detail(id).subscribe({ next: d => this.select(d), error: e => this.fail(e) }));
+    });
+  }
+
   ngOnInit(): void {
     this.drive.contacts('CUSTOMER').subscribe({ next: c => this.clients.set(c), error: () => { /* the filter stays empty */ } });
     this.load();
@@ -348,9 +370,10 @@ export class MissionListComponent implements OnInit {
     this.form.set(m ? {
       id: m.id, partnerId: m.partnerId, name: m.name, description: d?.description ?? '', status: m.status,
       startDate: m.startDate ?? '', dueDate: m.dueDate ?? '', feeAmount: m.feeAmount ?? null, assignedUserId: m.assignedUserId ?? null,
+      dealId: m.dealId ?? null,
     } : {
       partnerId: this.partnerId() || null, name: '', description: '', status: 'PLANNED',
-      startDate: '', dueDate: '', feeAmount: null, assignedUserId: null,
+      startDate: '', dueDate: '', feeAmount: null, assignedUserId: null, dealId: null,
     });
   }
 
@@ -361,6 +384,7 @@ export class MissionListComponent implements OnInit {
       startDate: f.startDate || null, dueDate: f.dueDate || null,
       feeAmount: f.feeAmount !== null && String(f.feeAmount) !== '' ? Number(f.feeAmount) : null,
       assignedUserId: f.assignedUserId,
+      dealId: f.dealId,
     }, f.id).subscribe({
       next: d => {
         this.busy.set(false);

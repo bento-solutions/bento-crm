@@ -10,10 +10,12 @@ import { AttachmentsComponent } from '../shared/attachments.component';
 import { UserPickerComponent } from '../shared/user-picker.component';
 import { ConfirmService } from '../shared/ui/confirm.service';
 import { AdvancesPanelComponent } from './advances/advances-panel.component';
+import { DealMissionsPanelComponent } from './missions/deal-missions-panel.component';
+import { DeliveryNotesPanelComponent } from './delivery-notes/delivery-notes-panel.component';
 
 @Component({
   selector: 'app-deal-detail',
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent, UserPickerComponent, AdvancesPanelComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, CreatedByBadgeComponent, AttachmentsComponent, UserPickerComponent, AdvancesPanelComponent, DealMissionsPanelComponent, DeliveryNotesPanelComponent],
   template: `
     <div class="page max-w-5xl mx-auto">
       <a routerLink="/sales" class="page-back">
@@ -457,6 +459,12 @@ import { AdvancesPanelComponent } from './advances/advances-panel.component';
         <div class="card p-5">
           <app-advances-panel [partnerId]="deal.partnerId" [dealId]="deal.id" [baseAmount]="deal.amount || 0"
                               [sourceLabel]="(deal.dealNumber || deal.title) + ' · ' + getPartnerName(deal.partnerId)" />
+        </div>
+
+        <!-- Mission(s) of this deal, and its delivery slips (phase 3C) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="card p-5"><app-deal-missions-panel [dealId]="deal.id" /></div>
+          <div class="card p-5"><app-delivery-notes-panel [dealId]="deal.id" /></div>
         </div>
 
         <!-- Footer Actions -->

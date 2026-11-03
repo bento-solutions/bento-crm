@@ -550,7 +550,7 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
               -->
               <div class="sm:col-span-2">
                 <label for="partner-select" class="field-label mb-1.5">
-                  Select Customer
+                  {{ newInvoiceData.type === 'Vendor' ? 'Select Supplier' : 'Select Customer' }}
                   @if (invoiceType() === 'Deal') {
                     <span class="badge badge-neutral ml-1"><mat-icon class="icon-xs">lock</mat-icon>Locked by deal</span>
                   }
@@ -564,12 +564,12 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
                   [disabled]="invoiceType() === 'Deal'"
                   [class]="invoiceType() === 'Deal' ? 'bg-subtle text-ink-3 cursor-not-allowed opacity-70' : 'bg-surface focus:ring-2 focus:ring-line-strong'"
                   class="input-field w-full">
-                  <option value="">— Select an existing Customer —</option>
+                  <option value="">{{ newInvoiceData.type === 'Vendor' ? '— Select an existing Supplier —' : '— Select an existing Customer —' }}</option>
                   @for (cust of invoiceEligibleCustomers(); track cust.id) {
                     <option [value]="cust.id">{{ cust.name }}</option>
                   }
                 </select>
-                @if (invoiceEligibleCustomers().length === 0) {
+                @if (invoiceEligibleCustomers().length === 0 && newInvoiceData.type !== 'Vendor') {
                   <p class="text-ink text-xs mt-1 flex items-center gap-1">
                     <mat-icon class="icon-xs">warning</mat-icon>
                     No active Customers found. Convert a Prospect first.
@@ -1119,9 +1119,11 @@ export class FinanceComponent {
 
   // ── Eligible Customers (Prospects blocked) ────────────────────────────────
   /** Only Partners with type === 'Customer' may be invoiced. */
-  invoiceEligibleCustomers = computed(() =>
-    this.state.partners().filter(p => p.type === 'Customer')
-  );
+  /** Customers for an invoice, suppliers for a supplier bill. */
+  invoiceEligibleCustomers() {
+    const type = this.newInvoiceData.type === 'Vendor' ? 'Vendor' : 'Customer';
+    return this.state.partners().filter(p => p.type === type);
+  }
 
   // ── Form State ────────────────────────────────────────────────────────────
   newInvoiceData: {
@@ -1453,7 +1455,7 @@ export class FinanceComponent {
     // Prospect guard (belt-and-suspenders, dropdown is already filtered)
     if (this.newInvoiceData.partnerId) {
       const partner = this.state.partners().find(p => p.id === this.newInvoiceData.partnerId);
-      if (partner && partner.type !== 'Customer') {
+      if (partner && partner.type !== (this.newInvoiceData.type === 'Vendor' ? 'Vendor' : 'Customer')) {
         this.formValidationError.set('Invoices can only be created for verified Customers. Prospects are not eligible.');
         return;
       }
