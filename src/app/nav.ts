@@ -73,6 +73,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Customers', icon: 'storefront', route: '/partners', hint: 'Every customer account', tab: 'Customer' },
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', hint: 'Quotes, invoices and payments received', tab: 'Customer', defaultTab: true },
+      { label: 'Delivery slips', icon: 'local_shipping', route: '/finance/delivery-notes', hint: 'Bons de livraison, delivered and invoiced', authority: 'INVOICES_READ' },
       { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule', tab: 'CUSTOMER', defaultTab: true },
       { label: 'Recovery', icon: 'notifications_active', route: '/finance', hint: 'Overdue invoices and reminders', tab: 'Recovery' },
       { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What customers owe, by age', tab: 'Aging' },
@@ -114,6 +115,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Posting setup', icon: 'tune', route: '/ledger', hint: 'Accounts that invoices, bills, payments and expenses post to', tab: 'setup', authority: 'LEDGER_READ' },
       { label: 'Closing', icon: 'event_available', route: '/ledger', hint: 'Lock date, closing checklist, stock change and year-end', tab: 'closing', authority: 'LEDGER_READ' },
       { label: 'VAT', icon: 'percent', route: '/ledger', hint: 'VAT collected and recoverable per period, and its settlement', tab: 'vat', authority: 'LEDGER_READ' },
+      { label: 'Payroll', icon: 'badge', route: '/ledger', hint: 'Monthly payroll totals and their entry', tab: 'payroll', authority: 'LEDGER_READ' },
       { label: 'Cut-off', icon: 'content_cut', route: '/ledger', hint: 'Accruals and prepayments (FNP, FAE, CCA, PCA) at a date', tab: 'cutoff', authority: 'LEDGER_READ' },
       { label: 'Fixed assets', icon: 'inventory', route: '/assets', hint: 'Assets, depreciation schedules and the register', authority: 'LEDGER_READ' },
       { label: 'Tax calendar', icon: 'event_note', route: '/tax-calendar', hint: 'TVA, IS, IR and CNSS deadlines', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },

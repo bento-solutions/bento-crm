@@ -247,6 +247,8 @@ export interface PostingSetup {
   startDate?: string | null;
   /** Phase 3: bank lines post once validated (default) or as soon as they are imported. */
   bankPostingMode?: BankPostingMode | null;
+  /** Phase 3C: a payroll run exists, so SALARIES and SOCIAL_CHARGES bank lines clear 4432 and 4441. */
+  payrollActive?: boolean | null;
 }
 
 /** What posts a document: the source types of automatic entries. */

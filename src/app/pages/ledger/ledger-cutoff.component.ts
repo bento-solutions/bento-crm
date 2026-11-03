@@ -17,7 +17,7 @@ import {
 } from '../../services/domains/closing.service';
 import { formatMoney, shortDate } from '../../shared/bank.util';
 import { LedgerPickerComponent, PickerOption } from './ledger-picker.component';
-import { errorDetail } from './ledger-labels';
+import { errorDetail, sourceLabel } from './ledger-labels';
 
 interface Row {
   uid: number;
@@ -98,7 +98,9 @@ let nextUid = 0;
                     <td class="min-w-56">
                       <input class="input-field w-full" maxlength="255" [disabled]="!editable()" [ngModel]="r.label" (ngModelChange)="patch(r, { label: $event })"
                              [attr.aria-label]="'ledger.cutoff.label' | translate" />
-                      @if (r.partnerName) { <div class="cell-sub">{{ r.partnerName }}</div> }
+                      @if (r.partnerName || r.sourceType) {
+                        <div class="cell-sub">@if (r.sourceType) { <span class="badge badge-neutral me-1">{{ source(r.sourceType) }}</span> }{{ r.partnerName || '' }}</div>
+                      }
                     </td>
                     <td class="min-w-56">
                       <app-ledger-picker [items]="accountOptions()" [value]="r.accountId" (valueChange)="patch(r, { accountId: $event })"
@@ -283,6 +285,7 @@ export class LedgerCutoffComponent implements OnInit {
   }
 
   money(v: number | null | undefined): string { return formatMoney(v); }
+  source(s: string | null | undefined): string { return sourceLabel(this.i18n, s); }
   fmt(iso: string | null | undefined): string { return iso ? shortDate(iso) : '—'; }
 
   private fail(e: unknown): void {

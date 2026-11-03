@@ -40,6 +40,7 @@ export const routes: Routes = [
   { path: 'tax-calendar', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/tax-calendar.component').then(m => m.TaxCalendarComponent) },
   { path: 'checklists', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/checklists.component').then(m => m.ChecklistsComponent) },
   { path: 'missions', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/missions.component').then(m => m.MissionsComponent) },
+  { path: 'finance/delivery-notes', canActivate: [authGuard, authorityGuard('INVOICES_READ')], loadComponent: () => import('./pages/delivery-notes/delivery-notes.component').then(m => m.DeliveryNotesComponent) },
   { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
   { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },

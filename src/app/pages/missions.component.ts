@@ -32,7 +32,7 @@ const TABS: Tab[] = ['missions', 'costs'];
       </div>
 
       @switch (tab()) {
-        @case ('missions') { <app-mission-list (openCosts)="openCosts($event)" /> }
+        @case ('missions') { <app-mission-list [openMissionId]="missionId()" (openCosts)="openCosts($event)" /> }
         @case ('costs') { <app-mission-costs [initialFilter]="costFilter()" /> }
       }
     </div>
@@ -51,11 +51,14 @@ export class MissionsComponent implements OnInit {
 
   tab = signal<Tab>('missions');
   costFilter = signal<DisbursementQuery | null>(null);
+  /** ?mission=<id>: the mission to open (the deal page links here). */
+  missionId = signal<string | null>(null);
 
   ngOnInit(): void {
     this.state.breadcrumbLabel.set(this.i18n.t('missions.title'));
     const t = this.route.snapshot.queryParamMap.get('tab') as Tab | null;
     if (t && TABS.includes(t)) this.tab.set(t);
+    this.missionId.set(this.route.snapshot.queryParamMap.get('mission'));
   }
 
   setTab(t: Tab): void {
