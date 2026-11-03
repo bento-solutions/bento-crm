@@ -36,6 +36,11 @@ export const routes: Routes = [
   { path: 'm/:key', canActivate: [authGuard], loadComponent: () => import('./pages/module-hub.component').then(m => m.ModuleHubComponent) },
   { path: 'bank', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/bank.component').then(m => m.BankComponent) },
   { path: 'ledger', canActivate: [authGuard, authorityGuard('LEDGER_READ')], loadComponent: () => import('./pages/ledger.component').then(m => m.LedgerComponent) },
+  // General ledger phase 4: customer and supplier balances (Accounts Receivable / Payable) and a partner's statement.
+  { path: 'receivables/balances', canActivate: [authGuard, authorityGuard('LEDGER_READ')], data: { type: 'CUSTOMER' }, loadComponent: () => import('./pages/partner-balances/partner-balances.component').then(m => m.PartnerBalancesComponent) },
+  { path: 'receivables/balances/:partnerId', canActivate: [authGuard, authorityGuard('LEDGER_READ')], data: { type: 'CUSTOMER' }, loadComponent: () => import('./pages/partner-balances/partner-statement-page.component').then(m => m.PartnerStatementPageComponent) },
+  { path: 'payables/balances', canActivate: [authGuard, authorityGuard('LEDGER_READ')], data: { type: 'SUPPLIER' }, loadComponent: () => import('./pages/partner-balances/partner-balances.component').then(m => m.PartnerBalancesComponent) },
+  { path: 'payables/balances/:partnerId', canActivate: [authGuard, authorityGuard('LEDGER_READ')], data: { type: 'SUPPLIER' }, loadComponent: () => import('./pages/partner-balances/partner-statement-page.component').then(m => m.PartnerStatementPageComponent) },
   { path: 'assets', canActivate: [authGuard, authorityGuard('LEDGER_READ')], loadComponent: () => import('./pages/assets/assets.component').then(m => m.AssetsComponent) },
   { path: 'tax-calendar', canActivate: [authGuard, authorityGuard('INVOICES_READ', 'PAYMENTS_READ')], loadComponent: () => import('./pages/tax-calendar.component').then(m => m.TaxCalendarComponent) },
   { path: 'checklists', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/checklists.component').then(m => m.ChecklistsComponent) },

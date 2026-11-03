@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '../../pipes/translate.pipe';
@@ -120,6 +120,8 @@ export class LedgerGeneralComponent implements OnInit {
 
   /** An entry number was clicked: the page opens it in the Journal entries tab. */
   openEntry = output<string>();
+  /** Filters to open with, over the default period (e.g. an account range from the financial statements). */
+  preset = input<Partial<GeneralLedgerFilter> | null>(null);
 
   filter = signal<GeneralLedgerFilter>({ ...defaultPeriod() });
   rangeFrom = signal('');
@@ -138,6 +140,12 @@ export class LedgerGeneralComponent implements OnInit {
     this.state.loadPartners();
     this.api.accounts(true).subscribe({ next: a => this.accounts.set(a ?? []), error: e => this.fail(e) });
     this.api.costCenters(true).subscribe({ next: c => this.costCenters.set(c ?? []), error: () => { /* the filter stays empty */ } });
+    const p = this.preset();
+    if (p) {
+      this.filter.update(f => ({ ...f, ...p }));
+      this.rangeFrom.set(p.accountFrom ?? '');
+      this.rangeTo.set(p.accountTo ?? '');
+    }
     this.load();
   }
 

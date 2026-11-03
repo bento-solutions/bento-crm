@@ -16,10 +16,11 @@ import {
 } from '../../services/domains/closing.service';
 import { formatMoney, shortDate } from '../../shared/bank.util';
 import { errorDetail } from './ledger-labels';
+import { LedgerExportDialogComponent } from './ledger-export-dialog.component';
 
-/** done: the step is posted for the date; todo: it is not; na: nothing to do; unknown: it could not be read. */
-type ItemStatus = 'done' | 'todo' | 'na' | 'unknown';
-type ItemKey = 'bank' | 'depreciation' | 'stock' | 'cutoff' | 'vat';
+/** done: the step is posted for the date; todo: it is not; na: nothing to do; unknown: it could not be read; none: no status (the export). */
+type ItemStatus = 'done' | 'todo' | 'na' | 'unknown' | 'none';
+type ItemKey = 'bank' | 'depreciation' | 'stock' | 'cutoff' | 'vat' | 'export';
 
 interface CheckItem {
   key: ItemKey;
@@ -30,7 +31,7 @@ interface CheckItem {
 }
 
 const ITEM_ICONS: Record<ItemKey, string> = {
-  bank: 'fact_check', depreciation: 'trending_down', stock: 'inventory_2', cutoff: 'content_cut', vat: 'percent',
+  bank: 'fact_check', depreciation: 'trending_down', stock: 'inventory_2', cutoff: 'content_cut', vat: 'percent', export: 'ios_share',
 };
 
 /**
@@ -40,7 +41,7 @@ const ITEM_ICONS: Record<ItemKey, string> = {
  */
 @Component({
   selector: 'app-ledger-closing',
-  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe],
+  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, LedgerExportDialogComponent],
   template: `
     <div class="space-y-6">
       <!-- Settings -->
@@ -95,8 +96,10 @@ const ITEM_ICONS: Record<ItemKey, string> = {
                 <div class="text-sm font-medium text-ink">{{ ('ledger.closing.item.' + it.key) | translate }}</div>
                 <div class="text-xs text-ink-3">{{ ('ledger.closing.itemHint.' + it.key) | translate }}@if (it.detail) { · {{ it.detail }} }</div>
               </div>
-              <span class="badge" [class.badge-success]="it.status === 'done'" [class.badge-warning]="it.status === 'todo'"
-                    [class.badge-neutral]="it.status === 'na' || it.status === 'unknown'">{{ ('ledger.closing.status.' + it.status) | translate }}</span>
+              @if (it.status !== 'none') {
+                <span class="badge" [class.badge-success]="it.status === 'done'" [class.badge-warning]="it.status === 'todo'"
+                      [class.badge-neutral]="it.status === 'na' || it.status === 'unknown'">{{ ('ledger.closing.status.' + it.status) | translate }}</span>
+              }
               @switch (it.key) {
                 @case ('bank') {
                   <a class="btn-secondary btn-sm" routerLink="/bank" [queryParams]="{ tab: 'journal' }">{{ 'ledger.closing.openBankJournal' | translate }}</a>
@@ -116,6 +119,9 @@ const ITEM_ICONS: Record<ItemKey, string> = {
                 }
                 @case ('vat') {
                   <button class="btn-secondary btn-sm" (click)="openTab('vat')">{{ 'ledger.closing.openVat' | translate }}</button>
+                }
+                @case ('export') {
+                  <button class="btn-secondary btn-sm" (click)="exportOpen.set(true)">{{ 'ledger.export.button' | translate }}</button>
                 }
               }
             </li>
@@ -196,6 +202,8 @@ const ITEM_ICONS: Record<ItemKey, string> = {
         </div>
       </section>
     </div>
+
+    @if (exportOpen()) { <app-ledger-export-dialog [date]="checkDate()" (closed)="exportOpen.set(false)" /> }
   `,
 })
 export class LedgerClosingComponent implements OnInit {
@@ -222,6 +230,7 @@ export class LedgerClosingComponent implements OnInit {
   stock = signal<StockChange | null>(null);
   years = signal<FiscalYear[]>([]);
   busy = signal(false);
+  exportOpen = signal(false);
 
   canWrite(): boolean { return this.state.hasAuthority('LEDGER_WRITE'); }
   canClose(): boolean { return this.state.hasAuthority('LEDGER_CLOSE'); }
@@ -310,6 +319,8 @@ export class LedgerClosingComponent implements OnInit {
         { key: 'vat', icon: ITEM_ICONS.vat,
           status: r.vat === null ? 'unknown' : r.vat.settlementEntryId ? 'done' : 'todo',
           detail: `${this.date(period.from)} – ${this.date(period.to)}` },
+        // The last step: hand the period over to the accountant (no status: Bento cannot tell).
+        { key: 'export', icon: ITEM_ICONS.export, status: 'none' },
       ];
       this.items.set(items);
     });

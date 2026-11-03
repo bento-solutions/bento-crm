@@ -77,6 +77,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule', tab: 'CUSTOMER', defaultTab: true },
       { label: 'Recovery', icon: 'notifications_active', route: '/finance', hint: 'Overdue invoices and reminders', tab: 'Recovery' },
       { label: 'Customer aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What customers owe, by age', tab: 'Aging' },
+      { label: 'Customer balances', icon: 'account_balance_wallet', route: '/receivables/balances', hint: 'Balance per customer from the ledger, with aging and statements', authority: 'LEDGER_READ' },
     ]
   },
   {
@@ -88,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Recurring bills', icon: 'event_repeat', route: '/finance/recurring', hint: 'Supplier bills generated on a schedule', tab: 'VENDOR' },
       { label: 'Expenses', icon: 'payments', route: '/finance', hint: 'Expense claims and receipts', tab: 'Expenses', authority: 'PAYMENTS_READ' },
       { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What you owe, by age', tab: 'SupplierAging' },
+      { label: 'Supplier balances', icon: 'account_balance_wallet', route: '/payables/balances', hint: 'Balance per supplier from the ledger, with aging and statements', authority: 'LEDGER_READ' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', hint: 'Bills and receipts received by email', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },
     ]
   },
@@ -111,6 +113,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Journal entries', icon: 'receipt_long', route: '/ledger', hint: 'Post, browse and reverse entries', tab: 'entries', authority: 'LEDGER_READ' },
       { label: 'General ledger', icon: 'menu_book', route: '/ledger', hint: 'Every line per account, with running balance', tab: 'ledger', authority: 'LEDGER_READ' },
       { label: 'Trial balance', icon: 'balance', route: '/ledger', hint: 'Debit and credit per account', tab: 'trial', authority: 'LEDGER_READ' },
+      { label: 'Financial statements', icon: 'account_balance', route: '/ledger', hint: 'Bilan and CPC (CGNC), with the prior year', tab: 'statements', authority: 'LEDGER_READ' },
       { label: 'Cost centers', icon: 'hub', route: '/ledger', hint: 'Analytic codes for entry lines', tab: 'cost-centers', authority: 'LEDGER_READ' },
       { label: 'Posting setup', icon: 'tune', route: '/ledger', hint: 'Accounts that invoices, bills, payments and expenses post to', tab: 'setup', authority: 'LEDGER_READ' },
       { label: 'Closing', icon: 'event_available', route: '/ledger', hint: 'Lock date, closing checklist, stock change and year-end', tab: 'closing', authority: 'LEDGER_READ' },
