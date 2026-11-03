@@ -735,7 +735,9 @@ import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.com
                             {{ partner.name.substring(0, 2).toUpperCase() }}
                           </div>
                           <div class="min-w-0">
-                            @if (partner.type === 'Vendor') {
+                            @if (partner.type === 'Vendor' && state.hasAuthority('LEDGER_READ')) {
+                              <button (click)="openPartnerPrimary(partner)" class="table-name-link text-xs font-semibold text-ink truncate max-w-[160px] block text-left" title="View supplier statement">{{ partner.name }}</button>
+                            } @else if (partner.type === 'Vendor') {
                               <div class="text-xs font-semibold text-ink truncate max-w-[160px]">{{ partner.name }}</div>
                             } @else {
                               <button (click)="openPartnerPrimary(partner)" class="table-name-link text-xs font-semibold text-ink truncate max-w-[160px] block text-left" [title]="partner.type === 'Customer' ? 'View customer card' : 'Convert to customer'">{{ partner.name }}</button>
@@ -1381,10 +1383,11 @@ export class PartnersComponent {
     this.router.navigate(['/partners', partnerId, 'customer-card']);
   }
 
-  /** Table-view name click: same primary destination as the card's main button. Vendors have no detail view. */
+  /** Table-view name click: same primary destination as the card's main button. A vendor opens its ledger statement. */
   openPartnerPrimary(partner: Partner | Lead) {
     if (partner.type === 'Customer') this.openCustomerCard(partner.id);
     else if (partner.type === 'Prospect') this.openConvertModal(partner);
+    else if (partner.type === 'Vendor' && this.state.hasAuthority('LEDGER_READ')) this.router.navigate(['/payables/balances', partner.id]);
   }
 
   getPartnerStatusClass(status?: string): string {

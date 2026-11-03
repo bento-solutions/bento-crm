@@ -1401,3 +1401,26 @@ body.bento-dragging { cursor: grabbing; user-select: none; }
 @media (prefers-reduced-motion: reduce) {
   .bento-tile { transition: none !important; }
 }
+
+/* Chevrons and arrows that point "forward" turn around in Arabic. */
+[dir='rtl'] .rtl-flip { transform: scaleX(-1); }
+
+/* ── Print ────────────────────────────────────
+   Printing a page (the financial statements, a statement) prints its content only: the app
+   shell (sidebar, top bar, overlays) and anything marked .no-print are hidden, and the
+   scrolling containers open up so long tables run over several pages. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { height: auto !important; overflow: visible !important; }
+  .app-sidebar, .content-topbar, .mobile-overlay, app-toast-container, app-assistant-panel,
+  app-notification-inbox-drawer, app-support-modal, .no-print { display: none !important; }
+  .app-layout, .app-content, .content-main {
+    display: block !important; height: auto !important; overflow: visible !important; padding: 0 !important;
+  }
+  .content-main > :not(router-outlet) { max-width: none !important; }
+  .table-card, .card { box-shadow: none !important; }
+  .table-card .overflow-x-auto { overflow: visible !important; }
+  .data-table { font-size: 10pt; }
+  .data-table tr { break-inside: avoid; }
+  .data-table thead { display: table-header-group; }
+}

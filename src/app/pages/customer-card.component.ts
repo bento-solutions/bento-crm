@@ -10,6 +10,8 @@ import { ClientPortalAccessComponent } from './checklists/client-portal-access.c
 import { OpenAdvancesComponent } from './advances/open-advances.component';
 import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.component';
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
+import { PartnerStatementComponent } from './partner-balances/partner-statement.component';
+import type { PartnerSide } from '../services/domains/statements.service';
 import {
   CrmStateService,
   CustomerCard,
@@ -30,7 +32,7 @@ const JOB_TITLES = [
 
 @Component({
   selector: 'app-customer-card',
-  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent, LedgerPartnerGroupsComponent, OpenAdvancesComponent],
+  imports: [MatIconModule, CommonModule, FormsModule, PageHeaderComponent, ClientChecklistsComponent, ClientPortalAccessComponent, LedgerPartnerGroupsComponent, OpenAdvancesComponent, PartnerStatementComponent],
   template: `
     <div class="page max-w-7xl mx-auto pb-12">
 
@@ -344,6 +346,15 @@ const JOB_TITLES = [
         <app-open-advances [partnerId]="clientId()" />
       }
 
+      <!-- General ledger: the partner's statement (customer or supplier, from the partner type). -->
+      @if (statementSide(); as side) {
+        @if (clientId() && isExisting() && state.hasAuthority('LEDGER_READ')) {
+          <section class="card p-5">
+            <app-partner-statement [partnerId]="clientId()" [type]="side" [heading]="true" />
+          </section>
+        }
+      }
+
       <!-- Practice: documents asked from this client, and who can sign in to the client portal. -->
       @if (clientId() && (isExisting() || isCustomer()) && state.hasAuthority('PARTNERS_READ')) {
         <app-client-checklists [partnerId]="clientId()" />
@@ -375,6 +386,12 @@ export class CustomerCardComponent implements OnInit {
   /** Fetched by id: after a reload the shared partner list only holds leads. */
   private fetchedType = signal<string | null>(null);
   isCustomer = computed(() => (this.fetchedType() ?? this.partner()?.type ?? '').toString().toUpperCase() === 'CUSTOMER');
+
+  /** The statement's side: a customer's receivable, or a supplier's payable; none for leads and prospects. */
+  statementSide = computed<PartnerSide | null>(() => {
+    const t = (this.fetchedType() ?? this.partner()?.type ?? '').toString().toUpperCase();
+    return t === 'CUSTOMER' ? 'CUSTOMER' : t === 'VENDOR' || t === 'SUPPLIER' ? 'SUPPLIER' : null;
+  });
 
   existingCards = computed(() => this.state.customerCards());
 
