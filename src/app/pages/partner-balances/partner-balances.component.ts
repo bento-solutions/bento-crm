@@ -101,7 +101,7 @@ const PAGE_SIZE = 50;
                     <td class="col-num num whitespace-nowrap">{{ money(t.closing) }}</td>
                     <td class="col-num num whitespace-nowrap">{{ money(t.advances) }}</td>
                     <td class="col-num num whitespace-nowrap">{{ money(t.overdue) }}</td>
-                    <td colspan="5"></td>
+                    @for (k of agingKeys; track k) { <td class="col-num num whitespace-nowrap">{{ side(t.aging?.[k]) }}</td> }
                   </tr>
                 }
               </tbody>

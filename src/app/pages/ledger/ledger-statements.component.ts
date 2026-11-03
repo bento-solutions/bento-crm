@@ -9,7 +9,7 @@ import { ApiService } from '../../services/api.service';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ClosingApi, FiscalYear } from '../../services/domains/closing.service';
 import {
-  Bilan, BilanSection, Cpc, StatementsApi, fiscalYearOf, fiscalYearRange, plainAmount, rubricRange, yearChoices,
+  Bilan, BilanSection, Cpc, StatementsApi, fiscalYearOf, fiscalYearRange, plainAmount, rubricRange, rowRange, yearChoices,
 } from '../../services/domains/statements.service';
 import { formatMoney, shortDate } from '../../shared/bank.util';
 import { isoDate } from '../../shared/ledger.util';
@@ -64,7 +64,7 @@ function bilanLines(sections: BilanSection[] | null | undefined): BilanLine[] {
       continue;
     }
     out.push({ kind: 'section', code: s.code, label: s.label, range: rubricRange(s.code) });
-    for (const r of rows) out.push({ kind: 'row', ...r, range: rubricRange(r.code) });
+    for (const r of rows) out.push({ kind: 'row', ...r, range: rowRange(r) });
     out.push({ kind: 'total', label: s.label, ...t, range: null });
   }
   return out;
@@ -76,22 +76,23 @@ function cpcLines(c: Cpc | null): CpcLine[] {
   if (c.sections?.length) {
     for (const s of c.sections) {
       const rows = s.rows ?? [];
+      const code = s.code ?? s.key;
       const current = s.total ?? s.current ?? rows.reduce((a, r) => a + num(r.current), 0);
       const prior = s.totalPrior ?? s.prior ?? rows.reduce((a, r) => a + num(r.prior), 0);
       if (!rows.length) {
-        out.push({ kind: 'result', code: s.code, label: s.label, current, prior, range: null });
+        out.push({ kind: 'result', code, label: s.label, current, prior, range: null });
         continue;
       }
-      out.push({ kind: 'section', code: s.code, label: s.label, range: null });
-      for (const r of rows) out.push({ kind: 'row', code: r.code, label: r.label, current: r.current, prior: r.prior, range: rubricRange(r.code) });
-      out.push({ kind: 'total', code: s.code, label: s.label, current, prior, range: null });
+      out.push({ kind: 'section', code, label: s.label, range: null });
+      for (const r of rows) out.push({ kind: 'row', code: r.code, label: r.label, current: r.current, prior: r.prior, range: rowRange(r) });
+      out.push({ kind: 'total', code, label: s.label, current, prior, range: null });
     }
     return out;
   }
   for (const r of c.rows ?? []) {
     const k = (r.kind ?? 'ROW').toUpperCase();
     const kind: CpcLine['kind'] = k === 'RESULT' || k === 'SUBTOTAL' ? 'result' : k === 'SECTION' || k === 'TOTAL' ? 'total' : 'row';
-    out.push({ kind, code: r.code, label: r.label, current: r.current, prior: r.prior, range: kind === 'row' ? rubricRange(r.code) : null });
+    out.push({ kind, code: r.code, label: r.label, current: r.current, prior: r.prior, range: kind === 'row' ? rowRange(r) : null });
   }
   return out;
 }
@@ -106,7 +107,7 @@ function cpcLines(c: Cpc | null): CpcLine[] {
   imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent],
   styles: [`
     .fs-bilan { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-    @media (min-width: 1280px) { .fs-bilan { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    @media (min-width: 1760px) { .fs-bilan { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
     .fs-section td { padding-top: 14px; }
     .fs-total td { font-weight: 600; }
     .fs-result td { font-weight: 600; background: var(--color-surface-hover); }

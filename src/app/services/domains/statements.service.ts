@@ -20,6 +20,8 @@ export interface BilanRow {
   amortProv?: number | null;
   net: number;
   netPrior?: number | null;
+  accountFrom?: string | null;
+  accountTo?: string | null;
 }
 
 export interface BilanTotals {
@@ -32,6 +34,8 @@ export interface BilanTotals {
 /** A section of one side (e.g. "Immobilisations corporelles"), with its rows and its total. */
 export interface BilanSection {
   code?: string | null;
+  /** The API's section key (A1…, P1…): internal, never shown. */
+  key?: string | null;
   label: string;
   rows?: BilanRow[] | null;
   /** Section totals; also read from totalGross / totalAmortProv / totalNet / totalNetPrior, or computed from the rows. */
@@ -67,6 +71,8 @@ export interface CpcRow {
   label: string;
   current: number;
   prior?: number | null;
+  accountFrom?: string | null;
+  accountTo?: string | null;
   /** On a flat list: ROW (a rubric), SECTION (a heading with its total) or RESULT (III, VI, VII, X, XI, XIII). */
   kind?: string | null;
 }
@@ -77,6 +83,8 @@ export interface CpcRow {
  */
 export interface CpcSection {
   code?: string | null;
+  /** The API's section numeral (I…XIII). */
+  key?: string | null;
   label: string;
   rows?: CpcRow[] | null;
   total?: number | null;
@@ -130,6 +138,7 @@ export interface PartnerBalanceTotals {
   closing: number;
   advances: number;
   overdue: number;
+  aging?: Aging | null;
 }
 
 export interface PartnerBalances {
@@ -285,6 +294,12 @@ export function yearChoices(list: FiscalYear[] | null | undefined, current: numb
     if (!rows.some(r => r.year === y)) rows.push({ year: y, status: 'OPEN' });
   }
   return rows.sort((a, b) => b.year - a.year);
+}
+
+/** The account range of a row: the API's accountFrom/accountTo when given, else derived from its code. */
+export function rowRange(r: { code?: string | null; accountFrom?: string | null; accountTo?: string | null }): { from: string; to: string } | null {
+  if (r.accountFrom) return { from: r.accountFrom, to: r.accountTo || r.accountFrom };
+  return rubricRange(r.code);
 }
 
 /** The account-code range a rubric code stands for ("23" → 23..23, "24-25" or "24/25" → 24..25), or null. */
