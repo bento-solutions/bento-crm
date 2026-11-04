@@ -71,7 +71,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Account Receivables',
     module: { key: 'ar', icon: 'call_received', subtitle: 'Customers, invoicing and collections' },
     items: [
-      { label: 'Customers', icon: 'storefront', route: '/partners', hint: 'Every customer account', tab: 'Customer' },
+      { label: 'Partners', icon: 'storefront', route: '/partners', hint: 'Leads, customers and prospects', tab: 'Customer' },
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', hint: 'Quotes, invoices and payments received', tab: 'Customer', defaultTab: true },
       { label: 'Delivery slips', icon: 'local_shipping', route: '/finance/delivery-notes', hint: 'Bons de livraison, delivered and invoiced', authority: 'INVOICES_READ' },
       { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule', tab: 'CUSTOMER', defaultTab: true },
@@ -88,6 +88,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Supplier bills', icon: 'request_quote', route: '/finance', hint: 'Bills to pay and payments made', tab: 'Vendor' },
       { label: 'Recurring bills', icon: 'event_repeat', route: '/finance/recurring', hint: 'Supplier bills generated on a schedule', tab: 'VENDOR' },
       { label: 'Expenses', icon: 'payments', route: '/finance', hint: 'Expense claims and receipts', tab: 'Expenses', authority: 'PAYMENTS_READ' },
+      { label: 'Expense reports', icon: 'receipt_long', route: '/finance/expense-reports', hint: 'Notes de frais: employee expenses, their proofs and reimbursement', authority: 'PAYMENTS_READ' },
       { label: 'Supplier aging', icon: 'stacked_bar_chart', route: '/finance', hint: 'What you owe, by age', tab: 'SupplierAging' },
       { label: 'Supplier balances', icon: 'account_balance_wallet', route: '/payables/balances', hint: 'Balance per supplier from the ledger, with aging and statements', authority: 'LEDGER_READ' },
       { label: 'Documents inbox', icon: 'move_to_inbox', route: '/inbox-documents', hint: 'Bills and receipts received by email', authority: ['INVOICES_READ', 'PAYMENTS_READ'] },

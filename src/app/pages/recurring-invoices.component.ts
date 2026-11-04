@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../pipes/translate.pipe';
@@ -59,20 +59,13 @@ function emptyForm(type: RecurringType): RecurringInvoiceInput {
     <div class="page">
       <app-page-header [title]="(vendor() ? 'recurring.titleVendor' : 'recurring.title') | translate"
                        [subtitle]="(vendor() ? 'recurring.subtitleVendor' : 'recurring.subtitle') | translate"
-                       backLink="/finance" [backLabel]="'recurring.back' | translate">
+                       backLink="/finance" [backQueryParams]="vendor() ? { tab: 'Vendor' } : null" [backLabel]="'recurring.back' | translate">
         @if (!editing() && canCreate()) {
           <button actions type="button" class="btn-primary" (click)="startCreate()">
             <mat-icon>add</mat-icon>{{ (vendor() ? 'recurring.newVendor' : 'recurring.new') | translate }}
           </button>
         }
       </app-page-header>
-
-      <div class="segmented mb-4" role="group" [attr.aria-label]="'recurring.side' | translate">
-        @for (t of types; track t) {
-          <button type="button" class="segmented__item" [class.is-active]="type() === t" [attr.aria-pressed]="type() === t" (click)="setType(t)">
-            {{ ('recurring.sideName.' + t) | translate }}</button>
-        }
-      </div>
 
       @if (editing()) {
         <section class="card">
@@ -286,13 +279,13 @@ export class RecurringInvoicesComponent implements OnInit {
   private toast = inject(ToastService);
   private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   protected groups = inject(LedgerGroupsStore);
 
   protected readonly frequencies = FREQUENCIES;
-  protected readonly types: RecurringType[] = ['CUSTOMER', 'VENDOR'];
-
-  /** Customer templates (invoices) or supplier templates (bills), from ?tab=. */
+  /**
+   * Customer templates (invoices) or supplier templates (bills), from ?tab= only: Account Receivables
+   * opens the customer side, Account Payables (?tab=VENDOR) the supplier side, with no switch between them.
+   */
   protected type = signal<RecurringType>('CUSTOMER');
   protected vendor = computed(() => this.type() === 'VENDOR');
 
@@ -341,10 +334,6 @@ export class RecurringInvoicesComponent implements OnInit {
     this.groups.ensure();
     this.partners.load();
     this.reload();
-  }
-
-  setType(t: RecurringType): void {
-    this.router.navigate([], { queryParams: { tab: t === 'CUSTOMER' ? null : t }, replaceUrl: true });
   }
 
   /** A line's VAT as a fraction: its code's rate, else the stored rate. */
@@ -428,7 +417,8 @@ export class RecurringInvoicesComponent implements OnInit {
     this.busy.set(true);
     const f = this.form();
     const input: RecurringInvoiceInput = {
-      ...f, name: f.name.trim(), autoSend: f.type === 'VENDOR' ? false : f.autoSend,
+      // The side always comes from the URL the page was opened with.
+      ...f, type: this.type(), name: f.name.trim(), autoSend: this.vendor() ? false : f.autoSend,
       lines: f.lines.filter(l => l.qty > 0 && l.unitPrice >= 0).map(l => ({ ...l, vatRate: this.rateOf(l) })),
     };
     try {

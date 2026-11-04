@@ -20,7 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
     <header class="page-header">
       <div class="page-header__main">
         @if (backLink()) {
-          <a class="page-back" [routerLink]="backLink()">
+          <a class="page-back" [routerLink]="backLink()" [queryParams]="backQueryParams()">
             <mat-icon class="icon-sm">arrow_back</mat-icon>{{ backLabel() }}
           </a>
         }
@@ -53,6 +53,8 @@ export class PageHeaderComponent {
   /** Router link for the "back" affordance on detail pages. */
   backLink = input<string | readonly unknown[] | null>(null);
   backLabel = input<string>('Back');
+  /** Query parameters of the back link, e.g. { tab: 'Vendor' } to return to one side of a page. */
+  backQueryParams = input<Record<string, string> | null>(null);
   /** `section` renders an h2 for sub-pages that already sit under a page header (Settings tabs). */
   size = input<'page' | 'section'>('page');
 }

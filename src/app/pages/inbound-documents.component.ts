@@ -658,8 +658,7 @@ export class InboundDocumentsComponent implements OnInit {
   /** Vendor invoices live under Finance → Vendor invoices. */
   openInvoice(): void {
     this.close();
-    this.state.navigateTab.set('Vendor');
-    this.router.navigate(['/finance']);
+    this.router.navigate(['/finance'], { queryParams: { tab: 'Vendor' } });
   }
 
   // Display

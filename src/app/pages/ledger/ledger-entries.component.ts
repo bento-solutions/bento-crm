@@ -104,7 +104,7 @@ interface ReverseForm {
                   <td class="cell-muted whitespace-nowrap">
                     {{ source(e.sourceType) }}
                     @if (e.sourceLabel) {
-                      @if (link(e.sourceType); as r) {
+                      @if (link(e.sourceType, e.sourceId); as r) {
                         <div class="cell-sub truncate max-w-48"><a class="text-accent-ink hover:underline" [routerLink]="r.path" [queryParams]="r.query">{{ e.sourceLabel }}</a></div>
                       } @else {
                         <div class="cell-sub truncate max-w-48">{{ e.sourceLabel }}</div>
@@ -144,7 +144,7 @@ interface ReverseForm {
           <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <dt class="text-ink-3">{{ 'ledger.entries.source' | translate }}</dt>
             <dd class="text-ink break-words">{{ source(e.sourceType) }}@if (e.sourceLabel) { ·
-              @if (link(e.sourceType); as r) { <a class="text-accent-ink hover:underline" [routerLink]="r.path" [queryParams]="r.query">{{ e.sourceLabel }}</a> }
+              @if (link(e.sourceType, e.sourceId); as r) { <a class="text-accent-ink hover:underline" [routerLink]="r.path" [queryParams]="r.query">{{ e.sourceLabel }}</a> }
               @else { {{ e.sourceLabel }} } }</dd>
             <dt class="text-ink-3">{{ 'ledger.entries.postedBy' | translate }}</dt><dd class="text-ink">{{ e.postedBy || '—' }}</dd>
             <dt class="text-ink-3">{{ 'ledger.entries.postedOn' | translate }}</dt><dd class="text-ink">{{ date(e.createdAt) }}</dd>
@@ -523,7 +523,7 @@ export class LedgerEntriesComponent implements OnInit {
   side(v: number | null | undefined): string { return sideAmount(v); }
   date(iso: string | null | undefined): string { return shortDate(iso); }
   source(s: string | null | undefined): string { return sourceLabel(this.i18n, s); }
-  link(s: string | null | undefined) { return sourceRoute(s); }
+  link(s: string | null | undefined, id?: string | null) { return sourceRoute(s, id); }
 
   private fail(e: unknown): void {
     this.busy.set(false);
