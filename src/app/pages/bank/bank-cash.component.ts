@@ -280,8 +280,7 @@ export class BankCashComponent implements OnInit {
 
   /** Receivables live under Finance → Customer invoices, payables under Vendor invoices. */
   openInvoice(it: ForecastItem): void {
-    this.state.navigateTab.set(it.kind === 'PAYABLE' ? 'Vendor' : 'Customer');
-    this.router.navigate(['/finance']);
+    this.router.navigate(['/finance'], { queryParams: it.kind === 'PAYABLE' ? { tab: 'Vendor' } : {} });
   }
 
   kindBadge(kind: string): string {

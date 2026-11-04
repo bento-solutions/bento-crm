@@ -42,6 +42,8 @@ export const routes: Routes = [
   { path: 'checklists', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/checklists.component').then(m => m.ChecklistsComponent) },
   { path: 'missions', canActivate: [authGuard, authorityGuard('PARTNERS_READ')], loadComponent: () => import('./pages/missions.component').then(m => m.MissionsComponent) },
   { path: 'finance/delivery-notes', canActivate: [authGuard, authorityGuard('INVOICES_READ')], loadComponent: () => import('./pages/delivery-notes/delivery-notes.component').then(m => m.DeliveryNotesComponent) },
+  { path: 'finance/expense-reports', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/expense-reports/expense-reports.component').then(m => m.ExpenseReportsComponent) },
+  { path: 'finance/expense-reports/:id', canActivate: [authGuard, authorityGuard('PAYMENTS_READ')], loadComponent: () => import('./pages/expense-reports/expense-report.component').then(m => m.ExpenseReportComponent) },
   { path: 'finance/recurring', canActivate: [authGuard], loadComponent: () => import('./pages/recurring-invoices.component').then(m => m.RecurringInvoicesComponent) },
   { path: 'tickets', canActivate: [authGuard], loadComponent: () => import('./pages/tickets.component').then(m => m.TicketsComponent) },
   { path: 'tickets/:id', canActivate: [authGuard], loadComponent: () => import('./pages/ticket-detail.component').then(m => m.TicketDetailComponent) },

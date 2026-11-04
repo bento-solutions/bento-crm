@@ -98,17 +98,21 @@ const SEARCH_ITEMS: SearchItem[] = [
 
   { mainMenu: 'Partners', mainIcon: 'handshake', mainRoute: '/partners', submenu: 'Customers', subIcon: 'people', tab: 'Customer', action: 'View customer profiles and account details', keywords: 'partners customers clients' },
   { mainMenu: 'Partners', mainIcon: 'handshake', mainRoute: '/partners', submenu: 'Prospects', subIcon: 'person_search', tab: 'Prospect', action: 'Track and convert prospects to customers', keywords: 'partners prospects conversions' },
-  { mainMenu: 'Partners', mainIcon: 'handshake', mainRoute: '/partners', submenu: 'Vendors', subIcon: 'store', tab: 'Vendor', action: 'Manage vendor and supplier directory', keywords: 'partners vendors suppliers' },
-  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Customer Invoices', subIcon: 'receipt', tab: 'Customer', action: 'Manage customer invoices and billing', keywords: 'finance invoices customers billing' },
-  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Vendor Invoices', subIcon: 'receipt_long', tab: 'Vendor', action: 'Manage vendor invoices and payables', keywords: 'finance invoices vendors billing' },
-  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Recovery', subIcon: 'healing', tab: 'Recovery', action: 'Send payment reminders for overdue invoices', keywords: 'finance recovery reminders overdue invoices' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/partners', submenu: 'Suppliers', subIcon: 'local_shipping', tab: 'Vendor', action: 'Every supplier account', keywords: 'suppliers vendors fournisseurs directory' },
+  { mainMenu: 'Account Receivables', mainIcon: 'call_received', mainRoute: '/finance', submenu: 'Customer invoices', subIcon: 'receipt', tab: 'Customer', action: 'Quotes, invoices and payments received', keywords: 'finance invoices customers billing factures clients' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/finance', submenu: 'Supplier bills', subIcon: 'request_quote', tab: 'Vendor', action: 'Bills to pay and payments made', keywords: 'finance bills invoices vendors suppliers payables factures fournisseurs' },
+  { mainMenu: 'Account Receivables', mainIcon: 'call_received', mainRoute: '/finance', submenu: 'Recovery', subIcon: 'healing', tab: 'Recovery', action: 'Send payment reminders for overdue invoices', keywords: 'finance recovery reminders overdue invoices relance' },
+  { mainMenu: 'Account Receivables', mainIcon: 'call_received', mainRoute: '/finance', submenu: 'Customer aging', subIcon: 'stacked_bar_chart', tab: 'Aging', action: 'What customers owe, by age', keywords: 'aging balance agee customers receivables' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/finance', submenu: 'Supplier aging', subIcon: 'stacked_bar_chart', tab: 'SupplierAging', action: 'What you owe, by age', keywords: 'aging balance agee suppliers payables' },
+  { mainMenu: 'Account Receivables', mainIcon: 'call_received', mainRoute: '/finance/recurring', submenu: 'Recurring invoices', subIcon: 'event_repeat', tab: 'CUSTOMER', action: 'Invoices sent on a schedule', keywords: 'recurring invoices customers factures recurrentes subscription abonnement' },
   { mainMenu: 'Automation', mainIcon: 'smart_toy', mainRoute: '/automation', action: 'Create and manage workflow automation rules', keywords: 'automation workflows rules triggers conditions' },
   { mainMenu: 'Groups', mainIcon: 'group_work', mainRoute: '/groups', action: 'Collaborate with teams via chat, meetings, and file sharing', keywords: 'groups chat meetings collaboration teams' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/organization', submenu: 'Organization', subIcon: 'business', action: 'Configure organization profile and settings', keywords: 'settings organization company profile' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/users', submenu: 'Users', subIcon: 'people', action: 'Manage user accounts and permissions', keywords: 'settings users accounts permissions roles' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/teams', submenu: 'Teams', subIcon: 'groups', action: 'Configure teams, departments, and assignments', keywords: 'settings teams departments groups' },
   { mainMenu: 'Settings', mainIcon: 'settings', mainRoute: '/settings/groups', submenu: 'Groups', subIcon: 'forum', action: 'Manage collaboration group settings', keywords: 'settings groups collaboration' },
-  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/finance', submenu: 'Expenses', subIcon: 'payments', tab: 'Expenses', action: 'Record expenses with their receipts', keywords: 'finance expenses spending receipts costs depenses' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/finance/expense-reports', submenu: 'Expense reports', subIcon: 'receipt_long', action: 'Employee expense reports (notes de frais), their proofs and reimbursement', keywords: 'expense reports notes de frais employee reimbursement remboursement justificatifs 4438' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', action: 'Bank accounts, statement import, reconciliation and cash forecast', keywords: 'bank cash accounts statements reconciliation forecast treasury' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', submenu: 'Bank journal', subIcon: 'fact_check', tab: 'journal', action: 'Review bank lines and validate them so they post', keywords: 'bank journal validate validation post review lines suspense 4497 rapprochement' },
   { mainMenu: 'Tax calendar', mainIcon: 'event_note', mainRoute: '/tax-calendar', action: 'TVA, IS, IR and CNSS deadlines for the company and its clients', keywords: 'tax calendar deadlines tva vat is ir cnss declarations impots fiscal' },
@@ -123,7 +127,7 @@ const SEARCH_ITEMS: SearchItem[] = [
   { mainMenu: 'General Ledger', mainIcon: 'menu_book', mainRoute: '/ledger', submenu: 'Cut-off', subIcon: 'content_cut', tab: 'cutoff', action: 'Accruals and prepayments at a date', keywords: 'cut-off cutoff fnp fae cca pca accruals prepayments regularisation charges a payer produits a recevoir' },
   { mainMenu: 'Fixed assets', mainIcon: 'inventory', mainRoute: '/assets', action: 'Fixed assets, depreciation and the fixed-asset register', keywords: 'fixed assets immobilisations depreciation amortissement register tableau disposal cession' },
   { mainMenu: 'Bank', mainIcon: 'savings', mainRoute: '/bank', submenu: 'Cash register', subIcon: 'point_of_sale', tab: 'register', action: 'Cash on hand and its movements', keywords: 'cash register caisse petty cash especes 5161 movements' },
-  { mainMenu: 'Finance', mainIcon: 'account_balance', mainRoute: '/finance/recurring', submenu: 'Recurring bills', subIcon: 'event_repeat', tab: 'VENDOR', action: 'Supplier bills generated on a schedule', keywords: 'recurring bills supplier factures recurrentes fournisseurs rent loyer subscription' },
+  { mainMenu: 'Account Payables', mainIcon: 'call_made', mainRoute: '/finance/recurring', submenu: 'Recurring bills', subIcon: 'event_repeat', tab: 'VENDOR', action: 'Supplier bills generated on a schedule', keywords: 'recurring bills supplier factures recurrentes fournisseurs rent loyer subscription' },
   { mainMenu: 'Document checklists', mainIcon: 'checklist', mainRoute: '/checklists', action: 'Documents to collect from clients, with reminders', keywords: 'documents checklist pieces a fournir collect reminders relance clients portal' },
   { mainMenu: 'Missions', mainIcon: 'work', mainRoute: '/missions', action: 'Client missions, deliverables and rebillable costs (débours)', keywords: 'missions deliverables costs debours disbursements rebill clients engagements' },
   { mainMenu: 'Inventory', mainIcon: 'inventory_2', mainRoute: '/inventory', action: 'Track stock levels, products and warehouses', keywords: 'inventory stock products warehouses movements' },
@@ -1367,7 +1371,7 @@ export class App implements OnInit, OnDestroy {
         kind: 'partner' as const,
         groupLabel: 'Partners',
         icon: p.type === 'Vendor' ? 'store' : p.type === 'Prospect' ? 'person_search' : 'people',
-        breadcrumb: p.type || 'Partner',
+        breadcrumb: p.type === 'Vendor' ? 'Supplier' : (p.type || 'Partner'),
         title: p.name,
         description: p.email || p.phone || 'No contact info',
         tab: p.type,
@@ -1494,8 +1498,10 @@ export class App implements OnInit, OnDestroy {
 
     switch (item.kind) {
       case 'page': {
+        // The tab rides in the URL too: pages with two sides (Partners / Suppliers, receivables /
+        // payables, recurring invoices / bills) take their scope from ?tab=, never from a mixed view.
         if (item.tab) this.state.navigateTab.set(item.tab);
-        this.router.navigate([item.route]);
+        this.router.navigate([item.route], { queryParams: item.tab ? { tab: item.tab } : {} });
         return;
       }
       case 'action': {
@@ -1513,8 +1519,9 @@ export class App implements OnInit, OnDestroy {
         return;
       }
       case 'partner': {
+        // A vendor opens the Suppliers scope, any other partner the CRM one on its own tab.
         if (item.tab) this.state.partnersSubTab.set(item.tab as 'Customer' | 'Prospect' | 'Vendor' | 'Lead');
-        this.router.navigate(['/partners']);
+        this.router.navigate(['/partners'], { queryParams: item.tab && item.tab !== 'Lead' ? { tab: item.tab } : {} });
         return;
       }
       case 'ticket': {
@@ -1523,7 +1530,7 @@ export class App implements OnInit, OnDestroy {
       }
       case 'invoice': {
         if (item.tab) this.state.financeSubTab.set(item.tab as 'Customer' | 'Vendor' | 'Recovery');
-        this.router.navigate(['/finance']);
+        this.router.navigate(['/finance'], { queryParams: item.tab === 'Vendor' ? { tab: 'Vendor' } : {} });
         return;
       }
     }

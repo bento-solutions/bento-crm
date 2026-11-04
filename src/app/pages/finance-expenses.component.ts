@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 import { ToastService } from '../services/toast.service';
@@ -26,9 +27,12 @@ interface ExpenseForm {
   vendorName: string;
   reference: string;
   costCenterId: string | null;
+  /** Set on a line of an expense report: read-only here, edited on the report. */
+  expenseReportId?: string | null;
+  expenseReportNumber?: string | null;
 }
 
-const DEFAULT_CATEGORIES = ['TRAVEL', 'FUEL', 'MEALS', 'OFFICE', 'RENT', 'UTILITIES', 'TELECOM', 'SOFTWARE',
+export const DEFAULT_CATEGORIES = ['TRAVEL', 'FUEL', 'MEALS', 'OFFICE', 'RENT', 'UTILITIES', 'TELECOM', 'SOFTWARE',
   'MARKETING', 'FEES', 'SALARIES', 'TAXES', 'OTHER'];
 
 function isoDate(d: Date): string {
@@ -41,7 +45,7 @@ function isoDate(d: Date): string {
  */
 @Component({
   selector: 'app-finance-expenses',
-  imports: [FormsModule, MatIconModule, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent],
+  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -54,8 +58,9 @@ function isoDate(d: Date): string {
             <option value="">{{ 'expenses.allCategories' | translate }}</option>
             @for (c of categories(); track c) { <option [value]="c">{{ categoryLabel(c) }}</option> }
           </select></label>
+        <a class="btn-secondary ms-auto" routerLink="/finance/expense-reports"><mat-icon>receipt_long</mat-icon>{{ 'expenseReports.title' | translate }}</a>
         @if (canCreate()) {
-          <button class="btn-primary ms-auto" (click)="openForm()"><mat-icon>add</mat-icon>{{ 'expenses.add' | translate }}</button>
+          <button class="btn-primary" (click)="openForm()"><mat-icon>add</mat-icon>{{ 'expenses.add' | translate }}</button>
         }
       </div>
 
@@ -87,13 +92,17 @@ function isoDate(d: Date): string {
                 <tr>
                   <td class="cell-muted whitespace-nowrap">{{ shortDate(e.expenseDate) }}</td>
                   <td><span class="badge badge-neutral">{{ categoryLabel(e.category) }}</span></td>
-                  <td><div class="cell-title">{{ e.description || e.vendorName || '—' }}</div>
+                  <td><div class="cell-title flex items-center gap-2 flex-wrap">{{ e.description || e.vendorName || '—' }}
+                      @if (e.expenseReportId) {
+                        <a class="badge badge-violet hover:underline" [routerLink]="['/finance/expense-reports', e.expenseReportId]"
+                           [attr.title]="'expenses.inReport' | translate"><mat-icon class="icon-xs">receipt_long</mat-icon>{{ e.expenseReportNumber || 'NF' }}</a>
+                      }</div>
                     <div class="cell-sub">{{ ('expenses.method.' + e.paymentMethod) | translate }}@if (e.vendorName && e.description) { · {{ e.vendorName }} }@if (e.reference) { · {{ e.reference }} }</div></td>
                   <td class="col-num num">{{ money(e.amount) }}
                     @if (e.vatAmount) { <div class="cell-sub">{{ 'expenses.vatShort' | translate }} {{ money(e.vatAmount) }}</div> }</td>
                   <td class="col-actions whitespace-nowrap">
-                    <button class="btn-ghost btn-sm" (click)="openForm(e)">{{ (canWrite() ? 'expenses.edit' : 'expenses.view') | translate }}</button>
-                    @if (canDelete()) {
+                    <button class="btn-ghost btn-sm" (click)="openForm(e)">{{ (canWrite() && !e.expenseReportId ? 'expenses.edit' : 'expenses.view') | translate }}</button>
+                    @if (canDelete() && !e.expenseReportId) {
                       <button class="btn-ghost btn-sm" [disabled]="busy()" (click)="remove(e)">{{ 'expenses.delete' | translate }}</button>
                     }
                   </td>
@@ -135,7 +144,11 @@ function isoDate(d: Date): string {
             <h3 class="modal-title">{{ (f.id ? 'expenses.editTitle' : 'expenses.add') | translate }}</h3>
             <button class="btn-icon btn-sm" (click)="form.set(null)" [attr.aria-label]="'expenses.cancel' | translate"><mat-icon class="icon-sm">close</mat-icon></button>
           </div>
-          <fieldset class="grid grid-cols-2 gap-3" [disabled]="f.id ? !canWrite() : !canCreate()">
+          @if (f.expenseReportId) {
+            <p class="text-sm text-ink-2 mb-3">{{ 'expenses.inReportHint' | translate }}
+              <a class="text-accent-ink hover:underline" [routerLink]="['/finance/expense-reports', f.expenseReportId]" (click)="form.set(null)">{{ f.expenseReportNumber || ('expenseReports.open' | translate) }}</a></p>
+          }
+          <fieldset class="grid grid-cols-2 gap-3" [disabled]="!!f.expenseReportId || (f.id ? !canWrite() : !canCreate())">
             <label class="block"><span class="field-label">{{ 'expenses.date' | translate }}</span>
               <input type="date" class="input-field" [(ngModel)]="f.expenseDate" /></label>
             <label class="block"><span class="field-label">{{ 'expenses.category' | translate }}</span>
@@ -156,6 +169,7 @@ function isoDate(d: Date): string {
               @if (vatTooHigh(f)) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.vatTooHigh' | translate }}</span> }</label>
             <label class="block"><span class="field-label">{{ 'expenses.paidBy' | translate }}</span>
               <select class="input-field" [(ngModel)]="f.paymentMethod">
+                @if (f.paymentMethod === 'EMPLOYEE') { <option value="EMPLOYEE">{{ 'expenses.method.EMPLOYEE' | translate }}</option> }
                 @for (m of methods; track m) { <option [value]="m">{{ ('expenses.method.' + m) | translate }}</option> }
               </select></label>
             <label class="block"><span class="field-label">{{ 'expenses.vendor' | translate }}</span>
@@ -173,15 +187,15 @@ function isoDate(d: Date): string {
           <div class="mt-4">
             <span class="field-label">{{ 'expenses.receipt' | translate }}</span>
             @if (f.id) {
-              <app-attachments ownerEntityType="EXPENSE" [ownerEntityId]="f.id" [canWrite]="canWrite()" />
+              <app-attachments ownerEntityType="EXPENSE" [ownerEntityId]="f.id" [canWrite]="canWrite() && !f.expenseReportId" />
             } @else {
               <p class="text-xs text-ink-3">{{ 'expenses.receiptAfterSave' | translate }}</p>
             }
           </div>
           <div class="modal-footer">
-            @if (f.id) { <div class="me-auto"><app-ledger-entry-link sourceType="EXPENSE" [sourceId]="f.id" /></div> }
+            @if (f.id && !f.expenseReportId) { <div class="me-auto"><app-ledger-entry-link sourceType="EXPENSE" [sourceId]="f.id" /></div> }
             <button class="btn-secondary" (click)="form.set(null)">{{ (f.id ? 'expenses.close' : 'expenses.cancel') | translate }}</button>
-            @if (f.id ? canWrite() : canCreate()) {
+            @if (!f.expenseReportId && (f.id ? canWrite() : canCreate())) {
               <button class="btn-primary" [disabled]="busy() || !valid(f)" (click)="save(f)">{{ 'expenses.save' | translate }}</button>
             }
           </div>
@@ -239,6 +253,7 @@ export class FinanceExpensesComponent implements OnInit {
       id: e.id, expenseDate: e.expenseDate, category: e.category, description: e.description ?? '',
       amount: e.amount, vatAmount: e.vatAmount ?? null, vatCode: e.vatCode ?? null, paymentMethod: e.paymentMethod,
       vendorName: e.vendorName ?? '', reference: e.reference ?? '', costCenterId: e.costCenterId ?? null,
+      expenseReportId: e.expenseReportId ?? null, expenseReportNumber: e.expenseReportNumber ?? null,
     } : {
       expenseDate: isoDate(new Date()), category: this.category() || 'OTHER', description: '', amount: null,
       vatAmount: null, vatCode: null, paymentMethod: 'CARD', vendorName: '', reference: '', costCenterId: null,

@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiService } from '../../core/services/base-api.service';
 
-export type PaymentMethod = 'BANK_TRANSFER' | 'CHECK' | 'CASH' | 'CARD' | 'DIRECT_DEBIT' | 'OTHER';
+/** EMPLOYEE: paid by an employee and owed back through an expense report (note de frais). */
+export type PaymentMethod = 'BANK_TRANSFER' | 'CHECK' | 'CASH' | 'CARD' | 'DIRECT_DEBIT' | 'OTHER' | 'EMPLOYEE';
 
 export interface Expense {
   id: string;
@@ -19,6 +20,11 @@ export interface Expense {
   reference?: string | null;
   /** Cost center (general ledger), put on the expense's posting line. */
   costCenterId?: string | null;
+  /** The expense report (note de frais) the expense is a line of; such an expense is edited there only. */
+  expenseReportId?: string | null;
+  /** Its number (NF-…), when the API sends it; null while the report is a draft. */
+  expenseReportNumber?: string | null;
+  paidByEmployee?: boolean | null;
   createdAt: string;
 }
 

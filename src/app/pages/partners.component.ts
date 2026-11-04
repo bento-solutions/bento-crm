@@ -25,19 +25,20 @@ import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.com
   imports: [MatIconModule, CommonModule, FormsModule, CreatedByBadgeComponent, UserAvatarComponent, DataStatusBannerComponent, PaginatorComponent, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerPartnerGroupsComponent],
   template: `
     <div class="page">
-      <app-page-header title="Partners" subtitle="Leads, customers, prospects and vendors in one directory">
-        @if (canCreate()) {
-          @if (activeTab() === 'Lead') {
-            <button actions class="btn-primary" (click)="openAddLeadModal()">
-              <mat-icon>add</mat-icon>
-              Add New Lead
-            </button>
-          } @else {
-            <button actions class="btn-primary" (click)="openCreateModal()">
-              <mat-icon>person_add</mat-icon>
-              New {{activeTab()}}
-            </button>
-          }
+      <app-page-header [title]="supplierScope() ? 'Suppliers' : 'Partners'"
+                       [subtitle]="supplierScope() ? 'Every supplier account, for bills and payments' : 'Leads, customers and prospects in one directory'">
+        <!-- One element per @if: a nested @if is not projected into the [actions] slot. -->
+        @if (canCreate() && activeTab() === 'Lead') {
+          <button actions class="btn-primary" (click)="openAddLeadModal()">
+            <mat-icon>add</mat-icon>
+            Add New Lead
+          </button>
+        }
+        @if (canCreate() && activeTab() !== 'Lead') {
+          <button actions class="btn-primary" (click)="openCreateModal()">
+            <mat-icon>person_add</mat-icon>
+            New {{activeTab()}}
+          </button>
         }
       </app-page-header>
 
@@ -52,32 +53,28 @@ import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.com
         <app-data-status-banner [error]="state.partnersError()" />
       }
 
+      @if (!supplierScope()) {
       <div class="tabs" role="tablist">
         <button role="tab" class="tab" [class.is-active]="activeTab() === 'Lead'" [attr.aria-selected]="activeTab() === 'Lead'"
-                (click)="activeTab.set('Lead'); state.breadcrumbLabel.set('Leads')">
+                (click)="activeTab.set('Lead')">
           <mat-icon>filter_alt</mat-icon>
           Leads
           <span class="count-pill">{{ state.leadsData().length }}</span>
         </button>
         <button role="tab" class="tab" [class.is-active]="activeTab() === 'Customer'" [attr.aria-selected]="activeTab() === 'Customer'"
-                (click)="activeTab.set('Customer'); state.breadcrumbLabel.set('Customers'); partnersPage.set(1)">
+                (click)="activeTab.set('Customer'); partnersPage.set(1)">
           <mat-icon>people</mat-icon>
           Customers
           <span class="count-pill">{{ customers().length }}</span>
         </button>
         <button role="tab" class="tab" [class.is-active]="activeTab() === 'Prospect'" [attr.aria-selected]="activeTab() === 'Prospect'"
-                (click)="activeTab.set('Prospect'); state.breadcrumbLabel.set('Prospects'); partnersPage.set(1)">
+                (click)="activeTab.set('Prospect'); partnersPage.set(1)">
           <mat-icon>person_search</mat-icon>
           Prospects
           <span class="count-pill">{{ prospects().length }}</span>
         </button>
-        <button role="tab" class="tab" [class.is-active]="activeTab() === 'Vendor'" [attr.aria-selected]="activeTab() === 'Vendor'"
-                (click)="activeTab.set('Vendor'); state.breadcrumbLabel.set('Vendors'); partnersPage.set(1)">
-          <mat-icon>store</mat-icon>
-          Vendors
-          <span class="count-pill">{{ vendors().length }}</span>
-        </button>
       </div>
+      }
 
       @if (!state.partnersLoading()) {
         @if (activeTab() === 'Lead') {
@@ -948,12 +945,17 @@ import { LedgerPartnerGroupsComponent } from './ledger/ledger-partner-groups.com
                 <form (ngSubmit)="savePartner()" class="space-y-4">
                   <div>
                     <label for="partner_type" class="field-label mb-1.5">Partner Type</label>
-                    <select id="partner_type" [(ngModel)]="newPartner.type" name="type" class="input-field w-full">
-                      <option value="Lead">Lead</option>
-                      <option value="Prospect">Prospect</option>
-                      <option value="Customer">Customer</option>
-                      <option value="Vendor">Vendor</option>
-                    </select>
+                    @if (supplierScope()) {
+                      <select id="partner_type" [ngModel]="'Vendor'" name="type" class="input-field w-full" disabled>
+                        <option value="Vendor">Vendor</option>
+                      </select>
+                    } @else {
+                      <select id="partner_type" [(ngModel)]="newPartner.type" name="type" class="input-field w-full">
+                        <option value="Lead">Lead</option>
+                        <option value="Prospect">Prospect</option>
+                        <option value="Customer">Customer</option>
+                      </select>
+                    }
                   </div>
 
                   <div>
@@ -1058,6 +1060,11 @@ export class PartnersComponent {
   private route = inject(ActivatedRoute);
   uploading = signal(false);
   activeTab = signal<'Lead' | 'Customer' | 'Prospect' | 'Vendor'>('Lead');
+  /**
+   * Two scopes share this page: the CRM one (Leads, Customers, Prospects, titled "Partners") and the
+   * supplier one (?tab=Vendor, from Account Payables → Suppliers), which lists vendors only.
+   */
+  supplierScope = computed(() => this.activeTab() === 'Vendor');
   showCreateModal = signal(false);
 
   canCreate(): boolean {
@@ -1154,7 +1161,6 @@ export class PartnersComponent {
       const tab = this.state.navigateTab();
       if (tab) {
         this.activeTab.set(tab as 'Lead' | 'Customer' | 'Prospect' | 'Vendor');
-        this.state.breadcrumbLabel.set(tab === 'Lead' ? 'Leads' : tab === 'Customer' ? 'Customers' : tab === 'Prospect' ? 'Prospects' : 'Vendors');
         this.state.navigateTab.set(null);
       }
     });
@@ -1168,7 +1174,6 @@ export class PartnersComponent {
       if (t !== this.activeTab()) {
         this.activeTab.set(t);
         this.partnersPage.set(1);
-        this.state.breadcrumbLabel.set(t === 'Lead' ? 'Leads' : t === 'Customer' ? 'Customers' : t === 'Prospect' ? 'Prospects' : 'Vendors');
       }
     });
     effect(() => {
@@ -1178,8 +1183,8 @@ export class PartnersComponent {
         this.router.navigate([], { relativeTo: this.route, queryParams: { tab: t === 'Lead' ? null : t }, queryParamsHandling: 'merge', replaceUrl: true });
       }
     });
-    const label = this.activeTab() === 'Lead' ? 'Leads' : this.activeTab() === 'Customer' ? 'Customers' : this.activeTab() === 'Prospect' ? 'Prospects' : 'Vendors';
-    this.state.breadcrumbLabel.set(label);
+    // The breadcrumb names the scope, not the tab: "Partners" (CRM) or "Suppliers".
+    effect(() => this.state.breadcrumbLabel.set(this.supplierScope() ? 'Suppliers' : 'Partners'));
     effect(() => {
       if (this.currentPage() > this.totalPages()) {
         this.currentPage.set(this.totalPages());
@@ -1349,6 +1354,7 @@ export class PartnersComponent {
   openCreateModal() {
     if (!this.canCreate()) return;
     this.newPartner.id = undefined;
+    // The supplier scope only creates vendors; the CRM scope never offers Vendor.
     this.newPartner.type = this.activeTab();
     this.newPartner.customerGroupId = null;
     this.newPartner.supplierGroupId = null;

@@ -105,6 +105,16 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
             <mat-icon>stacked_bar_chart</mat-icon>
             {{ 'aging.supplierTab' | translate }}
           </button>
+          @if (state.hasAuthority('PAYMENTS_READ')) {
+            <a routerLink="/finance/expense-reports" class="tab">
+              <mat-icon>receipt_long</mat-icon>
+              {{ 'expenseReports.tab' | translate }}
+            </a>
+          }
+          <a routerLink="/finance/recurring" [queryParams]="{ tab: 'VENDOR' }" class="tab">
+            <mat-icon>autorenew</mat-icon>
+            {{ 'recurring.tab' | translate }}
+          </a>
         } @else {
           <button role="tab" class="tab" [class.is-active]="activeTab() === 'Customer'" [attr.aria-selected]="activeTab() === 'Customer'"
                   (click)="setFinanceTab('Customer'); invoicesPage.set(1)">

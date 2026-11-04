@@ -252,7 +252,7 @@ export interface PostingSetup {
 }
 
 /** What posts a document: the source types of automatic entries. */
-export type PostingSourceType = 'INVOICE' | 'BILL' | 'PAYMENT' | 'EXPENSE' | 'BANK_LINE';
+export type PostingSourceType = 'INVOICE' | 'BILL' | 'PAYMENT' | 'EXPENSE' | 'BANK_LINE' | 'EXPENSE_REPORT' | 'EXPENSE_REPORT_REIMB';
 
 export interface RepostError {
   sourceType: string;
