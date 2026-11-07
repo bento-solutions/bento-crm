@@ -128,15 +128,10 @@ export class InvitationApiService extends BaseApiService {
   }
 
   /**
-   * For an already authenticated user, accepts an invitation addressed to their email
-   * and links them into the target organization without re-entering a password.
+   * For a signed-in user, accepts an invitation addressed to their email and adds a membership
+   * in the target organization without re-entering a password. The emailed token is required.
    */
-  acceptLoggedIn(invitationId: string): Observable<LoginResponse> {
-    return this.post<LoginResponse>(API_CONFIG.endpoints.invitations.acceptLoggedIn(invitationId), {});
-  }
-
-  /** Retrieves all pending invitations across organizations for the authenticated user's email. */
-  getMyPendingInvitations(): Observable<InvitationDto[]> {
-    return this.get<InvitationDto[]>(API_CONFIG.endpoints.invitations.myPending);
+  acceptLoggedIn(invitationId: string, token: string): Observable<LoginResponse> {
+    return this.post<LoginResponse>(API_CONFIG.endpoints.invitations.acceptLoggedIn(invitationId), { token });
   }
 }

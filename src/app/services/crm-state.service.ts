@@ -2081,22 +2081,6 @@ export class CrmStateService {
 
   // ---------------------------------------------------------------------- users
 
-  addUser(draft: Omit<CrmUser, 'id' | 'initials' | 'createdAt' | 'lastActiveAt' | 'avatarColor' | 'name' | 'role' | 'team'>): void {
-    const tempPassword = 'Temp-' + Math.random().toString(36).slice(2, 10) + 'A1!';
-    const payload = { ...this.userToApiPayload(draft), email: draft.email, password: tempPassword };
-    this.api.createUser(payload).subscribe({
-      next: (dto) => {
-        const created = this.userFromDto(dto);
-        this.users.update(list => [...list, created]);
-        if (draft.teamId) {
-          this.addTeamMember(draft.teamId, created.id);
-        }
-        this.toast.show(`User <strong>${created.displayName}</strong> created`, { type: 'info' });
-      },
-      error: () => this.toast.show('Failed to create user', { type: 'error' })
-    });
-  }
-
   updateUser(id: string, patch: Partial<CrmUser>): void {
     const current = this.users().find(u => u.id === id);
     if (!current) return;

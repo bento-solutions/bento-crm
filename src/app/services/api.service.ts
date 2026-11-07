@@ -292,10 +292,6 @@ export class ApiService extends BaseApiService {
     return this.get(`/users/${id}`);
   }
 
-  createUser(user: unknown): Observable<CrmUser> {
-    return this.post(`/users`, user);
-  }
-
   updateUser(id: string, user: unknown): Observable<CrmUser> {
     return this.patch(`/users/${id}`, user);
   }

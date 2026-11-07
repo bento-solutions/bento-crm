@@ -402,39 +402,6 @@ import { TranslationService } from '../services/translation.service';
       color: var(--color-text-tertiary);
     }
 
-    .org-warning-box {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      background: var(--color-warning-light);
-      border: 1px solid var(--color-warning-border);
-      border-radius: var(--r-card);
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      font-size: 12px;
-      color: var(--color-warning-text);
-      line-height: 1.4;
-      text-align: start;
-    }
-
-    .org-warning-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: var(--color-warning);
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    .org-warning-text {
-      flex: 1;
-    }
-
-    .org-warning-title {
-      font-weight: 700;
-      margin-inline-end: 4px;
-    }
-
     .back-btn {
       display: flex;
       align-items: center;
@@ -493,14 +460,6 @@ import { TranslationService } from '../services/translation.service';
           <div class="org-selection-header">
             <h2>{{ 'login.selectWorkspace' | translate }}</h2>
             <p>{{ 'login.multipleWorkspacesDesc' | translate }}</p>
-          </div>
-
-          <div class="org-warning-box">
-            <mat-icon class="org-warning-icon">info</mat-icon>
-            <div class="org-warning-text">
-              <span class="org-warning-title">{{ 'login.singleOrgTitle' | translate }}:</span>
-              {{ 'login.singleOrgNotice' | translate }}
-            </div>
           </div>
 
           @if (error()) {

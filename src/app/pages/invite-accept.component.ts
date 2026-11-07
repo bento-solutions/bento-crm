@@ -73,6 +73,29 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
           </div>
         }
 
+        <!-- Reached from an in-app notification or typed in: only the emailed link proves the
+             invited address, so point back to it. -->
+        @if (!loadingPreview() && needsEmailLink()) {
+          <div class="py-4 text-center space-y-4">
+            <div class="w-12 h-12 mx-auto bg-muted text-ink-3 rounded-full flex items-center justify-center">
+              <mat-icon class="icon-lg">mark_email_unread</mat-icon>
+            </div>
+            <div class="space-y-1.5">
+              <h1 class="t-title">Open the link in your invitation email</h1>
+              <p class="text-body text-ink-3 leading-relaxed">
+                Invitations are accepted from the link in the email sent to you. If you can't find
+                it, ask whoever invited you to send it again.
+              </p>
+            </div>
+            <button
+              (click)="goToSignIn()"
+              class="btn-secondary w-full"
+            >
+              Back to Bento
+            </button>
+          </div>
+        }
+
         <!-- The acceptance form -->
         @if (!loadingPreview() && preview(); as invite) {
           <div class="text-center mb-6">
@@ -107,15 +130,6 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
             <p class="text-meta text-ink-3 leading-relaxed">{{ roleBlurb() }}</p>
           </div>
 
-          <!-- Single Workspace Notice -->
-          <div class="alert alert-warning mb-4">
-            <mat-icon class="text-warning-ink shrink-0 mt-0.5 icon-sm">info</mat-icon>
-            <div>
-              <strong class="font-semibold">Single Organization Notice:</strong>
-              Joining <strong>{{ invite.organization_name }}</strong> will leave any current workspace. Bento accounts are associated with one organization at a time.
-            </div>
-          </div>
-
           @if (error()) {
             <div class="alert alert-danger mb-4 justify-center text-center" role="alert">
               {{ error() }}
@@ -133,7 +147,7 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                 <p class="text-xs font-semibold text-ink font-mono mt-0.5">{{ loggedInUser()?.email }}</p>
               </div>
               <p class="text-xs text-ink-2 leading-relaxed">
-                Accept this invitation to join <strong>{{ invite.organization_name }}</strong>. You will automatically switch to your new workspace.
+                Accept this invitation to join <strong>{{ invite.organization_name }}</strong>. You keep access to your current organization.
               </p>
               <button
                 type="button"
@@ -266,6 +280,7 @@ export class InviteAcceptComponent {
   loadingPreview = signal(true);
   preview = signal<InvitationPreview | null>(null);
   invalid = signal(false);
+  needsEmailLink = signal(false);
   loading = signal(false);
   error = signal('');
   loggedInUser = signal<CurrentUser | null>(null);
@@ -277,7 +292,6 @@ export class InviteAcceptComponent {
   confirmPassword = '';
 
   private token = '';
-  private invitationId = '';
 
   roleLabel = computed(() => {
     const role = this.preview()?.role;
@@ -304,7 +318,6 @@ export class InviteAcceptComponent {
 
   constructor() {
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
-    this.invitationId = this.route.snapshot.queryParamMap.get('invitationId') ?? '';
 
     const hasAccessToken = !!localStorage.getItem('accessToken');
     if (hasAccessToken) {
@@ -323,87 +336,26 @@ export class InviteAcceptComponent {
   }
 
   private loadInvitation(): void {
-    if (this.token) {
-      this.invitationApi.preview(this.token).subscribe({
-        next: (invite) => {
-          this.preview.set(invite);
-          this.displayName = invite.display_name ?? '';
-          this.loadingPreview.set(false);
-        },
-        error: () => {
-          this.loadingPreview.set(false);
-          this.invalid.set(true);
-        }
-      });
-    } else if (this.invitationId) {
-      // Arriving via in-app notification with invitationId
-      this.invitationApi.getMyPendingInvitations().subscribe({
-        next: (list) => {
-          const found = list.find(i => i.id === this.invitationId) || list[0];
-          if (found) {
-            this.preview.set({
-              id: found.id,
-              email: found.email,
-              organization_name: found.organization_name || 'Organization',
-              role: found.role,
-              team_id: found.team_id,
-              team_name: found.team_name,
-              display_name: found.display_name,
-              job_title: found.job_title,
-              invited_by_name: found.invited_by_name,
-              expires_at: found.expires_at
-            });
-            this.displayName = found.display_name ?? '';
-            this.loadingPreview.set(false);
-          } else {
-            this.loadingPreview.set(false);
-            this.invalid.set(true);
-          }
-        },
-        error: () => {
-          this.loadingPreview.set(false);
-          this.invalid.set(true);
-        }
-      });
-    } else if (localStorage.getItem('accessToken')) {
-      // Logged-in user navigated to /invite/accept directly: check for any pending invites
-      this.invitationApi.getMyPendingInvitations().subscribe({
-        next: (list) => {
-          if (list && list.length > 0) {
-            const first = list[0];
-            this.invitationId = first.id;
-            this.preview.set({
-              id: first.id,
-              email: first.email,
-              organization_name: first.organization_name || 'Organization',
-              role: first.role,
-              team_id: first.team_id,
-              team_name: first.team_name,
-              display_name: first.display_name,
-              job_title: first.job_title,
-              invited_by_name: first.invited_by_name,
-              expires_at: first.expires_at
-            });
-            this.displayName = first.display_name ?? '';
-            this.loadingPreview.set(false);
-          } else {
-            this.loadingPreview.set(false);
-            this.invalid.set(true);
-          }
-        },
-        error: () => {
-          this.loadingPreview.set(false);
-          this.invalid.set(true);
-        }
-      });
-    } else {
+    if (!this.token) {
       this.loadingPreview.set(false);
-      this.invalid.set(true);
+      this.needsEmailLink.set(true);
+      return;
     }
+    this.invitationApi.preview(this.token).subscribe({
+      next: (invite) => {
+        this.preview.set(invite);
+        this.displayName = invite.display_name ?? '';
+        this.loadingPreview.set(false);
+      },
+      error: () => {
+        this.loadingPreview.set(false);
+        this.invalid.set(true);
+      }
+    });
   }
 
   acceptAsLoggedIn(): void {
-    const targetId = this.invitationId || this.preview()?.id;
+    const targetId = this.preview()?.id;
     if (!targetId) {
       this.error.set('Could not identify the invitation to accept. Please enter your details below.');
       this.showPasswordForm.set(true);
@@ -413,7 +365,7 @@ export class InviteAcceptComponent {
     this.error.set('');
     this.loading.set(true);
 
-    this.invitationApi.acceptLoggedIn(targetId).subscribe({
+    this.invitationApi.acceptLoggedIn(targetId, this.token).subscribe({
       next: (response) => {
         this.loading.set(false);
         this.state.startSession(response);
