@@ -1,3 +1,4 @@
+import { CheckEmailResponse } from './auth-api.service';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -36,8 +37,9 @@ export class OrganizationApiService extends BaseApiService {
     super(http);
   }
 
-  create(request: CreateOrganizationRequest): Observable<OrganizationResponse> {
-    return this.post<OrganizationResponse>(API_CONFIG.endpoints.organizations.create, request);
+  /** The new organization, or "check_email" when the address must first be confirmed from an emailed link. */
+  create(request: CreateOrganizationRequest): Observable<OrganizationResponse | CheckEmailResponse> {
+    return this.post<OrganizationResponse | CheckEmailResponse>(API_CONFIG.endpoints.organizations.create, request);
   }
 
   me(): Observable<OrganizationResponse> {

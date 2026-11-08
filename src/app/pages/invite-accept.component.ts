@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
 import { catchError, switchMap, throwError } from 'rxjs';
-import { AuthApiService, CurrentUser } from '../core/services/auth-api.service';
+import { AuthApiService, CurrentUser, isCheckEmail } from '../core/services/auth-api.service';
 import { ApiClientError } from '../core/services/base-api.service';
 import { InvitationApiService, InvitationPreview, InvitationRole } from '../core/services/invitation-api.service';
 
@@ -138,8 +138,22 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
             </div>
           }
 
+          @if (checkEmail(); as sentTo) {
+            <!-- Joined through a copied link, which doesn't show the invitee reads the invited
+                 inbox: the emailed confirmation link finishes it. -->
+            <div class="bg-accent-soft/70 border border-accent-line/80 rounded-xl p-5 text-center space-y-3" role="status">
+              <div class="w-10 h-10 mx-auto bg-accent-soft text-accent-ink rounded-full flex items-center justify-center">
+                <mat-icon class="icon-md">mark_email_unread</mat-icon>
+              </div>
+              <p class="text-sm font-semibold text-ink">Check your inbox</p>
+              <p class="text-xs text-ink-2 leading-relaxed">
+                Your account is ready. We sent an email to <strong class="font-mono">{{ sentTo }}</strong>: open the
+                link in it to confirm your address, then sign in.
+              </p>
+              <button type="button" (click)="goToSignIn()" class="btn-primary w-full">Go to sign in</button>
+            </div>
+          } @else if (canAcceptDirectly()) {
           <!-- Signed in as the invited address: one click adds this organization to the account. -->
-          @if (canAcceptDirectly()) {
             <div class="bg-accent-soft/70 border border-accent-line/80 rounded-xl p-5 text-center space-y-3 mb-4">
               <div class="w-10 h-10 mx-auto bg-accent-soft text-accent-ink rounded-full flex items-center justify-center">
                 <mat-icon class="icon-md">how_to_reg</mat-icon>
@@ -293,6 +307,8 @@ export class InviteAcceptComponent {
   loading = signal(false);
   error = signal('');
   loggedInUser = signal<CurrentUser | null>(null);
+  /** Set when the address has to be confirmed from an emailed link before the first sign-in. */
+  checkEmail = signal<string | null>(null);
 
   displayName = '';
   phone = '';
@@ -457,8 +473,13 @@ export class InviteAcceptComponent {
     }).subscribe({
       next: (response) => {
         // Accepting returns a full session, so the invitee lands inside the app rather than
-        // on a login form asking for the password they just chose.
+        // on a login form asking for the password they just chose -- unless the address still
+        // has to be confirmed.
         this.loading.set(false);
+        if (isCheckEmail(response)) {
+          this.checkEmail.set(response.email);
+          return;
+        }
         this.state.startSession(response);
         this.router.navigate(['/']);
       },
@@ -470,7 +491,8 @@ export class InviteAcceptComponent {
     });
   }
 
+  /** A full page load: there is no login route, and the guard cancels a router navigation to '/' while signed out. */
   goToSignIn(): void {
-    this.router.navigate(['/']);
+    window.location.assign('/');
   }
 }

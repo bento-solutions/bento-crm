@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
-import { AuthApiService, LoginResponse, OrganizationChoice } from '../core/services/auth-api.service';
+import { AuthApiService, LoginResponse, OrganizationChoice, isEmailNotVerified } from '../core/services/auth-api.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { TranslationService } from '../services/translation.service';
 
@@ -240,8 +240,42 @@ import { TranslationService } from '../services/translation.service';
       text-align: center;
     }
 
+    .info-msg {
+      background: var(--color-accent-soft, var(--color-surface-muted));
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--color-text-secondary);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .info-msg strong {
+      display: block;
+      color: var(--color-text-primary);
+      margin-bottom: 2px;
+    }
+
+    .link-btn {
+      background: none;
+      border: 0;
+      padding: 0;
+      font: inherit;
+      color: var(--color-text-primary);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
     .forgot-link {
       display: block;
+      margin-left: auto;
+      background: none;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
       text-align: right;
       font-size: 11px;
       font-weight: 500;
@@ -513,6 +547,42 @@ import { TranslationService } from '../services/translation.service';
             <mat-icon class="back-icon">arrow_back</mat-icon>
             <span>{{ 'login.backToLogin' | translate }}</span>
           </button>
+        } @else if (mode() === 'forgot') {
+          <div class="login-title">
+            <h1>{{ 'login.forgotTitle' | translate }}</h1>
+            <p>{{ 'login.forgotSubtitle' | translate }}</p>
+          </div>
+
+          @if (error()) {
+            <div class="error-msg">{{ error() }}</div>
+          }
+          @if (info()) {
+            <div class="info-msg" role="status">{{ info() }}</div>
+          }
+
+          <form (ngSubmit)="sendResetLink()">
+            <div class="form-group">
+              <label for="reset-email">{{ 'login.email' | translate }}</label>
+              <input
+                id="reset-email"
+                type="email"
+                [(ngModel)]="email"
+                name="email"
+                class="input-field"
+                [placeholder]="'login.emailPlaceholder' | translate"
+                autocomplete="email"
+                required
+              />
+            </div>
+            <button type="submit" class="login-btn" [disabled]="loading()">
+              {{ loading() ? ('login.sending' | translate) : ('login.sendResetLink' | translate) }}
+            </button>
+          </form>
+
+          <button type="button" class="back-btn" style="margin-top: 12px" (click)="backToSignIn()" [disabled]="loading()">
+            <mat-icon class="back-icon">arrow_back</mat-icon>
+            <span>{{ 'login.backToLogin' | translate }}</span>
+          </button>
         } @else {
           <div class="login-title">
             <h1>{{ 'login.title' | translate }}</h1>
@@ -521,6 +591,22 @@ import { TranslationService } from '../services/translation.service';
 
           @if (error()) {
             <div class="error-msg">{{ error() }}</div>
+          }
+          @if (notVerifiedEmail(); as unverified) {
+            <!-- Right password, unconfirmed address: the API has just emailed a link. -->
+            <div class="info-msg" role="status">
+              <strong>{{ 'login.notVerifiedTitle' | translate }}</strong>
+              {{ 'login.notVerified' | translate: { email: unverified } }}
+              <div style="margin-top: 6px">
+                @if (info()) {
+                  {{ info() }}
+                } @else {
+                  <button type="button" class="link-btn" (click)="resendVerification()" [disabled]="loading()">
+                    {{ 'login.resendLink' | translate }}
+                  </button>
+                }
+              </div>
+            </div>
           }
 
           <form (ngSubmit)="onLogin()">
@@ -561,7 +647,7 @@ import { TranslationService } from '../services/translation.service';
                   <mat-icon class="toggle-icon">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
                 </button>
               </div>
-              <a class="forgot-link">{{ 'login.forgotPassword' | translate }}</a>
+              <button type="button" class="forgot-link" (click)="openForgot()">{{ 'login.forgotPassword' | translate }}</button>
             </div>
 
             <button
@@ -596,6 +682,12 @@ export class LoginComponent {
   selectedOrgId = signal<string | null>(null);
   loading = signal(false);
   error = signal('');
+  /** 'forgot' shows the form that emails a link to choose a new password. */
+  mode = signal<'signin' | 'forgot'>('signin');
+  /** Neutral notices, such as "a link is on its way". */
+  info = signal('');
+  /** Set when the password was right but the address isn't confirmed yet. */
+  notVerifiedEmail = signal<string | null>(null);
 
   togglePasswordVisibility(): void {
     this.showPassword.update(v => !v);
@@ -624,6 +716,8 @@ export class LoginComponent {
 
     this.loading.set(true);
     this.error.set('');
+    this.info.set('');
+    this.notVerifiedEmail.set(null);
 
     this.authApi.login({ email, password }).subscribe({
       next: (response) => {
@@ -656,7 +750,9 @@ export class LoginComponent {
           return;
         }
 
-        if (err.status === 429) {
+        if (isEmailNotVerified(err)) {
+          this.notVerifiedEmail.set(email);
+        } else if (err.status === 429) {
           this.error.set(this.translation.t('login.errorRateLimit'));
         } else if (err.status === 0 || err.status >= 500) {
           this.error.set(this.translation.t('login.errorServer'));
@@ -687,6 +783,57 @@ export class LoginComponent {
         this.selectedOrgId.set(null);
         const detail = err?.detail || err?.body?.detail || err?.error?.detail;
         this.error.set(detail || this.translation.t('login.errorInvalid'));
+      }
+    });
+  }
+
+  openForgot(): void {
+    this.mode.set('forgot');
+    this.error.set('');
+    this.info.set('');
+    this.notVerifiedEmail.set(null);
+  }
+
+  backToSignIn(): void {
+    this.mode.set('signin');
+    this.error.set('');
+    this.info.set('');
+  }
+
+  /** The API answers the same whether or not the address has an account, and so does this screen. */
+  sendResetLink(): void {
+    const email = this.email().trim();
+    if (!email) {
+      this.error.set(this.translation.t('login.errorRequired'));
+      return;
+    }
+    this.loading.set(true);
+    this.error.set('');
+    this.info.set('');
+    this.authApi.requestPasswordReset(email).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.info.set(this.translation.t('login.resetSent', { email }));
+      },
+      error: (err: { status?: number }) => {
+        this.loading.set(false);
+        this.error.set(this.translation.t(err?.status === 429 ? 'login.errorRateLimit' : 'login.errorServer'));
+      }
+    });
+  }
+
+  resendVerification(): void {
+    const email = this.notVerifiedEmail();
+    if (!email) return;
+    this.loading.set(true);
+    this.authApi.resendVerification(email).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.info.set(this.translation.t('login.linkResent'));
+      },
+      error: (err: { status?: number }) => {
+        this.loading.set(false);
+        this.error.set(this.translation.t(err?.status === 429 ? 'login.errorRateLimit' : 'login.errorServer'));
       }
     });
   }

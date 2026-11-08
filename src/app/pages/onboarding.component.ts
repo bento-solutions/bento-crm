@@ -2,10 +2,10 @@ import { BrandMarkComponent } from '../shared/ui/brand-mark.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
-import { AuthApiService } from '../core/services/auth-api.service';
+import { AuthApiService, isCheckEmail } from '../core/services/auth-api.service';
 import { OrganizationApiService } from '../core/services/organization-api.service';
 import { InvitationApiService, InvitationPreview } from '../core/services/invitation-api.service';
 import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
@@ -28,7 +28,7 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
 @Component({
   selector: 'app-onboarding',
   standalone: true,
-  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule, RouterLink],
+  imports: [BrandMarkComponent, FormsModule, CommonModule, MatIconModule],
   template: `
     <div class="min-h-screen flex items-center justify-center bg-canvas p-6">
       <div class="card w-full max-w-[460px] px-8 pt-10 pb-8">
@@ -38,6 +38,21 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
           <span class="font-semibold text-xl tracking-tight text-ink">Bento</span>
         </div>
 
+        @if (checkEmail(); as sentTo) {
+          <!-- The account exists but has no session yet: the emailed link confirms the address.
+               Same panel whether or not the address was already registered (see the API). -->
+          <div class="bg-accent-soft/70 border border-accent-line/80 rounded-xl p-5 text-center space-y-3" role="status">
+            <div class="w-10 h-10 mx-auto bg-accent-soft text-accent-ink rounded-full flex items-center justify-center">
+              <mat-icon class="icon-md">mark_email_unread</mat-icon>
+            </div>
+            <p class="text-sm font-semibold text-ink">Check your inbox</p>
+            <p class="text-xs text-ink-2 leading-relaxed">
+              We sent an email to <strong class="font-mono">{{ sentTo }}</strong>. Open the link in it to confirm
+              your address, then sign in.
+            </p>
+            <a href="/" class="btn-primary w-full">Go to sign in</a>
+          </div>
+        } @else {
         <!-- Mode switcher: Create vs Join -->
         <div class="flex bg-muted p-1 rounded-xl mb-6 border border-line">
           <button
@@ -395,10 +410,11 @@ function defaultStockTrigger(industry: string): StockIssueTrigger {
             </form>
           }
         }
+        }
 
         <p class="text-center text-body text-ink-3 mt-6">
           Already have an account?
-          <a routerLink="/" class="text-ink-2 font-semibold hover:text-ink cursor-pointer">Sign in</a>
+          <a href="/" class="text-ink-2 font-semibold hover:text-ink cursor-pointer">Sign in</a>
         </p>
       </div>
     </div>
@@ -418,6 +434,8 @@ export class OnboardingComponent {
   mode = signal<'create' | 'join'>('create');
   step = signal<1 | 2>(1);
   loading = signal(false);
+  /** Set when the address has to be confirmed from an emailed link before anyone signs in. */
+  checkEmail = signal<string | null>(null);
   error = signal('');
 
   // Create organization form signals
@@ -538,6 +556,10 @@ export class OnboardingComponent {
     }).subscribe({
       next: (response) => {
         this.loading.set(false);
+        if (isCheckEmail(response)) {
+          this.checkEmail.set(response.email);
+          return;
+        }
         this.state.startSession(response);
         window.location.href = '/';
       },
@@ -592,7 +614,13 @@ export class OnboardingComponent {
       admin_email: this.adminEmail().trim(),
       admin_password: this.adminPassword(),
     }).subscribe({
-      next: (org) => {
+      next: (created) => {
+        if (isCheckEmail(created)) {
+          this.loading.set(false);
+          this.checkEmail.set(created.email);
+          return;
+        }
+        const org = created;
         const initials = org.name
           .split(/\s+/)
           .map(w => w[0])

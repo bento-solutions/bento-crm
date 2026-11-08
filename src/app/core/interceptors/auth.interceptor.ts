@@ -37,7 +37,9 @@ export class AuthInterceptor implements HttpInterceptor {
     }
 
     const isAuthEndpoint = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
-    const isSignup = request.method === 'POST' && /\/organizations\/?$/.test(request.url.split('?')[0]);
+    // Sign-up only: POST /account/organizations is a signed-in person creating another
+    // organization, and it needs their token.
+    const isSignup = request.method === 'POST' && /(?<!\/account)\/organizations\/?$/.test(request.url.split('?')[0]);
     // A login or signup must never carry a leftover token: the backend scopes the request to
     // that token's organization, and logging into a different one then fails its
     // cross-tenant write guard (500) instead of simply signing the user in.

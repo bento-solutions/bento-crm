@@ -15,6 +15,10 @@ export const routes: Routes = [
   // Client portal: its own session and guard, and no staff shell (see App).
   { path: 'portal', loadChildren: () => import('./portal/portal.routes').then(m => m.PORTAL_ROUTES) },
   { path: 'invite/accept', loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent) },
+  // Emailed Account links: public, since the person has no session yet; the token is the credential.
+  { path: 'verify-email', loadComponent: () => import('./pages/verify-email.component').then(m => m.VerifyEmailComponent) },
+  { path: 'reset-password', loadComponent: () => import('./pages/reset-password.component').then(m => m.ResetPasswordComponent) },
+  { path: 'organizations/new', canActivate: [authGuard], loadComponent: () => import('./pages/new-organization.component').then(m => m.NewOrganizationComponent) },
   { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'analytics', canActivate: [authGuard], loadComponent: () => import('./pages/analytics.component').then(m => m.AnalyticsComponent) },
   { path: 'tasks', canActivate: [authGuard], loadComponent: () => import('./pages/tasks.component').then(m => m.TasksComponent) },

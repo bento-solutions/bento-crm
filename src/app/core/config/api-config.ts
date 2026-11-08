@@ -8,6 +8,18 @@ export const API_CONFIG = {
       refresh: '/auth/refresh',
       logout: '/auth/logout',
       me: '/auth/me',
+      verifyEmail: '/auth/verify-email',
+      resendVerification: '/auth/verification',
+      passwordReset: '/auth/password-reset',
+      passwordResetConfirm: '/auth/password-reset/confirm',
+    },
+    // The signed-in person's account, across their organizations.
+    account: {
+      organizations: '/account/organizations',
+      switch: '/account/switch',
+      leave: '/account/leave',
+      password: '/account/password',
+      signOutEverywhere: '/account/sign-out-everywhere',
     },
     organizations: {
       create: '/organizations',

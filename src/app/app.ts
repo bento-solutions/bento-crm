@@ -12,8 +12,8 @@ import { ConfirmDialogComponent } from './shared/ui/confirm-dialog.component';
 import { ENTITY_TONE } from './shared/ui/tones';
 import type { Tone } from './shared/ui/stat-card.component';
 import { LoginComponent } from './pages/login.component';
-import { filter } from 'rxjs/operators';
-import { Subscription, interval } from 'rxjs';
+import { catchError, filter, timeout } from 'rxjs/operators';
+import { Subscription, firstValueFrom, interval, of } from 'rxjs';
 import { DealsService } from './services/domains/deals.service';
 import { PartnersService } from './services/domains/partners.service';
 import { InvoicesService } from './services/domains/invoices.service';
@@ -22,6 +22,8 @@ import { WhatsAppInboxStore } from './services/domains/whatsapp-inbox.service';
 import { AssistantPanelComponent } from './shared/assistant-panel.component';
 import { TranslatePipe } from './pipes/translate.pipe';
 import { NativeService } from './core/services/native.service';
+import { AuthApiService, OrganizationChoice } from './core/services/auth-api.service';
+import { ToastService } from './services/toast.service';
 
 interface NavItem {
   label: string;
@@ -563,6 +565,39 @@ function readSidebarCollapsed(): boolean {
       color: var(--color-text-heading);
     }
 
+    .profile-menu-label {
+      padding: 6px 12px 2px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .profile-menu-org {
+      width: 100%;
+      text-align: left;
+    }
+
+    .profile-menu-org span {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .profile-menu-org[aria-current="true"] {
+      color: var(--color-text-heading);
+      cursor: default;
+    }
+
+    .profile-menu-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 6px 0;
+    }
+
     .profile-menu-item mat-icon {
       font-size: 18px;
       width: 18px;
@@ -1014,6 +1049,30 @@ function readSidebarCollapsed(): boolean {
 
               @if (profileMenuOpen()) {
                 <div class="profile-menu">
+                  <!-- Every organization this account belongs to: switching opens a session in
+                       another one without asking for the password again. -->
+                  <div class="profile-menu-label">Organizations</div>
+                  @for (org of myOrganizations(); track org.organization_id) {
+                    <button
+                      type="button"
+                      class="profile-menu-item profile-menu-org"
+                      [attr.aria-current]="org.organization_id === currentOrganizationId() ? 'true' : null"
+                      [disabled]="switchingTo() !== null"
+                      (click)="switchOrganization(org.organization_id)"
+                    >
+                      <mat-icon>{{ org.organization_id === currentOrganizationId() ? 'check' : 'apartment' }}</mat-icon>
+                      <span>{{ org.organization_name }}</span>
+                    </button>
+                  }
+                  <a
+                    routerLink="/organizations/new"
+                    class="profile-menu-item"
+                    (click)="closeProfileMenu()"
+                  >
+                    <mat-icon>add</mat-icon>
+                    <span>New organization</span>
+                  </a>
+                  <div class="profile-menu-divider"></div>
                   <a
                     routerLink="/profile"
                     class="profile-menu-item"
@@ -1199,10 +1258,11 @@ function readSidebarCollapsed(): boolean {
       <app-toast-container></app-toast-container>
       <app-confirm-dialog />
     } @else {
-      <!-- The only two routes a signed-out visitor is meant to reach: creating an
-           organization, and joining one from an emailed invitation. Everything else
-           collapses to the login screen. -->
-      @if (activeRoute().startsWith('/onboarding') || activeRoute().startsWith('/invite')) {
+      <!-- The routes a signed-out visitor is meant to reach: creating an organization,
+           joining one from an emailed invitation, and the emailed links that confirm an
+           address or choose a new password. Everything else collapses to the login screen. -->
+      @if (activeRoute().startsWith('/onboarding') || activeRoute().startsWith('/invite')
+           || activeRoute().startsWith('/verify-email') || activeRoute().startsWith('/reset-password')) {
         <router-outlet></router-outlet>
       } @else {
         <!-- Signed-in sessions never need the login screen, so it is fetched only when shown. -->
@@ -1231,6 +1291,8 @@ export class App implements OnInit, OnDestroy {
   private invoicesService = inject(InvoicesService);
   private ticketsService = inject(TicketsService);
   private native = inject(NativeService);
+  private authApi = inject(AuthApiService);
+  private toast = inject(ToastService);
 
   /** In the mobile app, a signed-in user's phone registers for push notifications (no-op on the web). */
   private readonly pushRegistration = effect(() => {
@@ -1310,6 +1372,41 @@ export class App implements OnInit, OnDestroy {
 
   toggleProfileMenu() {
     this.profileMenuOpen.update(v => !v);
+    if (this.profileMenuOpen()) {
+      this.loadMyOrganizations();
+    }
+  }
+
+  /** The account's organizations, for the switcher in the profile menu. */
+  myOrganizations = signal<OrganizationChoice[]>([]);
+  currentOrganizationId = signal<string | null>(null);
+  switchingTo = signal<string | null>(null);
+
+  private loadMyOrganizations(): void {
+    this.authApi.organizations().subscribe({
+      next: (result) => {
+        this.myOrganizations.set(result.organizations);
+        this.currentOrganizationId.set(result.current_organization_id);
+      },
+      error: () => this.myOrganizations.set([]),
+    });
+  }
+
+  switchOrganization(organizationId: string) {
+    if (organizationId === this.currentOrganizationId() || this.switchingTo()) return;
+    this.switchingTo.set(organizationId);
+    const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    this.authApi.switchOrganization(organizationId, refreshToken).subscribe({
+      next: (session) => {
+        this.state.startSession(session);
+        // Everything loaded belongs to the organization being left: start over in the new one.
+        window.location.href = '/';
+      },
+      error: () => {
+        this.switchingTo.set(null);
+        this.toast.show('Could not open that organization. Please try again.', { type: 'error' });
+      },
+    });
   }
 
   closeProfileMenu() {
@@ -1321,6 +1418,10 @@ export class App implements OnInit, OnDestroy {
     this.mobileMenuOpen.set(false);
     // The phone's push token is removed while the session can still authenticate the call.
     await this.native.unregisterPush();
+    // Ends this device's session on the server too; otherwise its refresh token stayed valid
+    // for 30 days after signing out. A failure must not keep the person signed in here.
+    const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    await firstValueFrom(this.authApi.logout(refreshToken).pipe(timeout(4000), catchError(() => of(null))));
     this.state.logout();
     this.router.navigate(['/']);
   }

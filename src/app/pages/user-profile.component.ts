@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslationService } from '../services/translation.service';
 import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { EmptyStateComponent } from '../shared/ui/empty-state.component';
+import { AuthApiService } from '../core/services/auth-api.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -124,7 +125,7 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
 
         <!-- Tabs -->
         <div class="tabs" role="tablist">
-          @for (tab of profileTabs; track tab.id) {
+          @for (tab of visibleTabs(); track tab.id) {
             <button role="tab" class="tab" [class.is-active]="profileTab() === tab.id" [attr.aria-selected]="profileTab() === tab.id" (click)="profileTab.set(tab.id)">
               {{ tab.label }}
             </button>
@@ -267,6 +268,75 @@ import { EmptyStateComponent } from '../shared/ui/empty-state.component';
         </div>
         }
 
+        @if (profileTab() === 'security' && isOwnProfile()) {
+        <!-- SECURITY: the account's password and sessions, and this organization's membership -->
+        <div class="card p-5 space-y-4">
+          <h3 class="card-title">Password</h3>
+          <p class="text-sm text-ink-2">One password for every organization you belong to. Changing it signs you out on your other devices.</p>
+          @if (passwordMessage()) {
+            <div class="alert alert-success" role="status">{{ passwordMessage() }}</div>
+          }
+          @if (passwordError()) {
+            <div class="alert alert-danger" role="alert">{{ passwordError() }}</div>
+          }
+          <form (ngSubmit)="changePassword()" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+              <label for="current_password" class="field-label mb-1.5">Current password</label>
+              <input id="current_password" [(ngModel)]="currentPassword" name="currentPassword" type="password"
+                autocomplete="current-password" required class="input-field w-full" />
+            </div>
+            <div>
+              <label for="new_password" class="field-label mb-1.5">New password</label>
+              <input id="new_password" [(ngModel)]="newPassword" name="newPassword" type="password"
+                autocomplete="new-password" required minlength="12" class="input-field w-full" />
+            </div>
+            <div>
+              <label for="confirm_new_password" class="field-label mb-1.5">Confirm new password</label>
+              <input id="confirm_new_password" [(ngModel)]="confirmNewPassword" name="confirmNewPassword" type="password"
+                autocomplete="new-password" required class="input-field w-full" />
+            </div>
+            <div class="sm:col-span-3 flex justify-end">
+              <button type="submit" class="btn-primary btn-sm" [disabled]="busy()">Change password</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card p-5 space-y-3">
+          <h3 class="card-title">Sessions</h3>
+          <p class="text-sm text-ink-2">Sign out of Bento on every device and in every organization, this one included. Use it if a device was lost or shared.</p>
+          @if (confirmSignOutEverywhere()) {
+            <div class="alert alert-danger flex-col items-stretch" role="alert">
+              <p>Sign out everywhere now?</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <button (click)="confirmSignOutEverywhere.set(false)" class="btn-secondary btn-sm">Cancel</button>
+                <button (click)="signOutEverywhere()" class="btn-danger btn-sm" [disabled]="busy()">Sign out everywhere</button>
+              </div>
+            </div>
+          } @else {
+            <button (click)="confirmSignOutEverywhere.set(true)" class="btn-secondary btn-sm">Sign out everywhere</button>
+          }
+        </div>
+
+        <div class="card border-danger-line p-5 space-y-3">
+          <h3 class="card-title text-danger-ink">Leave {{ state.organization().name || 'this organization' }}</h3>
+          <p class="text-sm text-ink-2">You lose access to this organization's data. Your other organizations aren't affected, and an admin can invite you back.</p>
+          @if (leaveError()) {
+            <div class="alert alert-danger" role="alert">{{ leaveError() }}</div>
+          }
+          @if (confirmLeave()) {
+            <div class="alert alert-danger flex-col items-stretch" role="alert">
+              <p>Leave {{ state.organization().name || 'this organization' }}?</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <button (click)="confirmLeave.set(false)" class="btn-secondary btn-sm">Cancel</button>
+                <button (click)="leaveOrganization()" class="btn-danger btn-sm" [disabled]="busy()">Leave</button>
+              </div>
+            </div>
+          } @else {
+            <button (click)="confirmLeave.set(true)" class="btn-danger-soft btn-sm">Leave organization</button>
+          }
+        </div>
+        }
+
         @if (profileTab() === 'activity') {
         <!-- ACTIVITY SECTION -->
         <div class="card p-5 space-y-4">
@@ -324,6 +394,7 @@ export class UserProfileComponent {
   translation = inject(TranslationService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private authApi = inject(AuthApiService);
 
   userId = signal<string | null>(null);
   profileTab = signal('profile');
@@ -333,6 +404,81 @@ export class UserProfileComponent {
     { id: 'groups', label: 'Groups' },
     { id: 'activity', label: 'Activity' },
   ];
+
+  /** The Security tab is about the signed-in person's own account, so it never shows on someone else's profile. */
+  visibleTabs = computed(() => this.isOwnProfile()
+    ? [...this.profileTabs, { id: 'security', label: 'Security' }]
+    : this.profileTabs);
+
+  // Security tab
+  currentPassword = '';
+  newPassword = '';
+  confirmNewPassword = '';
+  busy = signal(false);
+  passwordMessage = signal('');
+  passwordError = signal('');
+  confirmSignOutEverywhere = signal(false);
+  confirmLeave = signal(false);
+  leaveError = signal('');
+
+  changePassword(): void {
+    this.passwordMessage.set('');
+    this.passwordError.set('');
+    if (this.newPassword.length < 12) {
+      this.passwordError.set('Use at least 12 characters for the new password');
+      return;
+    }
+    if (this.newPassword !== this.confirmNewPassword) {
+      this.passwordError.set('The new passwords do not match');
+      return;
+    }
+    this.busy.set(true);
+    this.authApi.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: (session) => {
+        // The change ended every session, this one included; the answer is this device's new one.
+        this.state.startSession(session);
+        this.busy.set(false);
+        this.currentPassword = this.newPassword = this.confirmNewPassword = '';
+        this.passwordMessage.set('Password changed. You are signed out on your other devices.');
+      },
+      error: (err) => {
+        this.busy.set(false);
+        this.passwordError.set(errorMessage(err, 'Could not change the password. Please try again.'));
+      }
+    });
+  }
+
+  signOutEverywhere(): void {
+    this.busy.set(true);
+    this.authApi.signOutEverywhere().subscribe({
+      next: () => this.endLocalSession(),
+      error: (err) => {
+        this.busy.set(false);
+        this.confirmSignOutEverywhere.set(false);
+        this.passwordError.set(errorMessage(err, 'Could not sign out everywhere. Please try again.'));
+      }
+    });
+  }
+
+  leaveOrganization(): void {
+    this.leaveError.set('');
+    this.busy.set(true);
+    this.authApi.leaveOrganization().subscribe({
+      // This organization's session is over; signing in again opens one of the others.
+      next: () => this.endLocalSession(),
+      error: (err) => {
+        this.busy.set(false);
+        this.confirmLeave.set(false);
+        this.leaveError.set(errorMessage(err, 'Could not leave the organization. Please try again.'));
+      }
+    });
+  }
+
+  private endLocalSession(): void {
+    this.busy.set(false);
+    this.state.logout();
+    this.router.navigate(['/']);
+  }
 
   // Edit fields
   isEditingName = signal(false);

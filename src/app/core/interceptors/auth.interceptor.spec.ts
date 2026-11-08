@@ -41,6 +41,15 @@ describe('AuthInterceptor token refresh', () => {
     localStorage.clear();
   });
 
+  it('sends sign-up without a token but creating another organization with one', () => {
+    http.post(`${API_CONFIG.baseUrl}/organizations`, {}).subscribe();
+    http.post(`${API_CONFIG.baseUrl}/account/organizations`, {}).subscribe();
+
+    expect(backend.expectOne(`${API_CONFIG.baseUrl}/organizations`).request.headers.has('Authorization')).toBe(false);
+    expect(backend.expectOne(`${API_CONFIG.baseUrl}/account/organizations`).request.headers.get('Authorization'))
+      .toBe('Bearer access-1');
+  });
+
   it('refreshes once for concurrent 401s and retries both with the new token', async () => {
     const results: unknown[] = [];
     http.get('/api/a').subscribe(r => results.push(r));

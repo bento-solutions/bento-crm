@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { BaseApiService } from './base-api.service';
 import { API_CONFIG, HTTP_CONFIG } from '../config/api-config';
-import { LoginResponse } from './auth-api.service';
+import { LoginResponse, CheckEmailResponse } from './auth-api.service';
 
 /** Mirrors the backend UserRole enum. */
 export type InvitationRole = 'ADMIN' | 'MANAGER' | 'SALESPERSON' | 'SUPPORT' | 'VIEWER';
@@ -125,8 +125,9 @@ export class InvitationApiService extends BaseApiService {
   }
 
   /** Returns a full session: accepting signs the new user straight in. */
-  accept(request: AcceptInvitationRequest): Observable<LoginResponse> {
-    return this.post<LoginResponse>(API_CONFIG.endpoints.invitations.accept, request);
+  /** A session, or "check_email" when the address must first be confirmed from an emailed link. */
+  accept(request: AcceptInvitationRequest): Observable<LoginResponse | CheckEmailResponse> {
+    return this.post<LoginResponse | CheckEmailResponse>(API_CONFIG.endpoints.invitations.accept, request);
   }
 
   /**
