@@ -58,6 +58,8 @@ export interface InvitationPreview {
   job_title: string | null;
   invited_by_name: string | null;
   expires_at: string;
+  /** The invited address already signs in to Bento, so the invitee signs in rather than registering. */
+  has_account?: boolean;
 }
 
 export interface AcceptInvitationRequest {

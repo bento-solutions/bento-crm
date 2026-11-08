@@ -5,7 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CrmStateService } from '../services/crm-state.service';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthApiService, CurrentUser } from '../core/services/auth-api.service';
+import { ApiClientError } from '../core/services/base-api.service';
 import { InvitationApiService, InvitationPreview, InvitationRole } from '../core/services/invitation-api.service';
 
 const ROLE_LABELS: Record<InvitationRole, string> = {
@@ -136,8 +138,8 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
             </div>
           }
 
-          <!-- Option 1: 1-Click Accept for Logged-in user -->
-          @if (canAcceptDirectly() && !showPasswordForm()) {
+          <!-- Signed in as the invited address: one click adds this organization to the account. -->
+          @if (canAcceptDirectly()) {
             <div class="bg-accent-soft/70 border border-accent-line/80 rounded-xl p-5 text-center space-y-3 mb-4">
               <div class="w-10 h-10 mx-auto bg-accent-soft text-accent-ink rounded-full flex items-center justify-center">
                 <mat-icon class="icon-md">how_to_reg</mat-icon>
@@ -163,15 +165,34 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                 }
               </button>
             </div>
-            <div class="text-center">
-              <button
-                type="button"
-                (click)="showPasswordForm.set(true)"
-                class="text-xs text-ink-3 hover:text-ink underline cursor-pointer"
-              >
-                Or set a new password for this workspace
+          } @else if (invite.has_account) {
+            <!-- The address already signs in to Bento: one person, one password, so they sign in
+                 with it and the invitation adds this organization to their account. -->
+            <form (ngSubmit)="signInAndAccept()" class="space-y-4">
+              <p class="text-xs text-ink-2 leading-relaxed text-center">
+                <strong>{{ invite.email }}</strong> already has a Bento account. Sign in to join
+                <strong>{{ invite.organization_name }}</strong>. You keep access to your other organizations.
+              </p>
+              <div>
+                <label for="invite_signin_email" class="field-label mb-1.5">Email</label>
+                <input id="invite_signin_email" [value]="invite.email" type="email" disabled
+                  class="input-field w-full cursor-not-allowed" />
+              </div>
+              <div>
+                <label for="invite_signin_password" class="field-label mb-1.5">Password</label>
+                <input id="invite_signin_password"
+                  [(ngModel)]="password"
+                  name="signinPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  class="input-field w-full"
+                />
+              </div>
+              <button type="submit" [disabled]="loading()" class="btn-primary w-full mt-2">
+                {{ loading() ? 'Joining…' : 'Sign in and join ' + invite.organization_name }}
               </button>
-            </div>
+            </form>
           } @else {
             <form (ngSubmit)="submit()" class="space-y-4">
               <div>
@@ -248,18 +269,6 @@ const ROLE_BLURBS: Record<InvitationRole, string> = {
                 {{ loading() ? 'Joining…' : 'Join ' + invite.organization_name }}
               </button>
             </form>
-
-            @if (canAcceptDirectly() && showPasswordForm()) {
-              <div class="text-center mt-3">
-                <button
-                  type="button"
-                  (click)="showPasswordForm.set(false)"
-                  class="text-xs text-ink-3 hover:text-ink underline cursor-pointer"
-                >
-                  Return to 1-click join
-                </button>
-              </div>
-            }
           }
 
           <p class="text-center text-body text-ink-3 mt-6">
@@ -284,7 +293,6 @@ export class InviteAcceptComponent {
   loading = signal(false);
   error = signal('');
   loggedInUser = signal<CurrentUser | null>(null);
-  showPasswordForm = signal(false);
 
   displayName = '';
   phone = '';
@@ -357,8 +365,7 @@ export class InviteAcceptComponent {
   acceptAsLoggedIn(): void {
     const targetId = this.preview()?.id;
     if (!targetId) {
-      this.error.set('Could not identify the invitation to accept. Please enter your details below.');
-      this.showPasswordForm.set(true);
+      this.error.set('Could not identify the invitation to accept. Open the link from your invitation email again.');
       return;
     }
 
@@ -375,6 +382,51 @@ export class InviteAcceptComponent {
         this.loading.set(false);
         const detail = err?.error?.detail || err?.error?.message || 'Could not join workspace. Please try again.';
         this.error.set(detail);
+      }
+    });
+  }
+
+  /**
+   * Signs the existing account in, then accepts as that signed-in person. When the account
+   * belongs to several organizations, any of them will do: the session only proves who is
+   * accepting, and the acceptance answers with a session in the new organization.
+   */
+  signInAndAccept(): void {
+    const invite = this.preview();
+    if (!invite?.id) {
+      this.error.set('Could not identify the invitation to accept. Open the link from your invitation email again.');
+      return;
+    }
+    if (!this.password) {
+      this.error.set('Enter your password');
+      return;
+    }
+    this.error.set('');
+    this.loading.set(true);
+
+    const invitationId = invite.id;
+    this.authApi.login({ email: invite.email, password: this.password }).pipe(
+      catchError((err: ApiClientError) => {
+        const orgs = err?.organizations;
+        if (err?.status === 409 && Array.isArray(orgs) && orgs.length > 0) {
+          return this.authApi.login({ email: invite.email, password: this.password, organization_id: orgs[0].organization_id });
+        }
+        return throwError(() => err);
+      }),
+      switchMap(session => {
+        this.state.startSession(session);
+        return this.invitationApi.acceptLoggedIn(invitationId, this.token);
+      })
+    ).subscribe({
+      next: (response) => {
+        this.state.startSession(response);
+        window.location.href = '/';
+      },
+      error: (err: ApiClientError) => {
+        this.loading.set(false);
+        this.error.set(err?.status === 401
+          ? 'That password is not right for this account.'
+          : err?.detail || 'Could not join the workspace. Please try again.');
       }
     });
   }
