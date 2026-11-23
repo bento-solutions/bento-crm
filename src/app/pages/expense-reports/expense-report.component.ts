@@ -601,14 +601,17 @@ export class ExpenseReportComponent implements OnInit {
       dims: f.dims,
     };
     const isNew = !f.id;
+    const before = new Set(r.lines.map(l => l.id));
     this.busy.set(true);
     this.api.saveLine(r.id, body, f.id).subscribe({
-      next: saved => {
+      next: updated => {
         this.busy.set(false);
         this.line.set(null);
         this.toast.show(this.i18n.t(isNew ? 'expenseReports.lineAdded' : 'expenseReports.lineSaved'), { type: 'success' });
-        // A new line opens its receipts right away, so the proof goes with it.
-        if (isNew && saved?.id) this.receiptsFor.set(saved);
+        // A new line opens its receipts right away, so the proof goes with it. The API answers
+        // with the whole report, so the new line is the one that wasn't there before.
+        const added = isNew ? updated?.lines?.find(l => l.id && !before.has(l.id)) : undefined;
+        if (added) this.receiptsFor.set(added);
         this.load(r.id, false);
       },
       error: e => this.fail(e),
@@ -633,7 +636,8 @@ export class ExpenseReportComponent implements OnInit {
 
   // Display
 
-  categoryLabel(c: string): string {
+  categoryLabel(c: string | null | undefined): string {
+    if (!c) return '';
     const key = `expenses.cat.${c}`;
     const label = this.i18n.t(key);
     return label === key ? c.charAt(0) + c.slice(1).toLowerCase().replace(/_/g, ' ') : label;
