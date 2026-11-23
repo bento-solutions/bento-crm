@@ -82,7 +82,9 @@ export function dimensionsFromApi(r: Raw): DimensionValues {
   const out: DimensionValues = emptyDimensions();
   for (const k of DIMENSION_KEYS) {
     out[k] = first(r, RESPONSE_FIELDS[k].id);
-    const nameKeys = k === 'vendorId' && r && r['vendorId'] !== undefined ? ['vendorName', ...RESPONSE_FIELDS[k].name] : RESPONSE_FIELDS[k].name;
+    // Expenses and report lines carry vendorPartnerId and a free-text vendorName: use vendorPartnerName there.
+    const nameKeys = k === 'vendorId' && r && r['vendorId'] !== undefined && r['vendorPartnerId'] === undefined
+      ? ['vendorName', ...RESPONSE_FIELDS[k].name] : RESPONSE_FIELDS[k].name;
     out[NAME_OF[k]] = first(r, nameKeys);
   }
   return out;
