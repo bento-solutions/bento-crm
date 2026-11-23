@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { BaseApiService } from '../../core/services/base-api.service';
+import { CostCenterCost, costsByCostCenterFromApi } from './dimensions';
 
 export type MissionStatus = 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 export type DeliverableStatus = 'TODO' | 'IN_PROGRESS' | 'DELIVERED';
@@ -90,6 +91,8 @@ export interface MissionFinancials {
   advances?: number | null;
   costs?: { accountCode: string; accountName?: string | null; amount: number }[] | null;
   costsTotal?: number | null;
+  /** The same costs by cost center (normalised in dimensions.ts). */
+  costsByCostCenter: CostCenterCost[];
   margin?: number | null;
   documents?: { type: MissionDocumentType; id: string; number?: string | null; date?: string | null; amount?: number | null; status?: string | null }[] | null;
 }
@@ -138,13 +141,14 @@ export class MissionApi extends BaseApiService {
     return this.get('/missions', params);
   }
 
-  /** POST /deals/{id}/mission: a PLANNED mission (and its cost center) from the deal. */
+  /** POST /deals/{id}/mission: a PLANNED mission from the deal. */
   createForDeal(dealId: string): Observable<MissionDetail | MissionSummary> {
     return this.post(`/deals/${dealId}/mission`, {});
   }
 
   summary(id: string): Observable<MissionFinancials> {
-    return this.get(`/missions/${id}/summary`);
+    return this.get<MissionFinancials>(`/missions/${id}/summary`).pipe(
+      map(s => ({ ...s, costsByCostCenter: costsByCostCenterFromApi(s as unknown as Record<string, unknown>) })));
   }
 
   detail(id: string): Observable<MissionDetail> {

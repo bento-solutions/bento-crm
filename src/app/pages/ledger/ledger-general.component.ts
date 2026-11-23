@@ -13,6 +13,9 @@ import { formatMoney, shortDate } from '../../shared/bank.util';
 import { csvAmount, defaultPeriod, downloadCsv } from '../../shared/ledger.util';
 import { LedgerPickerComponent, PickerOption } from './ledger-picker.component';
 import { balanceText, errorDetail, sideAmount } from './ledger-labels';
+import { DimensionChipsComponent } from '../../shared/dimension-chips.component';
+import { DimensionKey } from '../../services/domains/dimensions';
+import { DimensionsStore } from '../../services/domains/dimensions.store';
 
 /**
  * General Ledger → General ledger (grand livre): for each account with activity, its opening
@@ -20,7 +23,7 @@ import { balanceText, errorDetail, sideAmount } from './ledger-labels';
  */
 @Component({
   selector: 'app-ledger-general',
-  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent, LedgerPickerComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent, LedgerPickerComponent, DimensionChipsComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -47,6 +50,12 @@ import { balanceText, errorDetail, sideAmount } from './ledger-labels';
             <option [ngValue]="null">{{ 'ledger.allCostCenters' | translate }}</option>
             @for (c of costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
           </select></label>
+        @for (d of dimensionFilters; track d.key) {
+          <div class="block w-48 max-w-full"><span class="field-label">{{ d.label | translate }}</span>
+            <app-ledger-picker [items]="dimensionOptions(d.key)" [value]="filter()[d.key] ?? null" (valueChange)="setDimension(d.key, $event)"
+                               [allowClear]="true" [clearLabel]="'dimensions.all' | translate" [placeholder]="'dimensions.all' | translate"
+                               [emptyLabel]="'ledger.noMatch' | translate" [ariaLabel]="d.label | translate" /></div>
+        }
         <div class="flex gap-2 ms-auto">
           <button class="btn-ghost" (click)="resetFilter()">{{ 'ledger.reset' | translate }}</button>
           <button class="btn-secondary" [disabled]="!blocks().length" (click)="exportCsv()"><mat-icon>download</mat-icon>{{ 'ledger.exportCsv' | translate }}</button>
@@ -87,6 +96,7 @@ import { balanceText, errorDetail, sideAmount } from './ledger-labels';
                       @if (l.partnerName || l.costCenterCode) {
                         <div class="cell-sub">{{ l.partnerName }}@if (l.partnerName && l.costCenterCode) { · }@if (l.costCenterCode) { {{ 'ledger.costCenterShort' | translate }} {{ l.costCenterCode }} }</div>
                       }
+                      <app-dimension-chips class="mt-0.5" [value]="l.dims" [all]="true" />
                     </td>
                     <td class="col-num num whitespace-nowrap">{{ side(l.debit) }}</td>
                     <td class="col-num num whitespace-nowrap">{{ side(l.credit) }}</td>
@@ -117,6 +127,14 @@ export class LedgerGeneralComponent implements OnInit {
   private toast = inject(ToastService);
   private i18n = inject(TranslationService);
   private state = inject(CrmStateService);
+  private dims = inject(DimensionsStore);
+
+  readonly dimensionFilters: { key: DimensionKey; label: string }[] = [
+    { key: 'missionId', label: 'dimensions.mission' },
+    { key: 'dealId', label: 'dimensions.deal' },
+    { key: 'customerId', label: 'dimensions.customer' },
+    { key: 'vendorId', label: 'dimensions.vendor' },
+  ];
 
   /** An entry number was clicked: the page opens it in the Journal entries tab. */
   openEntry = output<string>();
@@ -138,6 +156,7 @@ export class LedgerGeneralComponent implements OnInit {
 
   ngOnInit(): void {
     this.state.loadPartners();
+    this.dims.ensure();
     this.api.accounts(true).subscribe({ next: a => this.accounts.set(a ?? []), error: e => this.fail(e) });
     this.api.costCenters(true).subscribe({ next: c => this.costCenters.set(c ?? []), error: () => { /* the filter stays empty */ } });
     const p = this.preset();
@@ -165,6 +184,19 @@ export class LedgerGeneralComponent implements OnInit {
     this.load();
   }
 
+  dimensionOptions(key: DimensionKey): PickerOption[] {
+    switch (key) {
+      case 'missionId': return this.dims.missionOptions();
+      case 'dealId': return this.dims.dealOptions();
+      case 'customerId': return this.dims.customerOptions();
+      default: return this.dims.vendorOptions();
+    }
+  }
+
+  setDimension(key: DimensionKey, id: string | null): void {
+    this.setFilter({ [key]: id } as Partial<GeneralLedgerFilter>);
+  }
+
   applyRange(): void {
     const from = this.rangeFrom().trim() || null;
     const to = this.rangeTo().trim() || null;
@@ -185,15 +217,19 @@ export class LedgerGeneralComponent implements OnInit {
     const t = (k: string) => this.i18n.t(k);
     const rows: unknown[][] = [[
       t('ledger.code'), t('ledger.accounts.name'), t('ledger.date'), t('ledger.entries.number'), t('ledger.journalShort'),
-      t('ledger.label'), t('ledger.partner'), t('ledger.costCenter'), t('ledger.debit'), t('ledger.credit'), t('ledger.balance'),
+      t('ledger.label'), t('ledger.partner'), t('ledger.costCenter'),
+      t('dimensions.mission'), t('dimensions.deal'), t('dimensions.customer'), t('dimensions.vendor'),
+      t('ledger.debit'), t('ledger.credit'), t('ledger.balance'),
     ]];
     for (const a of r.accounts ?? []) {
-      rows.push([a.code, a.name, r.from, '', '', t('ledger.gl.opening'), '', '', '', '', csvAmount(a.openingBalance)]);
+      rows.push([a.code, a.name, r.from, '', '', t('ledger.gl.opening'), '', '', '', '', '', '', '', '', csvAmount(a.openingBalance)]);
       for (const l of a.lines ?? []) {
+        const d = l.dims ?? {};
         rows.push([a.code, a.name, l.entryDate, l.entryNumber, l.journalCode, l.label ?? '', l.partnerName ?? '', l.costCenterCode ?? '',
+          this.dims.missionLabel(d) ?? '', this.dims.dealLabel(d) ?? '', this.dims.customerLabel(d) ?? '', this.dims.vendorLabel(d) ?? '',
           csvAmount(l.debit), csvAmount(l.credit), csvAmount(l.balance)]);
       }
-      rows.push([a.code, a.name, r.to, '', '', t('ledger.gl.totals'), '', '', csvAmount(a.totalDebit), csvAmount(a.totalCredit), csvAmount(a.closingBalance)]);
+      rows.push([a.code, a.name, r.to, '', '', t('ledger.gl.totals'), '', '', '', '', '', '', csvAmount(a.totalDebit), csvAmount(a.totalCredit), csvAmount(a.closingBalance)]);
     }
     downloadCsv(`grand-livre_${r.from}_${r.to}.csv`, rows);
   }

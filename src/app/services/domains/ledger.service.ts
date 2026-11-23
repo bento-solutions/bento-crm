@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { BaseApiService } from '../../core/services/base-api.service';
 import type { PageResponse } from '../api.service';
+import { DimensionFilter, DimensionValues, dimensionQuery, dimensionsFromApi } from './dimensions';
 
 export type AccountKind = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
 export type JournalKind = 'SALES' | 'PURCHASES' | 'BANK' | 'CASH' | 'MISC' | 'OPENING';
@@ -52,6 +53,8 @@ export interface EntryLine {
   label?: string | null;
   debit: number;
   credit: number;
+  /** Analytic dimensions of the line (expense lines only), normalised in dimensions.ts. */
+  dims?: DimensionValues;
 }
 
 export interface Entry {
@@ -90,7 +93,7 @@ export interface EntryRequest {
   lines: EntryLineRequest[];
 }
 
-export interface EntryFilter {
+export interface EntryFilter extends DimensionFilter {
   journalId?: string | null;
   from?: string | null;
   to?: string | null;
@@ -102,7 +105,7 @@ export interface EntryFilter {
   sourceId?: string | null;
 }
 
-export interface GeneralLedgerFilter {
+export interface GeneralLedgerFilter extends DimensionFilter {
   from?: string | null;
   to?: string | null;
   accountId?: string | null;
@@ -124,6 +127,8 @@ export interface GeneralLedgerLine {
   credit: number;
   /** Running balance, debit minus credit. */
   balance: number;
+  /** Analytic dimensions of the line, normalised in dimensions.ts. */
+  dims?: DimensionValues;
 }
 
 export interface GeneralLedgerAccount {
@@ -267,13 +272,20 @@ export interface RepostResult {
   errors?: RepostError[] | null;
 }
 
-/** Copies the set, non-blank values of a filter into query parameters. */
+/** Copies the set, non-blank values of a filter into query parameters (dimension names come from dimensions.ts). */
 function params(f: object, extra: Record<string, string | number | boolean> = {}): Record<string, string | number | boolean> {
-  const out = { ...extra };
-  for (const [k, v] of Object.entries(f)) {
+  const { missionId, dealId, customerId, vendorId, costCenterId, ...rest } = f as DimensionFilter & Record<string, unknown>;
+  const out: Record<string, string | number | boolean> = { ...extra };
+  for (const [k, v] of Object.entries(rest)) {
     if (v !== null && v !== undefined && String(v).trim() !== '') out[k] = String(v).trim();
   }
-  return out;
+  return { ...out, ...dimensionQuery({ missionId, dealId, customerId, vendorId, costCenterId }) };
+}
+
+function withLineDims<T extends { lines?: unknown[] | null }>(e: T): T {
+  return e && Array.isArray(e.lines)
+    ? { ...e, lines: e.lines.map(l => ({ ...(l as object), dims: dimensionsFromApi(l as Record<string, unknown>) })) }
+    : e;
 }
 
 /** The general ledger: chart of accounts, journals, entries, cost centers and reports (backend: LedgerController). */
@@ -320,11 +332,12 @@ export class LedgerApi extends BaseApiService {
 
   // Entries
   entries(f: EntryFilter, page = 0, size = 50): Observable<PageResponse<Entry>> {
-    return this.get('/ledger/entries', params(f, { page, size }));
+    return this.get<PageResponse<Entry>>('/ledger/entries', params(f, { page, size })).pipe(
+      map(p => (p && Array.isArray(p.content) ? { ...p, content: p.content.map(withLineDims) } : p)));
   }
 
   entry(id: string): Observable<Entry> {
-    return this.get(`/ledger/entries/${id}`);
+    return this.get<Entry>(`/ledger/entries/${id}`).pipe(map(withLineDims));
   }
 
   createEntry(body: EntryRequest): Observable<Entry> {
@@ -405,7 +418,9 @@ export class LedgerApi extends BaseApiService {
 
   // Reports
   generalLedger(f: GeneralLedgerFilter): Observable<GeneralLedger> {
-    return this.get('/ledger/general-ledger', params(f));
+    return this.get<GeneralLedger>('/ledger/general-ledger', params(f)).pipe(map(r => (r && Array.isArray(r.accounts)
+      ? { ...r, accounts: r.accounts.map(withLineDims) }
+      : r)));
   }
 
   trialBalance(f: { from?: string | null; to?: string | null; accountClass?: number | null }): Observable<TrialBalance> {

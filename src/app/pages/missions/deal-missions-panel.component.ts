@@ -11,7 +11,7 @@ import { errorDetail } from '../bank/bank-labels';
 
 /**
  * The missions of a deal (GET /missions?dealId=), and "Create mission" when there is none
- * (POST /deals/{id}/mission: name, client and fee from the deal, plus its cost center).
+ * (POST /deals/{id}/mission: name, client and fee from the deal).
  */
 @Component({
   selector: 'app-deal-missions-panel',

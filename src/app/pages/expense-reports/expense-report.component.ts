@@ -25,6 +25,9 @@ import { errorDetail } from '../bank/bank-labels';
 import { saveBlob, todayIso } from '../delivery-notes/delivery-note-labels';
 import { DEFAULT_CATEGORIES } from '../finance-expenses.component';
 import { expenseReportBadge } from './expense-report-labels';
+import { DimensionFieldsComponent } from '../../shared/dimension-fields.component';
+import { DimensionChipsComponent } from '../../shared/dimension-chips.component';
+import { DimensionValues, Dimensions, emptyDimensions } from '../../services/domains/dimensions';
 
 const OTHER_EMPLOYEE = '__other';
 
@@ -50,6 +53,8 @@ interface LineForm {
   vatCode: string | null;
   vatAmount: number | null;
   costCenterId: string | null;
+  dims: Dimensions;
+  dimNames?: DimensionValues | null;
 }
 
 interface ReimburseForm {
@@ -70,7 +75,7 @@ function monthBounds(): { from: string; to: string } {
  */
 @Component({
   selector: 'app-expense-report',
-  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent],
+  imports: [FormsModule, MatIconModule, TranslatePipe, PageHeaderComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent, DimensionFieldsComponent, DimensionChipsComponent],
   template: `
     <div class="page">
       <app-page-header [title]="pageTitle()" [subtitle]="report()?.title || ('expenseReports.subtitle' | translate)"
@@ -83,8 +88,8 @@ function monthBounds(): { from: string; to: string } {
             @if (r.status === 'DRAFT' && canWrite()) {
               <button class="btn-ghost" [disabled]="busy()" (click)="cancelReport()">{{ 'expenseReports.cancelReport' | translate }}</button>
               <button class="btn-secondary" [disabled]="busy() || !headerValid()" (click)="saveHeader()"><mat-icon>save</mat-icon>{{ 'expenseReports.save' | translate }}</button>
-              <button class="btn-primary" [disabled]="busy() || !headerValid() || !r.lines.length" (click)="post()"
-                      [attr.title]="r.lines.length ? null : ('expenseReports.postNeedsLines' | translate)"><mat-icon>task_alt</mat-icon>{{ 'expenseReports.post' | translate }}</button>
+              <button class="btn-primary" [disabled]="busy() || !headerValid() || !r.lines.length || linesMissingCostCenter()" (click)="post()"
+                      [attr.title]="r.lines.length ? (linesMissingCostCenter() ? ('expenseReports.linesMissingCostCenter' | translate) : null) : ('expenseReports.postNeedsLines' | translate)"><mat-icon>task_alt</mat-icon>{{ 'expenseReports.post' | translate }}</button>
             }
             @if (r.status === 'POSTED' && canWrite()) {
               <button class="btn-secondary" [disabled]="busy()" (click)="unpost()"><mat-icon>undo</mat-icon>{{ 'expenseReports.unpost' | translate }}</button>
@@ -129,7 +134,7 @@ function monthBounds(): { from: string; to: string } {
             @if (groups.enabled()) {
               <label class="block"><span class="field-label">{{ 'expenseReports.defaultCostCenter' | translate }}</span>
                 <select class="input-field w-full" [ngModel]="head().costCenterId" (ngModelChange)="patchHead({ costCenterId: $event })">
-                  <option [ngValue]="null">{{ 'expenses.noProject' | translate }}</option>
+                  <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
                 </select></label>
             }
@@ -137,6 +142,7 @@ function monthBounds(): { from: string; to: string } {
               <textarea class="input-field w-full" rows="2" [ngModel]="head().notes" (ngModelChange)="patchHead({ notes: $event })"></textarea></label>
           </fieldset>
           @if (periodInvalid()) { <p class="px-4 pb-3 text-meta text-danger-ink">{{ 'expenseReports.periodInvalid' | translate }}</p> }
+          @if (editable() && linesMissingCostCenter()) { <p class="px-4 pb-3 text-meta text-danger-ink">{{ 'expenseReports.linesMissingCostCenter' | translate }}</p> }
         </section>
 
         <section class="table-card mb-4">
@@ -160,7 +166,7 @@ function monthBounds(): { from: string; to: string } {
                   <th class="col-num">{{ 'expenseReports.ttc' | translate }}</th>
                   <th class="hidden md:table-cell">{{ 'expenses.vatCode' | translate }}</th>
                   <th class="col-num hidden sm:table-cell">{{ 'expenseReports.vat' | translate }}</th>
-                  @if (groups.enabled()) { <th class="hidden xl:table-cell">{{ 'expenses.project' | translate }}</th> }
+                  @if (groups.enabled()) { <th class="hidden md:table-cell">{{ 'ledger.costCenter' | translate }}</th> }
                   <th class="col-actions"><span class="sr-only">{{ 'expenseReports.receipts' | translate }}</span></th>
                   <th class="col-actions"></th>
                 </tr></thead>
@@ -169,13 +175,14 @@ function monthBounds(): { from: string; to: string } {
                     <tr>
                       <td class="cell-muted whitespace-nowrap">{{ date(l.expenseDate) }}</td>
                       <td><span class="badge badge-neutral">{{ categoryLabel(l.category) }}</span></td>
-                      <td class="max-w-56 truncate">{{ l.description || '—' }}</td>
+                      <td class="max-w-64"><div class="truncate">{{ l.description || '—' }}</div>
+                        <app-dimension-chips [value]="l.dims" /></td>
                       <td class="hidden lg:table-cell max-w-40 truncate">{{ l.vendorName || '—' }}</td>
                       <td class="hidden lg:table-cell cell-muted">{{ l.reference || '—' }}</td>
                       <td class="col-num num">{{ money(l.amount) }}</td>
                       <td class="hidden md:table-cell cell-muted">{{ l.vatCode ? groups.vatLabel(l.vatCode) : '—' }}</td>
                       <td class="col-num num hidden sm:table-cell">{{ money(l.vatAmount ?? 0) }}</td>
-                      @if (groups.enabled()) { <td class="hidden xl:table-cell cell-muted">{{ costCenterCode(l.costCenterId) }}</td> }
+                      @if (groups.enabled()) { <td class="hidden md:table-cell cell-muted num" [class.text-danger-ink]="!l.costCenterId && !report()!.costCenterId">{{ costCenterCode(l.costCenterId) }}</td> }
                       <td class="col-actions">
                         <button class="btn-icon btn-sm relative" (click)="receiptsFor.set(l)"
                                 [attr.title]="'expenseReports.receipts' | translate" [attr.aria-label]="'expenseReports.receipts' | translate">
@@ -267,12 +274,20 @@ function monthBounds(): { from: string; to: string } {
               <input type="number" min="0" step="0.01" class="input-field w-full" [(ngModel)]="f.vatAmount" />
               @if (vatTooHigh(f)) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.vatTooHigh' | translate }}</span> }</label>
             @if (groups.enabled()) {
-              <label class="block"><span class="field-label">{{ 'expenses.project' | translate }}</span>
-                <select class="input-field w-full" [(ngModel)]="f.costCenterId">
-                  <option [ngValue]="null">{{ 'expenseReports.reportCostCenter' | translate }}</option>
+              <label class="block"><span class="field-label">{{ 'ledger.costCenter' | translate }}@if (!reportCostCenter()) { * }</span>
+                <select class="input-field w-full" [(ngModel)]="f.costCenterId" [attr.aria-invalid]="!f.costCenterId && !reportCostCenter()">
+                  @if (reportCostCenter(); as rc) {
+                    <option [ngValue]="null">{{ 'expenseReports.reportCostCenterNamed' | translate: { code: rc.code } }}</option>
+                  } @else {
+                    <option [ngValue]="null">{{ 'expenses.pickCostCenter' | translate }}</option>
+                  }
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
-                </select></label>
+                </select>
+                @if (!f.costCenterId && !reportCostCenter()) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenseReports.lineNeedsCostCenter' | translate }}</span> }</label>
             }
+            <div class="col-span-2">
+              <app-dimension-fields [(value)]="f.dims" [names]="f.dimNames ?? null" />
+            </div>
           </div>
           @if (!f.id) { <p class="text-xs text-ink-3 mt-3">{{ 'expenseReports.receiptAfterSave' | translate }}</p> }
           <div class="modal-footer">
@@ -372,6 +387,18 @@ export class ExpenseReportComponent implements OnInit {
     return !!h.periodFrom && !!h.periodTo && h.periodFrom > h.periodTo;
   });
   headerValid = computed(() => !!this.employeeName().trim() && !this.periodInvalid());
+  /** The saved report's default cost center, which a line without its own uses. */
+  reportCostCenter = computed(() => {
+    const id = this.report()?.costCenterId;
+    if (!id) return null;
+    return this.groups.costCenters().find(c => c.id === id) ?? { id, code: '—', name: '' };
+  });
+  /** A line has no cost center and the report (as on screen) has no default: posting would fail. */
+  linesMissingCostCenter = computed(() => {
+    const r = this.report();
+    if (!r || !this.groups.enabled() || this.head().costCenterId) return false;
+    return r.lines.some(l => !l.costCenterId);
+  });
 
   canWrite(): boolean { return this.state.hasAuthority('PAYMENTS_CREATE'); }
 
@@ -532,9 +559,11 @@ export class ExpenseReportComponent implements OnInit {
     this.line.set(l ? {
       id: l.id, expenseDate: l.expenseDate, category: l.category, description: l.description ?? '', vendorName: l.vendorName ?? '',
       reference: l.reference ?? '', amount: l.amount, vatCode: l.vatCode ?? null, vatAmount: l.vatAmount ?? null, costCenterId: l.costCenterId ?? null,
+      dims: { missionId: l.dims?.missionId ?? null, dealId: l.dims?.dealId ?? null, customerId: l.dims?.customerId ?? null, vendorId: l.dims?.vendorId ?? null },
+      dimNames: l.dims ?? null,
     } : {
       expenseDate: this.defaultLineDate(r), category: 'MEALS', description: '', vendorName: '', reference: '',
-      amount: null, vatCode: null, vatAmount: null, costCenterId: null,
+      amount: null, vatCode: null, vatAmount: null, costCenterId: null, dims: emptyDimensions(),
     });
   }
 
@@ -557,7 +586,9 @@ export class ExpenseReportComponent implements OnInit {
 
   lineValid(f: LineForm): boolean {
     return !!f.expenseDate && !!f.category && f.amount !== null && f.amount > 0
-      && (f.vatAmount === null || (f.vatAmount >= 0 && f.vatAmount <= f.amount));
+      && (f.vatAmount === null || (f.vatAmount >= 0 && f.vatAmount <= f.amount))
+      // A line needs a cost center, its own or the report's default.
+      && (!this.groups.enabled() || !!f.costCenterId || !!this.reportCostCenter());
   }
 
   saveLine(f: LineForm): void {
@@ -567,6 +598,7 @@ export class ExpenseReportComponent implements OnInit {
       expenseDate: f.expenseDate, category: f.category, description: f.description.trim() || null, amount: f.amount!,
       vatAmount: f.vatAmount, vatCode: f.vatCode, vendorName: f.vendorName.trim() || null, reference: f.reference.trim() || null,
       costCenterId: f.costCenterId,
+      dims: f.dims,
     };
     const isNew = !f.id;
     this.busy.set(true);

@@ -56,8 +56,20 @@ const DOC_ICONS: Record<MissionDocumentType, string> = {
               </div>
             }
           </div>
-        } @else if (!s.costCenterId) {
-          <p class="text-xs text-ink-3">{{ 'missions.summary.noCostCenter' | translate }}</p>
+        }
+        @if (s.costsByCostCenter.length) {
+          <div class="space-y-1">
+            <div class="text-xs font-semibold text-ink-2">{{ 'missions.summary.costsByCostCenter' | translate }}</div>
+            @for (c of s.costsByCostCenter; track c.costCenterId ?? $index) {
+              <div class="flex justify-between gap-2 text-xs">
+                <span class="text-ink-2 truncate">@if (c.code || c.name) { @if (c.code) { <span class="num">{{ c.code }}</span> · }{{ c.name || '' }} } @else { {{ 'ledger.groups.noCostCenter' | translate }} }</span>
+                <span class="num text-ink shrink-0">{{ money(c.amount) }}</span>
+              </div>
+            }
+          </div>
+        }
+        @if (!s.costs?.length && !s.costsByCostCenter.length) {
+          <p class="text-xs text-ink-3">{{ 'missions.summary.noCosts' | translate }}</p>
         }
 
         <div class="space-y-1">
