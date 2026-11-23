@@ -177,9 +177,9 @@ function isoDate(d: Date): string {
             <label class="block"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
               <input class="input-field" maxlength="100" [(ngModel)]="f.reference" /></label>
             @if (groups.enabled()) {
-              <label class="block col-span-2"><span class="field-label">{{ 'ledger.costCenter' | translate }}</span>
+              <label class="block col-span-2"><span class="field-label">{{ 'expenses.project' | translate }}</span>
                 <select class="input-field" [(ngModel)]="f.costCenterId">
-                  <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
+                  <option [ngValue]="null">{{ 'expenses.noProject' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
                 </select></label>
             }

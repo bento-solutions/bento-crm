@@ -2695,8 +2695,8 @@
   "expenseReports.periodFrom": "Période du",
   "expenseReports.periodTo": "Période au",
   "expenseReports.periodInvalid": "La période se termine avant de commencer.",
-  "expenseReports.defaultCostCenter": "Section analytique par défaut",
-  "expenseReports.reportCostCenter": "Celle de la note de frais",
+  "expenseReports.defaultCostCenter": "Projet par défaut",
+  "expenseReports.reportCostCenter": "Celui de la note de frais",
   "expenseReports.notes": "Notes",
   "expenseReports.header": "Note de frais",
   "expenseReports.totalTtc": "Total TTC",
@@ -2750,5 +2750,7 @@
   "expenses.method.EMPLOYEE": "Salarié (note de frais)",
   "ledger.source.EXPENSE_REPORT": "Note de frais",
   "ledger.source.EXPENSE_REPORT_REIMB": "Remboursement de note de frais",
-  "bank.cat.EXPENSE_REIMBURSEMENT": "Remboursement de notes de frais"
+  "bank.cat.EXPENSE_REIMBURSEMENT": "Remboursement de notes de frais",
+  "expenses.project": "Projet",
+  "expenses.noProject": "Sans projet"
 }

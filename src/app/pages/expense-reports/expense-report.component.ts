@@ -129,7 +129,7 @@ function monthBounds(): { from: string; to: string } {
             @if (groups.enabled()) {
               <label class="block"><span class="field-label">{{ 'expenseReports.defaultCostCenter' | translate }}</span>
                 <select class="input-field w-full" [ngModel]="head().costCenterId" (ngModelChange)="patchHead({ costCenterId: $event })">
-                  <option [ngValue]="null">{{ 'ledger.groups.noCostCenter' | translate }}</option>
+                  <option [ngValue]="null">{{ 'expenses.noProject' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
                 </select></label>
             }
@@ -160,7 +160,7 @@ function monthBounds(): { from: string; to: string } {
                   <th class="col-num">{{ 'expenseReports.ttc' | translate }}</th>
                   <th class="hidden md:table-cell">{{ 'expenses.vatCode' | translate }}</th>
                   <th class="col-num hidden sm:table-cell">{{ 'expenseReports.vat' | translate }}</th>
-                  @if (groups.enabled()) { <th class="hidden xl:table-cell">{{ 'ledger.costCenter' | translate }}</th> }
+                  @if (groups.enabled()) { <th class="hidden xl:table-cell">{{ 'expenses.project' | translate }}</th> }
                   <th class="col-actions"><span class="sr-only">{{ 'expenseReports.receipts' | translate }}</span></th>
                   <th class="col-actions"></th>
                 </tr></thead>
@@ -267,7 +267,7 @@ function monthBounds(): { from: string; to: string } {
               <input type="number" min="0" step="0.01" class="input-field w-full" [(ngModel)]="f.vatAmount" />
               @if (vatTooHigh(f)) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.vatTooHigh' | translate }}</span> }</label>
             @if (groups.enabled()) {
-              <label class="block"><span class="field-label">{{ 'ledger.costCenter' | translate }}</span>
+              <label class="block"><span class="field-label">{{ 'expenses.project' | translate }}</span>
                 <select class="input-field w-full" [(ngModel)]="f.costCenterId">
                   <option [ngValue]="null">{{ 'expenseReports.reportCostCenter' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }

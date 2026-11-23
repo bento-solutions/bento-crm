@@ -2695,8 +2695,8 @@
   "expenseReports.periodFrom": "الفترة من",
   "expenseReports.periodTo": "الفترة إلى",
   "expenseReports.periodInvalid": "تنتهي الفترة قبل أن تبدأ.",
-  "expenseReports.defaultCostCenter": "مركز التكلفة الافتراضي",
-  "expenseReports.reportCostCenter": "مركز تكلفة التقرير",
+  "expenseReports.defaultCostCenter": "المشروع الافتراضي",
+  "expenseReports.reportCostCenter": "مشروع التقرير",
   "expenseReports.notes": "ملاحظات",
   "expenseReports.header": "التقرير",
   "expenseReports.totalTtc": "المجموع شامل الضريبة",
@@ -2750,5 +2750,7 @@
   "expenses.method.EMPLOYEE": "الموظف (تقرير مصاريف)",
   "ledger.source.EXPENSE_REPORT": "تقرير مصاريف",
   "ledger.source.EXPENSE_REPORT_REIMB": "استرداد تقرير مصاريف",
-  "bank.cat.EXPENSE_REIMBURSEMENT": "استرداد تقارير المصاريف"
+  "bank.cat.EXPENSE_REIMBURSEMENT": "استرداد تقارير المصاريف",
+  "expenses.project": "المشروع",
+  "expenses.noProject": "بدون مشروع"
 }
