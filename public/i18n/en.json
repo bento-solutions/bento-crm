@@ -2722,8 +2722,8 @@
   "expenseReports.periodFrom": "Period from",
   "expenseReports.periodTo": "Period to",
   "expenseReports.periodInvalid": "The period ends before it starts.",
-  "expenseReports.defaultCostCenter": "Default cost center",
-  "expenseReports.reportCostCenter": "The report's cost center",
+  "expenseReports.defaultCostCenter": "Default project",
+  "expenseReports.reportCostCenter": "The report's project",
   "expenseReports.notes": "Notes",
   "expenseReports.header": "Report",
   "expenseReports.totalTtc": "Total incl. VAT",
@@ -2777,5 +2777,7 @@
   "expenses.method.EMPLOYEE": "Employee (expense report)",
   "ledger.source.EXPENSE_REPORT": "Expense report",
   "ledger.source.EXPENSE_REPORT_REIMB": "Expense report reimbursement",
-  "bank.cat.EXPENSE_REIMBURSEMENT": "Expense report reimbursement"
+  "bank.cat.EXPENSE_REIMBURSEMENT": "Expense report reimbursement",
+  "expenses.project": "Project",
+  "expenses.noProject": "No project"
 }
