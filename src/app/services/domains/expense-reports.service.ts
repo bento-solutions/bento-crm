@@ -191,11 +191,12 @@ export class ExpenseReportsApi extends BaseApiService {
   }
 
   /** Answers with the line (an expense); callers reload the report for its totals. */
-  saveLine(reportId: string, body: ExpenseReportLineInput, expenseId?: string | null): Observable<ExpenseReportLine> {
+  /** Adds or updates a line. The API answers with the whole report, lines included. */
+  saveLine(reportId: string, body: ExpenseReportLineInput, expenseId?: string | null): Observable<ExpenseReport> {
     const payload = expenseToApi(body);
     return (expenseId
       ? this.put<Raw>(`/expense-reports/${reportId}/lines/${expenseId}`, payload)
-      : this.post<Raw>(`/expense-reports/${reportId}/lines`, payload)).pipe(map(lineFromApi));
+      : this.post<Raw>(`/expense-reports/${reportId}/lines`, payload)).pipe(map(reportFromApi));
   }
 
   removeLine(reportId: string, expenseId: string): Observable<void> {
