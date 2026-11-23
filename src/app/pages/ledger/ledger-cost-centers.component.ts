@@ -18,12 +18,15 @@ interface CostCenterForm {
   missionId: string | null;
 }
 
-/** General Ledger → Cost centers: analytic codes put on entry lines, optionally tied to a mission. */
+/** General Ledger → Cost centers: analytic codes put on entry lines, by function or person (a legacy mission link is kept as data). */
 @Component({
   selector: 'app-ledger-cost-centers',
   imports: [FormsModule, MatIconModule, TranslatePipe, EmptyStateComponent],
   template: `
     <div class="space-y-4">
+      <p class="text-sm text-ink-2 flex items-start gap-2">
+        <mat-icon class="icon-sm text-ink-3 shrink-0">info</mat-icon>{{ 'ledger.cc.help' | translate }}
+      </p>
       <div class="flex flex-wrap items-center gap-3">
         <label class="choice-row">
           <input type="checkbox" [ngModel]="showInactive()" (ngModelChange)="showInactive.set($event)" />

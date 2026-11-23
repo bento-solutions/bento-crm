@@ -14,6 +14,9 @@ import { Expense, ExpenseSummary, ExpensesApi, PaymentMethod } from '../services
 import { LedgerGroupsStore } from '../services/domains/ledger-groups.store';
 import { round2, vatFraction } from '../services/domains/vat';
 import { LedgerEntryLinkComponent } from './ledger/ledger-entry-link.component';
+import { DimensionFieldsComponent } from '../shared/dimension-fields.component';
+import { DimensionChipsComponent } from '../shared/dimension-chips.component';
+import { DimensionValues, Dimensions, emptyDimensions } from '../services/domains/dimensions';
 
 interface ExpenseForm {
   id?: string;
@@ -27,6 +30,9 @@ interface ExpenseForm {
   vendorName: string;
   reference: string;
   costCenterId: string | null;
+  /** Mission, deal, customer, vendor: all optional. */
+  dims: Dimensions;
+  dimNames?: DimensionValues | null;
   /** Set on a line of an expense report: read-only here, edited on the report. */
   expenseReportId?: string | null;
   expenseReportNumber?: string | null;
@@ -45,7 +51,7 @@ function isoDate(d: Date): string {
  */
 @Component({
   selector: 'app-finance-expenses',
-  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent],
+  imports: [FormsModule, MatIconModule, RouterLink, TranslatePipe, StatCardComponent, EmptyStateComponent, AttachmentsComponent, LedgerEntryLinkComponent, DimensionFieldsComponent, DimensionChipsComponent],
   template: `
     <div class="space-y-4">
       <div class="flex flex-wrap items-end gap-3">
@@ -96,7 +102,9 @@ function isoDate(d: Date): string {
                       @if (e.expenseReportId) {
                         <a class="badge badge-violet hover:underline" [routerLink]="['/finance/expense-reports', e.expenseReportId]"
                            [attr.title]="'expenses.inReport' | translate"><mat-icon class="icon-xs">receipt_long</mat-icon>{{ e.expenseReportNumber || 'NF' }}</a>
-                      }</div>
+                      }
+                      @if (costCenterCode(e); as cc) { <span class="badge badge-neutral num" [attr.title]="'ledger.costCenter' | translate">{{ cc }}</span> }
+                      <app-dimension-chips [value]="e.dims" /></div>
                     <div class="cell-sub">{{ ('expenses.method.' + e.paymentMethod) | translate }}@if (e.vendorName && e.description) { · {{ e.vendorName }} }@if (e.reference) { · {{ e.reference }} }</div></td>
                   <td class="col-num num">{{ money(e.amount) }}
                     @if (e.vatAmount) { <div class="cell-sub">{{ 'expenses.vatShort' | translate }} {{ money(e.vatAmount) }}</div> }</td>
@@ -177,12 +185,16 @@ function isoDate(d: Date): string {
             <label class="block"><span class="field-label">{{ 'expenses.reference' | translate }}</span>
               <input class="input-field" maxlength="100" [(ngModel)]="f.reference" /></label>
             @if (groups.enabled()) {
-              <label class="block col-span-2"><span class="field-label">{{ 'expenses.project' | translate }}</span>
-                <select class="input-field" [(ngModel)]="f.costCenterId">
-                  <option [ngValue]="null">{{ 'expenses.noProject' | translate }}</option>
+              <label class="block col-span-2"><span class="field-label">{{ 'ledger.costCenter' | translate }} *</span>
+                <select class="input-field" [(ngModel)]="f.costCenterId" required [attr.aria-invalid]="!f.costCenterId">
+                  <option [ngValue]="null">{{ 'expenses.pickCostCenter' | translate }}</option>
                   @for (c of groups.costCenters(); track c.id) { <option [ngValue]="c.id">{{ c.code }} · {{ c.name }}</option> }
-                </select></label>
+                </select>
+                @if (!f.costCenterId && !f.expenseReportId) { <span class="text-meta text-danger-ink mt-1 block">{{ 'expenses.costCenterRequired' | translate }}</span> }</label>
             }
+            <div class="col-span-2">
+              <app-dimension-fields [(value)]="f.dims" [names]="f.dimNames ?? null" />
+            </div>
           </fieldset>
           <div class="mt-4">
             <span class="field-label">{{ 'expenses.receipt' | translate }}</span>
@@ -233,6 +245,7 @@ export class FinanceExpensesComponent implements OnInit {
   canDelete(): boolean { return this.state.hasAuthority('PAYMENTS_DELETE'); }
 
   ngOnInit(): void {
+    this.groups.ensure(true);
     this.load();
   }
 
@@ -253,10 +266,13 @@ export class FinanceExpensesComponent implements OnInit {
       id: e.id, expenseDate: e.expenseDate, category: e.category, description: e.description ?? '',
       amount: e.amount, vatAmount: e.vatAmount ?? null, vatCode: e.vatCode ?? null, paymentMethod: e.paymentMethod,
       vendorName: e.vendorName ?? '', reference: e.reference ?? '', costCenterId: e.costCenterId ?? null,
+      dims: { missionId: e.dims?.missionId ?? null, dealId: e.dims?.dealId ?? null, customerId: e.dims?.customerId ?? null, vendorId: e.dims?.vendorId ?? null },
+      dimNames: e.dims ?? null,
       expenseReportId: e.expenseReportId ?? null, expenseReportNumber: e.expenseReportNumber ?? null,
     } : {
       expenseDate: isoDate(new Date()), category: this.category() || 'OTHER', description: '', amount: null,
       vatAmount: null, vatCode: null, paymentMethod: 'CARD', vendorName: '', reference: '', costCenterId: null,
+      dims: emptyDimensions(),
     });
     this.groups.ensure(true);
   }
@@ -275,7 +291,16 @@ export class FinanceExpensesComponent implements OnInit {
 
   valid(f: ExpenseForm): boolean {
     return !!f.expenseDate && !!f.category && f.amount !== null && f.amount > 0
-      && (f.vatAmount === null || (f.vatAmount >= 0 && f.vatAmount <= f.amount));
+      && (f.vatAmount === null || (f.vatAmount >= 0 && f.vatAmount <= f.amount))
+      // The cost center is mandatory (the API answers 400 without one); users who cannot see it leave it to the API.
+      && (!this.groups.enabled() || !!f.costCenterId);
+  }
+
+  /** The cost center's code, from the loaded list or the one the API sent. */
+  costCenterCode(e: Expense): string | null {
+    if (!e.costCenterId) return null;
+    return this.groups.costCenters().find(c => c.id === e.costCenterId)?.code
+      ?? ((e as unknown as { costCenterCode?: string | null }).costCenterCode ?? null);
   }
 
   save(f: ExpenseForm): void {
@@ -287,6 +312,7 @@ export class FinanceExpensesComponent implements OnInit {
       vendorName: f.vendorName.trim() || null, reference: f.reference.trim() || null,
       // Sent by everyone (the form starts from the expense's own value): PUT replaces the expense.
       costCenterId: f.costCenterId,
+      dims: f.dims,
     }, f.id).subscribe({
       next: saved => {
         this.busy.set(false);

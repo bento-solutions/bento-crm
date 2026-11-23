@@ -37,6 +37,8 @@ import { AdvancesApi, OpenAdvance } from '../services/domains/advances.service';
 import { CatalogProduct, InventoryApi } from '../services/domains/inventory.service';
 import { determineVatCode, round2, vatBreakdown, vatFraction } from '../services/domains/vat';
 import { shortDate } from '../shared/bank.util';
+import { DimensionFieldsComponent } from '../shared/dimension-fields.component';
+import { Dimensions, dimensionsToApi, emptyDimensions, hasDimensions } from '../services/domains/dimensions';
 
 // ── Local type alias for invoice line items ────────────────────────────────
 interface InvoiceLine {
@@ -55,13 +57,15 @@ interface InvoiceLine {
   vatRate?: number | null;
   /** The user picked the VAT code: partner or product changes no longer recompute it. Not sent. */
   vatManual?: boolean;
+  /** Supplier bills: the line's analytic dimensions (mission, deal, customer, vendor), all optional. */
+  dims?: Dimensions;
 }
 
 const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
 
 @Component({
   selector: 'app-finance',
-  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent, CreditNoteDialogComponent, AssetDialogComponent],
+  imports: [MatIconModule, MatTooltipModule, CommonModule, FormsModule, RouterLink, FinanceAgingComponent, FinanceExpensesComponent, CreatedByBadgeComponent, DataStatusBannerComponent, PaginatorComponent, AttachmentsComponent, TranslatePipe, PageHeaderComponent, EmptyStateComponent, StatCardComponent, LedgerEntryLinkComponent, CreditNoteDialogComponent, AssetDialogComponent, DimensionFieldsComponent],
   template: `
     <div class="page">
       <app-page-header [title]="(payablesSide() ? 'finance.payables' : 'finance.receivables') | translate"
@@ -796,6 +800,13 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
                       }
                       </div>
                     }
+                    @if (newInvoiceData.type === 'Vendor') {
+                      <!-- Supplier bill: the line's dimensions (optional), folded -->
+                      <div class="px-3 pb-2">
+                        <app-dimension-fields [compact]="true" [value]="line.dims ?? emptyDims" (valueChange)="setLineDims(i, $event)"
+                                              [vendorPlaceholder]="'dimensions.billVendor' | translate" />
+                      </div>
+                    }
                     </div>
                   }
 
@@ -1437,6 +1448,12 @@ export class FinanceComponent {
   }
 
   /** Remove the line at index i. */
+  readonly emptyDims = emptyDimensions();
+
+  setLineDims(i: number, dims: Dimensions) {
+    this.invoiceLines.update(lines => lines.map((l, idx) => idx === i ? { ...l, dims } : l));
+  }
+
   removeLine(i: number) {
     this.invoiceLines.update(lines => lines.filter((_, idx) => idx !== i));
   }
@@ -1526,12 +1543,13 @@ export class FinanceComponent {
    * server determines the rest.
    */
   private lineToApi(l: InvoiceLine) {
-    const { vatManual, ...line } = l;
+    const { vatManual, dims, ...line } = l;
     if (!vatManual && !this.groups.vatReliable()) {
       delete line.vatCode;
       delete line.vatRate;
     }
-    return line;
+    // Dimensions go on supplier bill lines only; the vendor defaults to the bill's partner on the API.
+    return this.newInvoiceData.type === 'Vendor' && hasDimensions(dims) ? { ...line, ...dimensionsToApi(dims) } : line;
   }
 
   // ── Invoice list helpers ──────────────────────────────────────────────────

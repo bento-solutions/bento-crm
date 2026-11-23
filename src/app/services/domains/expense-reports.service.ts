@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { BaseApiService } from '../../core/services/base-api.service';
-import { Expense } from './expenses.service';
+import { Expense, expenseFromApi, expenseToApi } from './expenses.service';
+import { Dimensions } from './dimensions';
 
 /** A note de frais: DRAFT until posted (number allocated), then POSTED, then REIMBURSED; CANCELLED from DRAFT only. */
 export type ExpenseReportStatus = 'DRAFT' | 'POSTED' | 'REIMBURSED' | 'CANCELLED';
@@ -65,6 +66,8 @@ export interface ExpenseReportLineInput {
   vendorName: string | null;
   reference: string | null;
   costCenterId: string | null;
+  /** Mission, deal, customer, vendor: all optional. */
+  dims: Dimensions;
 }
 
 export interface ReimburseInput {
@@ -115,7 +118,7 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 /** A line: the expense DTO, with `attachments` as a count (or a list, or `attachmentCount`). */
 export function lineFromApi(r: Raw): ExpenseReportLine {
   const a = pick(r, 'attachments', 'attachmentCount', 'attachmentsCount', 'receiptCount');
-  const e = (r ?? {}) as unknown as Expense;
+  const e = expenseFromApi(r ?? {}) as unknown as Expense;
   return {
     ...e,
     amount: num(e.amount),
@@ -189,9 +192,10 @@ export class ExpenseReportsApi extends BaseApiService {
 
   /** Answers with the line (an expense); callers reload the report for its totals. */
   saveLine(reportId: string, body: ExpenseReportLineInput, expenseId?: string | null): Observable<ExpenseReportLine> {
+    const payload = expenseToApi(body);
     return (expenseId
-      ? this.put<Raw>(`/expense-reports/${reportId}/lines/${expenseId}`, body)
-      : this.post<Raw>(`/expense-reports/${reportId}/lines`, body)).pipe(map(lineFromApi));
+      ? this.put<Raw>(`/expense-reports/${reportId}/lines/${expenseId}`, payload)
+      : this.post<Raw>(`/expense-reports/${reportId}/lines`, payload)).pipe(map(lineFromApi));
   }
 
   removeLine(reportId: string, expenseId: string): Observable<void> {
