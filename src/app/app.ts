@@ -23,6 +23,7 @@ import { AssistantPanelComponent } from './shared/assistant-panel.component';
 import { TranslatePipe } from './pipes/translate.pipe';
 import { NativeService } from './core/services/native.service';
 import { NAV_SECTIONS, NavItem, NavSection, moduleRoute } from './nav';
+import { NavGlyphComponent } from './shared/ui/nav-glyph.component';
 
 const OPEN_MODULES_KEY = 'bento_open_nav_modules';
 
@@ -137,7 +138,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [BrandMarkComponent, RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe],
+  imports: [BrandMarkComponent, RouterOutlet, RouterLink, MatIconModule, CommonModule, UserAvatarComponent, SupportModalComponent, NotificationInboxDrawerComponent, ToastContainerComponent, ConfirmDialogComponent, LoginComponent, AssistantPanelComponent, TranslatePipe, NavGlyphComponent],
   styles: [`
     :host {
       display: block;
@@ -894,7 +895,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                     <a class="sidebar-link sidebar-module" [routerLink]="moduleLink(mod.key)"
                        [class.active]="activeRoute() === moduleLink(mod.key)" [class.has-active]="sectionActive(section)"
                        [title]="section.label" (click)="mobileMenuOpen.set(false)">
-                      <mat-icon>{{ mod.icon }}</mat-icon>
+                      @if (mod.glyph) { <app-nav-glyph [name]="mod.glyph" /> } @else { <mat-icon>{{ mod.icon }}</mat-icon> }
                       <span class="nav-label">{{ section.label }}</span>
                     </a>
                     <button type="button" class="module-toggle" [attr.aria-expanded]="moduleOpen(mod.key)"
@@ -917,7 +918,7 @@ const SEARCH_ITEMS: SearchItem[] = [
                     [title]="item.label"
                     (click)="mobileMenuOpen.set(false)"
                   >
-                    <mat-icon>{{ item.icon }}</mat-icon>
+                    @if (item.glyph) { <app-nav-glyph [name]="item.glyph" /> } @else { <mat-icon>{{ item.icon }}</mat-icon> }
                     <span class="nav-label">{{ item.label }}</span>
                     @if (badgeCount(item); as count) {
                       <span class="nav-badge" [attr.aria-label]="count + ' unread'">{{ count > 99 ? '99+' : count }}</span>
@@ -937,7 +938,7 @@ const SEARCH_ITEMS: SearchItem[] = [
               title="Settings"
               (click)="mobileMenuOpen.set(false)"
             >
-              <mat-icon>settings</mat-icon>
+              <app-nav-glyph name="settings" />
               <span class="nav-label">Settings</span>
             </a>
             <button
@@ -945,7 +946,7 @@ const SEARCH_ITEMS: SearchItem[] = [
               title="Help & Support"
               (click)="openSupportModal()"
             >
-              <mat-icon>help_outline</mat-icon>
+              <app-nav-glyph name="help" />
               <span class="nav-label">Help & Support</span>
             </button>
             <div class="sidebar-profile-wrapper" #profileWrapper>

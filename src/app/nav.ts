@@ -15,27 +15,29 @@ export interface NavItem {
   alsoTabs?: string[];
   /** One line shown under the entry on its module's page. */
   hint?: string;
+  /** One of Bento's own drawn icons (see NavGlyphComponent), shown instead of `icon` in the sidebar. */
+  glyph?: string;
 }
 
 export interface NavSection {
   label: string;
   items: NavItem[];
   /** A module: a heading that opens and closes its pages. Without it the items show as plain links. */
-  module?: { key: string; icon: string; /** One line under the title of the module's page. */ subtitle?: string };
+  module?: { key: string; icon: string; /** Bento's own drawn icon, shown instead of `icon`. */ glyph?: string; /** One line under the title of the module's page. */ subtitle?: string };
 }
 
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: '',
     items: [
-      { label: 'Home', icon: 'home', route: '/', hint: 'Your day at a glance: KPIs, tasks and tickets' },
-      { label: 'Analytics', icon: 'bar_chart', route: '/analytics', hint: 'Sales, finance and activity charts' },
-      { label: 'Inbox', icon: 'forum', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
+      { label: 'Home', icon: 'home', glyph: 'home', route: '/', hint: 'Your day at a glance: KPIs, tasks and tickets' },
+      { label: 'Analytics', icon: 'bar_chart', glyph: 'analytics', route: '/analytics', hint: 'Sales, finance and activity charts' },
+      { label: 'Inbox', icon: 'forum', glyph: 'inbox', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
     ]
   },
   {
     label: 'Sales',
-    module: { key: 'sales', icon: 'monetization_on', subtitle: 'Pipeline and campaigns' },
+    module: { key: 'sales', icon: 'monetization_on', glyph: 'sales', subtitle: 'Pipeline and campaigns' },
     items: [
       { label: 'Sales pipeline', icon: 'view_kanban', route: '/sales', hint: 'Deals by stage, from lead to won' },
       { label: 'Marketing', icon: 'campaign', route: '/marketing', hint: 'Campaigns and WhatsApp broadcasts' },
@@ -43,7 +45,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Contacts',
-    module: { key: 'contacts', icon: 'contacts', subtitle: 'Partners, groups and shared documents' },
+    module: { key: 'contacts', icon: 'contacts', glyph: 'contacts', subtitle: 'Partners, groups and shared documents' },
     items: [
       { label: 'Partners', icon: 'handshake', route: '/partners', hint: 'Leads and prospects', tab: 'Lead', defaultTab: true, alsoTabs: ['Prospect'] },
       { label: 'Groups', icon: 'group_work', route: '/groups', hint: 'Partner groups and holding structures' },
@@ -52,7 +54,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Work',
-    module: { key: 'work', icon: 'assignment', subtitle: 'Tasks, tickets, missions and automation' },
+    module: { key: 'work', icon: 'assignment', glyph: 'work', subtitle: 'Tasks, tickets, missions and automation' },
     items: [
       { label: 'Tasks', icon: 'task_alt', route: '/tasks', hint: 'To-dos and due dates for the team' },
       { label: 'Tickets', icon: 'support_agent', route: '/tickets', hint: 'Client requests and support' },
@@ -63,7 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Account Receivables',
-    module: { key: 'ar', icon: 'call_received', subtitle: 'Customers, invoicing and collections' },
+    module: { key: 'ar', icon: 'call_received', glyph: 'receivables', subtitle: 'Customers, invoicing and collections' },
     items: [
       { label: 'Partners', icon: 'storefront', route: '/partners', hint: 'Leads, customers and prospects', tab: 'Customer' },
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', hint: 'Quotes, invoices and payments received', tab: 'Customer', defaultTab: true },
@@ -76,7 +78,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Account Payables',
-    module: { key: 'ap', icon: 'call_made', subtitle: 'Suppliers, bills and expenses' },
+    module: { key: 'ap', icon: 'call_made', glyph: 'payables', subtitle: 'Suppliers, bills and expenses' },
     items: [
       { label: 'Suppliers', icon: 'local_shipping', route: '/partners', hint: 'Every supplier account', tab: 'Vendor' },
       { label: 'Supplier bills', icon: 'request_quote', route: '/finance', hint: 'Bills to pay and payments made', tab: 'Vendor' },
@@ -90,7 +92,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Cash and Bank',
-    module: { key: 'bank', icon: 'savings', subtitle: 'Bank accounts, statements and cash' },
+    module: { key: 'bank', icon: 'savings', glyph: 'bank', subtitle: 'Bank accounts, statements and cash' },
     items: [
       { label: 'Cash position', icon: 'savings', route: '/bank', hint: 'Balances across banks and cash', tab: 'cash', defaultTab: true, authority: 'PAYMENTS_READ' },
       { label: 'Bank transactions', icon: 'receipt_long', route: '/bank', hint: 'Statement lines and their matches', tab: 'transactions', authority: 'PAYMENTS_READ' },
@@ -102,7 +104,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'General Ledger',
-    module: { key: 'gl', icon: 'menu_book', subtitle: 'Accounts, entries, reports and tax deadlines' },
+    module: { key: 'gl', icon: 'menu_book', glyph: 'ledger', subtitle: 'Accounts, entries, reports and tax deadlines' },
     items: [
       { label: 'Chart of accounts', icon: 'account_tree', route: '/ledger', hint: 'PCGE accounts and balances', tab: 'accounts', defaultTab: true, authority: 'LEDGER_READ' },
       { label: 'Journal entries', icon: 'receipt_long', route: '/ledger', hint: 'Post, browse and reverse entries', tab: 'entries', authority: 'LEDGER_READ' },
@@ -120,7 +122,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Inventory',
-    module: { key: 'inv', icon: 'inventory_2', subtitle: 'Catalogue, stock and warehouses' },
+    module: { key: 'inv', icon: 'inventory_2', glyph: 'inventory', subtitle: 'Catalogue, stock and warehouses' },
     items: [
       { label: 'Stock levels', icon: 'inventory_2', route: '/inventory', hint: 'Quantities per warehouse', tab: 'stock', defaultTab: true },
       { label: 'Catalogue', icon: 'category', route: '/inventory', hint: 'Products, services and prices', tab: 'products' },
