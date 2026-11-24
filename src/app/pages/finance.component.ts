@@ -89,7 +89,7 @@ const LINE_GRID = 'grid-template-columns: 1fr 1.4fr 60px 90px 130px 90px 32px';
         </div>
       }
 
-      <div class="tabs" role="tablist">
+      <div class="tabs page-tabs" role="tablist">
         @if (payablesSide()) {
           <button role="tab" class="tab" [class.is-active]="activeTab() === 'Vendor'" [attr.aria-selected]="activeTab() === 'Vendor'"
                   (click)="setFinanceTab('Vendor'); invoicesPage.set(1)">

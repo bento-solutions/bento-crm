@@ -38,24 +38,16 @@ export const NAV_GLYPHS = Object.keys(GLYPHS);
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="markup()"></svg>`,
   styles: [`
-    /* Each icon sits in a soft light blue tile; on the active row the tile turns to paper. */
-    :host { --g-stroke: #2E8FE0; --g-fill: #D4ECFD; --g-solid: #5CB5F3; --g-paper: #fff; --g-tile: #EAF5FE; --g-tile-active: #fff;
-      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-      width: 26px; height: 26px; border-radius: 7px; background: var(--g-tile); transition: background var(--transition-fast, 120ms); }
-    :host-context(html[data-theme="dark"]) { --g-stroke: #6CBDF5; --g-fill: rgba(92, 181, 243, 0.22); --g-solid: #7CC6F7;
-      --g-paper: var(--color-surface); --g-tile: rgba(92, 181, 243, 0.14); --g-tile-active: rgba(92, 181, 243, 0.26); }
-    @media (prefers-color-scheme: dark) {
-      :host-context(html:not([data-theme])), :host-context(html[data-theme="system"]) {
-        --g-stroke: #6CBDF5; --g-fill: rgba(92, 181, 243, 0.22); --g-solid: #7CC6F7;
-        --g-paper: var(--color-surface); --g-tile: rgba(92, 181, 243, 0.14); --g-tile-active: rgba(92, 181, 243, 0.26); }
-    }
-    :host-context(.active) { background: var(--g-tile-active); box-shadow: 0 0 0 1px var(--g-fill); }
+    /* Each icon sits in a soft light blue tile; on the active row the tile turns to paper. Colours: --nav-blue* in styles.css. */
+    :host { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+      width: 26px; height: 26px; border-radius: 7px; background: var(--nav-blue-bg); transition: background var(--transition-fast, 120ms); }
+    :host-context(.active) { background: var(--color-surface); }
     svg { width: 16px; height: 16px; overflow: visible; }
-    svg ::ng-deep g { fill: none; stroke: var(--g-stroke); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    svg ::ng-deep g.f { fill: var(--g-fill); }
-    svg ::ng-deep g.w { fill: var(--g-paper); }
-    svg ::ng-deep g.d { fill: var(--g-solid); stroke: none; }
-    svg ::ng-deep g.k { stroke: var(--g-solid); stroke-width: 2.2; }
+    svg ::ng-deep g { fill: none; stroke: var(--nav-blue); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    svg ::ng-deep g.f { fill: var(--nav-blue-soft); }
+    svg ::ng-deep g.w { fill: var(--color-surface); }
+    svg ::ng-deep g.d { fill: var(--nav-blue-solid); stroke: none; }
+    svg ::ng-deep g.k { stroke: var(--nav-blue-solid); stroke-width: 2.2; }
   `],
 })
 export class NavGlyphComponent {

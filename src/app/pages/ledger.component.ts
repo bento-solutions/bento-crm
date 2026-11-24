@@ -43,7 +43,7 @@ const TABS: Tab[] = ['accounts', 'entries', 'ledger', 'trial', 'statements', 'co
         <button actions class="btn-secondary" (click)="exportOpen.set(true)"><mat-icon>ios_share</mat-icon>{{ 'ledger.export.button' | translate }}</button>
       </app-page-header>
 
-      <div class="tabs no-print" role="tablist">
+      <div class="tabs page-tabs no-print" role="tablist">
         @for (t of tabs; track t.key) {
           <button role="tab" class="tab" [class.is-active]="tab() === t.key" [attr.aria-selected]="tab() === t.key" (click)="setTab(t.key)">
             <mat-icon>{{ t.icon }}</mat-icon>{{ t.label | translate }}

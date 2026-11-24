@@ -307,11 +307,13 @@ const SEARCH_ITEMS: SearchItem[] = [
     .module-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .app-sidebar.collapsed .module-toggle { display: none; }
     .app-sidebar.collapsed .sidebar-link.sidebar-module { padding-inline-end: 0; }
-    .sidebar-module.has-active { color: var(--sidebar-ink-strong); font-weight: 600; }
+    .sidebar-module.has-active { font-weight: 600; }
     /* Module names are long ("Account Receivables"): wrap them rather than cut them. */
     .sidebar-link.sidebar-module { height: auto; min-height: 32px; padding-block: 4px; }
     .sidebar-link.sidebar-module .nav-label { white-space: normal; line-height: 1.25; }
     .sidebar-link.sidebar-sublink { padding-inline-start: 22px; height: 30px; font-size: 13px; }
+    /* Sub-pages: plain blue icons, no tile. */
+    .sidebar-link.sidebar-sublink mat-icon { color: var(--nav-blue); }
     /* On the icon rail a module shows its own icon; a click opens its pages as icons below it. */
     .app-sidebar.collapsed .sidebar-link.sidebar-module { min-height: 40px; padding: 0; }
     .app-sidebar.collapsed .sidebar-link.sidebar-sublink { padding: 0; height: 40px; }
@@ -367,15 +369,16 @@ const SEARCH_ITEMS: SearchItem[] = [
       font-size: 10px;
     }
 
-    .sidebar-link.active {
-      background: var(--color-surface);
-      color: var(--color-text-primary);
+    /* The page you're on, and the module that holds it, sit on Bento's light blue. */
+    .sidebar-link.active, .sidebar-link.sidebar-module.has-active {
+      background: var(--nav-blue-bg);
+      color: var(--nav-blue-ink);
       font-weight: 500;
-      box-shadow: 0 0 0 1px var(--color-border);
     }
+    .sidebar-link.active:hover, .sidebar-link.sidebar-module.has-active:hover { background: var(--nav-blue-bg); }
 
     .sidebar-link.active mat-icon {
-      color: var(--color-accent-text);
+      color: var(--nav-blue);
     }
 
     .sidebar-link mat-icon, .sidebar-bottom-link mat-icon {
@@ -775,6 +778,21 @@ const SEARCH_ITEMS: SearchItem[] = [
     }
 
 
+    /* ── Module bar: the pages of the current module, above the page ── */
+    .content-main > .module-bar {
+      display: flex; flex-wrap: wrap; gap: 4px; padding: 4px;
+      margin: 0 auto 20px; border: 1px solid var(--color-border); border-radius: var(--r-card, 12px);
+      background: var(--color-surface);
+    }
+    .module-bar__link {
+      display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+      border-radius: var(--r-control); font-size: 13px; color: var(--color-text-secondary); text-decoration: none; white-space: nowrap;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .module-bar__link mat-icon { font-size: 16px; width: 16px; height: 16px; line-height: 16px; color: var(--nav-blue); }
+    .module-bar__link:hover { background: var(--color-surface-hover); color: var(--color-text-heading); }
+    .module-bar__link.active { background: var(--nav-blue-bg); color: var(--nav-blue-ink); font-weight: 500; }
+
     /* ── Main content ── */
     .content-main {
       flex: 1;
@@ -892,8 +910,8 @@ const SEARCH_ITEMS: SearchItem[] = [
               @if (section.module; as mod) {
                 @if (sectionVisible(section)) {
                   <div class="sidebar-module-row">
-                    <a class="sidebar-link sidebar-module" [routerLink]="moduleLink(mod.key)"
-                       [class.active]="activeRoute() === moduleLink(mod.key)" [class.has-active]="sectionActive(section)"
+                    <a class="sidebar-link sidebar-module" [routerLink]="moduleEntry(section).route" [queryParams]="moduleEntry(section).query"
+                       [class.has-active]="sectionActive(section)"
                        [title]="section.label" (click)="mobileMenuOpen.set(false)">
                       @if (mod.glyph) { <app-nav-glyph [name]="mod.glyph" /> } @else { <mat-icon>{{ mod.icon }}</mat-icon> }
                       <span class="nav-label">{{ section.label }}</span>
@@ -1119,7 +1137,21 @@ const SEARCH_ITEMS: SearchItem[] = [
 
 
           <!-- Main Content -->
-          <main class="content-main">
+          <main class="content-main" [class.has-module-bar]="!!activeModule()">
+            <!-- The module you're in: all its pages, one click away. -->
+            @if (activeModule(); as am) {
+              <nav class="module-bar" [attr.aria-label]="am.label">
+                @for (item of am.items; track item.label) {
+                  @if (canSee(item)) {
+                    <a class="module-bar__link" [routerLink]="item.route"
+                       [queryParams]="item.tab && !item.defaultTab ? { tab: item.tab } : null"
+                       [class.active]="isNavActive(item)" [attr.aria-current]="isNavActive(item) ? 'page' : null">
+                      <mat-icon>{{ item.icon }}</mat-icon><span>{{ item.label }}</span>
+                    </a>
+                  }
+                }
+              </nav>
+            }
             <router-outlet></router-outlet>
           </main>
         </div>
@@ -1580,6 +1612,19 @@ export class App implements OnInit, OnDestroy {
   sectionActive(section: NavSection): boolean {
     return section.items.some(i => this.isNavActive(i));
   }
+
+  /** A module's name opens its first page you can see. */
+  moduleEntry(section: NavSection): { route: string; query: Record<string, string> | null } {
+    const item = section.items.find(i => this.canSee(i));
+    if (!item) return { route: moduleRoute(section.module!.key), query: null };
+    return { route: item.route, query: item.tab && !item.defaultTab ? { tab: item.tab } : null };
+  }
+
+  /** The module of the current page, for the bar of its pages above the page. */
+  activeModule = computed<NavSection | null>(() => {
+    this.activeRoute(); this.activeTab();
+    return this.navSections.find(s => !!s.module && this.sectionActive(s)) ?? null;
+  });
 
   /** Opening a page of a closed module (a link, a search result) opens the module too. */
   private revealActiveModule(): void {

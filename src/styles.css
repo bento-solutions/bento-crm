@@ -200,6 +200,12 @@
   --color-accent-light: #EEF0F9;
   --color-accent-border: #CDD4F0;
   --color-accent-text: #2B46B5;
+  /* Sidebar and module bar: Bento's light blue. */
+  --nav-blue: #2E8FE0;
+  --nav-blue-soft: #D4ECFD;
+  --nav-blue-solid: #5CB5F3;
+  --nav-blue-bg: #EAF5FE;
+  --nav-blue-ink: #1565A8;
   --color-focus: #2B46B5;
   --color-focus-ring: rgba(43, 70, 181, 0.18);
 
@@ -325,6 +331,11 @@
     --color-accent-light: rgba(143, 160, 236, 0.14);
     --color-accent-border: rgba(143, 160, 236, 0.32);
     --color-accent-text: #A9B6F3;
+    --nav-blue: #6CBDF5;
+    --nav-blue-soft: rgba(92, 181, 243, 0.22);
+    --nav-blue-solid: #7CC6F7;
+    --nav-blue-bg: rgba(92, 181, 243, 0.14);
+    --nav-blue-ink: #A8D8FA;
     --color-focus: #8FA0EC;
     --color-focus-ring: rgba(143, 160, 236, 0.28);
 
@@ -413,6 +424,11 @@
   --color-accent-light: rgba(143, 160, 236, 0.14);
   --color-accent-border: rgba(143, 160, 236, 0.32);
   --color-accent-text: #A9B6F3;
+  --nav-blue: #6CBDF5;
+  --nav-blue-soft: rgba(92, 181, 243, 0.22);
+  --nav-blue-solid: #7CC6F7;
+  --nav-blue-bg: rgba(92, 181, 243, 0.14);
+  --nav-blue-ink: #A8D8FA;
   --color-focus: #8FA0EC;
   --color-focus-ring: rgba(143, 160, 236, 0.28);
 
@@ -1424,3 +1440,6 @@ body.bento-dragging { cursor: grabbing; user-select: none; }
   .data-table tr { break-inside: avoid; }
   .data-table thead { display: table-header-group; }
 }
+
+/* When the module bar above the page lists a module's pages, the page's own tab row would repeat it. */
+.has-module-bar .page-tabs { display: none; }

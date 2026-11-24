@@ -69,7 +69,7 @@ interface ProductForm {
         </div>
       }
 
-      <div class="tabs" role="tablist">
+      <div class="tabs page-tabs" role="tablist">
         @for (t of tabs; track t.key) {
           <button role="tab" class="tab" [class.is-active]="tab() === t.key" [attr.aria-selected]="tab() === t.key" (click)="setTab(t.key)">
             <mat-icon>{{ t.icon }}</mat-icon>{{ t.label | translate }}
