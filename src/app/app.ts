@@ -939,7 +939,7 @@ function readSidebarCollapsed(): boolean {
                 @if (sectionVisible(section)) {
                   <div class="sidebar-module-row">
                     <a class="sidebar-link sidebar-module" [routerLink]="moduleEntry(section).route" [queryParams]="moduleEntry(section).query"
-                       [class.has-active]="sectionActive(section)"
+                       [class.has-active]="activeModule() === section"
                        [title]="section.label" (click)="mobileMenuOpen.set(false)">
                       @if (mod.glyph) { <app-nav-glyph [name]="mod.glyph" /> } @else { <mat-icon>{{ mod.icon }}</mat-icon> }
                       <span class="nav-label">{{ section.label }}</span>
@@ -960,7 +960,7 @@ function readSidebarCollapsed(): boolean {
                     [queryParams]="item.tab && !item.defaultTab ? { tab: item.tab } : null"
                     class="sidebar-link"
                     [class.sidebar-sublink]="!!section.module"
-                    [class.active]="isNavActive(item)"
+                    [class.active]="isNavActive(item) && (!section.module || activeModule() === section)"
                     [title]="item.label"
                     (click)="mobileMenuOpen.set(false)"
                   >
@@ -1717,10 +1717,15 @@ export class App implements OnInit, OnDestroy {
     return { route: item.route, query: item.tab && !item.defaultTab ? { tab: item.tab } : null };
   }
 
-  /** The module of the current page, for the bar of its pages above the page. */
+  /** The module of the current page, for the bar of its pages above the page. A page listed in
+   *  two modules (Partner groups: CRM and Receivables) stays in the module you came from. */
+  private lastModuleKey: string | null = null;
   activeModule = computed<NavSection | null>(() => {
     this.activeRoute(); this.activeTab();
-    return this.navSections.find(s => !!s.module && this.sectionActive(s)) ?? null;
+    const matches = this.navSections.filter(s => !!s.module && this.sectionActive(s));
+    const pick = matches.find(s => s.module!.key === this.lastModuleKey) ?? matches[0] ?? null;
+    this.lastModuleKey = pick?.module?.key ?? this.lastModuleKey;
+    return pick;
   });
 
   /** Opening a page of a closed module (a link, a search result) opens the module too. */

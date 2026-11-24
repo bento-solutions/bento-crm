@@ -33,31 +33,25 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Home', icon: 'home', glyph: 'home', route: '/', hint: 'Your day at a glance: KPIs, tasks and tickets' },
       { label: 'Analytics', icon: 'bar_chart', glyph: 'analytics', route: '/analytics', hint: 'Sales, finance and activity charts' },
       { label: 'Inbox', icon: 'forum', glyph: 'inbox', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
+      { label: 'Documents', icon: 'folder_open', glyph: 'documents', route: '/drive', hint: 'Shared files and folders', authority: 'FILES_READ' },
     ]
   },
   {
-    label: 'Sales',
-    module: { key: 'sales', icon: 'monetization_on', glyph: 'sales', subtitle: 'Pipeline and campaigns' },
+    label: 'CRM',
+    module: { key: 'crm', icon: 'contacts', glyph: 'crm', subtitle: 'Pipeline, leads, groups, campaigns and client requests' },
     items: [
       { label: 'Sales pipeline', icon: 'view_kanban', route: '/sales', hint: 'Deals by stage, from lead to won' },
+      { label: 'Leads & prospects', icon: 'handshake', route: '/partners', hint: 'Leads and prospects', tab: 'Lead', defaultTab: true, alsoTabs: ['Prospect'] },
+      { label: 'Partner groups', icon: 'group_work', route: '/groups', hint: 'Partner groups and holding structures' },
       { label: 'Marketing', icon: 'campaign', route: '/marketing', hint: 'Campaigns and WhatsApp broadcasts' },
-    ]
-  },
-  {
-    label: 'Contacts',
-    module: { key: 'contacts', icon: 'contacts', glyph: 'contacts', subtitle: 'Partners, groups and shared documents' },
-    items: [
-      { label: 'Partners', icon: 'handshake', route: '/partners', hint: 'Leads and prospects', tab: 'Lead', defaultTab: true, alsoTabs: ['Prospect'] },
-      { label: 'Groups', icon: 'group_work', route: '/groups', hint: 'Partner groups and holding structures' },
-      { label: 'Documents', icon: 'folder_open', route: '/drive', hint: 'Shared files and folders', authority: 'FILES_READ' },
+      { label: 'Tickets', icon: 'support_agent', route: '/tickets', hint: 'Client requests and support' },
     ]
   },
   {
     label: 'Work',
-    module: { key: 'work', icon: 'assignment', glyph: 'work', subtitle: 'Tasks, tickets, missions and automation' },
+    module: { key: 'work', icon: 'assignment', glyph: 'work', subtitle: 'Tasks, missions, checklists and automation' },
     items: [
       { label: 'Tasks', icon: 'task_alt', route: '/tasks', hint: 'To-dos and due dates for the team' },
-      { label: 'Tickets', icon: 'support_agent', route: '/tickets', hint: 'Client requests and support' },
       { label: 'Missions', icon: 'work', route: '/missions', hint: 'Engagements per client', authority: 'PARTNERS_READ' },
       { label: 'Document checklists', icon: 'checklist', route: '/checklists', hint: 'Documents to collect from clients', authority: 'PARTNERS_READ' },
       { label: 'Automation', icon: 'smart_toy', route: '/automation', hint: 'Rules that run on their own' },
@@ -68,6 +62,7 @@ export const NAV_SECTIONS: NavSection[] = [
     module: { key: 'ar', icon: 'call_received', glyph: 'receivables', subtitle: 'Customers, invoicing and collections' },
     items: [
       { label: 'Partners', icon: 'storefront', route: '/partners', hint: 'Leads, customers and prospects', tab: 'Customer' },
+      { label: 'Partner groups', icon: 'group_work', route: '/groups', hint: 'Partner groups and holding structures' },
       { label: 'Customer invoices', icon: 'receipt', route: '/finance', hint: 'Quotes, invoices and payments received', tab: 'Customer', defaultTab: true },
       { label: 'Delivery slips', icon: 'local_shipping', route: '/finance/delivery-notes', hint: 'Bons de livraison, delivered and invoiced', authority: 'INVOICES_READ' },
       { label: 'Recurring invoices', icon: 'event_repeat', route: '/finance/recurring', hint: 'Invoices sent on a schedule', tab: 'CUSTOMER', defaultTab: true },
