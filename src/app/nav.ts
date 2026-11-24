@@ -26,16 +26,10 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Dashboard',
-    module: { key: 'dash', icon: 'space_dashboard', subtitle: 'Your overview and reports' },
+    label: '',
     items: [
       { label: 'Home', icon: 'home', route: '/', hint: 'Your day at a glance: KPIs, tasks and tickets' },
       { label: 'Analytics', icon: 'bar_chart', route: '/analytics', hint: 'Sales, finance and activity charts' },
-    ]
-  },
-  {
-    label: '',
-    items: [
       { label: 'Inbox', icon: 'forum', route: '/inbox', authority: 'WHATSAPP_READ', badge: 'whatsappUnread' },
     ]
   },
