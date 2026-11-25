@@ -10,6 +10,7 @@ import { Observable, defer, firstValueFrom, throwError } from 'rxjs';
 import { catchError, finalize, shareReplay, switchMap, take } from 'rxjs/operators';
 import { CrmStateService } from '../../services/crm-state.service';
 import { AuthApiService, LoginResponse } from '../services/auth-api.service';
+import { API_CONFIG } from '../config/api-config';
 import { PortalSessionStore, isPortalApiUrl, isPortalAuthUrl } from '../../portal/portal-session';
 
 /** Name of the Web Lock that serialises token refreshes across every tab of the app. */
@@ -37,26 +38,41 @@ export class AuthInterceptor implements HttpInterceptor {
     }
 
     const isAuthEndpoint = request.url.includes('/auth/login') || request.url.includes('/auth/refresh');
+    const isI18n = request.url.includes('/i18n/');
     // Sign-up only: POST /account/organizations is a signed-in person creating another
     // organization, and it needs their token.
     const isSignup = request.method === 'POST' && /(?<!\/account)\/organizations\/?$/.test(request.url.split('?')[0]);
     // A login or signup must never carry a leftover token: the backend scopes the request to
     // that token's organization, and logging into a different one then fails its
     // cross-tenant write guard (500) instead of simply signing the user in.
-    const token = typeof localStorage !== 'undefined' && !isAuthEndpoint && !isSignup
-      ? localStorage.getItem('accessToken') : null;
+    const token = !isAuthEndpoint && !isSignup && !isI18n ? this.readAccessToken() : null;
+
+    // If the session flag says the user is signed in, yet the access token is gone,
+    // recover via refresh token immediately (or disconnect and prompt to reconnect if none)
+    // instead of sending doomed unauthenticated requests that return 401 and leave the UI
+    // stuck in a broken Viewer/"?" state.
+    if (!token && !isAuthEndpoint && !isSignup && !isI18n && this.state.isAuthenticated?.()) {
+      if (this.readRefreshToken()) {
+        return this.handleUnauthorized(request, next, '');
+      }
+      this.state.logout({ reason: 'reconnect' });
+      return throwError(() => new HttpErrorResponse({
+        status: 401,
+        statusText: 'Unauthorized',
+        url: request.url,
+      }));
+    }
+
     const authedRequest = this.applyHeaders(request, token);
 
     return next.handle(authedRequest).pipe(
       catchError((error: HttpErrorResponse) => {
         // Only treat this as "the session expired" when the request actually
-        // carried a token. A 401 on an unauthenticated (anonymous) request is
-        // expected, not an error condition — reacting to it here previously
-        // triggered a hard `window.location.href` reload, which re-ran the
-        // app's eager data loads, re-fired the same 401s, and reloaded again:
-        // an infinite reload loop for anyone who wasn't logged in yet.
-        if (error.status === 401 && token && !isAuthEndpoint) {
-          return this.handleUnauthorized(request, next, token);
+        // carried a token (or the client still believed it had an active session).
+        // A 401 on an anonymous request while signed out is expected and must not
+        // trigger a logout/reload loop.
+        if (error.status === 401 && !isAuthEndpoint && (token || (!isI18n && !isSignup && this.state.isAuthenticated?.()))) {
+          return this.handleUnauthorized(request, next, token || '');
         }
         return throwError(() => error);
       })
@@ -154,7 +170,15 @@ export class AuthInterceptor implements HttpInterceptor {
       return current;
     }
 
-    const presented = typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') || '' : '';
+    const presented = this.readRefreshToken() || '';
+    if (!presented) {
+      this.state.logout({ reason: 'reconnect' });
+      throw new HttpErrorResponse({
+        status: 401,
+        statusText: 'Unauthorized',
+        url: API_CONFIG.endpoints.auth.refresh,
+      });
+    }
     try {
       const response = await firstValueFrom(this.authApi.refresh(presented));
       this.storeTokens(response);
@@ -167,16 +191,27 @@ export class AuthInterceptor implements HttpInterceptor {
       // meantime, the session is alive even though this attempt lost.
       const status = (refreshError as { status?: number }).status;
       const rejected = status === 401 || status === 403;
-      const unchanged = typeof localStorage === 'undefined' || localStorage.getItem('refreshToken') === (presented || null);
+      const unchanged = typeof localStorage === 'undefined' || this.readRefreshToken() === presented;
       if (rejected && unchanged) {
-        this.state.logout();
+        this.state.logout({ reason: 'reconnect' });
       }
       throw refreshError;
     }
   }
 
   private readAccessToken(): string | null {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    return this.readToken('accessToken');
+  }
+
+  private readRefreshToken(): string | null {
+    return this.readToken('refreshToken');
+  }
+
+  private readToken(key: 'accessToken' | 'refreshToken'): string | null {
+    if (typeof localStorage === 'undefined') return null;
+    const value = localStorage.getItem(key)?.trim();
+    if (!value || value === 'null' || value === 'undefined') return null;
+    return value;
   }
 
   private storeTokens(response: LoginResponse): void {

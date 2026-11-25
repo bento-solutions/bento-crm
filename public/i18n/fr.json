@@ -198,6 +198,8 @@
   "login.notVerified": "Nous avons envoyé un lien à {{email}}. Ouvrez-le pour confirmer votre adresse, puis connectez-vous.",
   "login.resendLink": "Renvoyer le lien",
   "login.linkResent": "Envoyé. Vérifiez votre boîte de réception et vos courriers indésirables.",
+  "login.sessionExpiredTitle": "Session expirée",
+  "login.sessionExpired": "Votre jeton d'authentification est manquant ou expiré. Veuillez vous reconnecter.",
   "verify.checking": "Confirmation de votre adresse e-mail…",
   "verify.done": "Votre adresse e-mail est confirmée. Vous pouvez vous connecter.",
   "verify.failed": "Ce lien n'est pas valide ou a expiré.",

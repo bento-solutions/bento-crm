@@ -899,6 +899,23 @@ function readSidebarCollapsed(): boolean {
       <!-- The client portal has its own frame and session, whoever else is signed in. -->
       <router-outlet></router-outlet>
       <app-toast-container></app-toast-container>
+    } @else if (state.isAuthenticated() && state.currentUserStatus() === 'failed') {
+      <div class="min-h-screen flex items-center justify-center p-6 bg-canvas">
+        <div class="card max-w-md w-full p-6 text-center space-y-4">
+          <div class="mx-auto w-11 h-11 rounded-full bg-danger-soft text-danger-ink flex items-center justify-center">
+            <mat-icon>cloud_off</mat-icon>
+          </div>
+          <div class="space-y-1">
+            <h2 class="text-lg font-semibold text-ink">Unable to load your account</h2>
+            <p class="text-sm text-ink-2">We couldn't verify your account and permissions with the server. Retry or sign in again.</p>
+          </div>
+          <div class="flex items-center justify-center gap-2 pt-1">
+            <button type="button" class="btn-secondary" (click)="state.logout({ reason: 'reconnect' })">Sign in again</button>
+            <button type="button" class="btn-primary" (click)="state.retrySessionInit()">Retry</button>
+          </div>
+        </div>
+      </div>
+      <app-toast-container></app-toast-container>
     } @else if (state.isAuthenticated()) {
       <div class="app-layout search-container">
 
@@ -1755,8 +1772,11 @@ export class App implements OnInit, OnDestroy {
         this.state.breadcrumbLabel.set(null);
       });
 
-    // Sync current user data from API on app initialization
-    this.state.syncCurrentUserFromApi();
+    // Fallback sync when the app was initialized outside appConfig (e.g. unit tests)
+    // or transitioned from a public route where initSession() skipped the /auth/me check.
+    if (this.state.isAuthenticated() && this.state.currentUserStatus() === 'pending') {
+      this.state.syncCurrentUserFromApi();
+    }
 
     // Poll the inbox so task / lead / ticket assignments surface in the
     // notification bar without a manual refresh. Skipped while logged out

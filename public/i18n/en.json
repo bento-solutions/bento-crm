@@ -198,6 +198,8 @@
   "login.notVerified": "We sent a link to {{email}}. Open it to confirm your address, then sign in.",
   "login.resendLink": "Send the link again",
   "login.linkResent": "Sent. Check your inbox, and your spam folder.",
+  "login.sessionExpiredTitle": "Session expired",
+  "login.sessionExpired": "Your authentication token is missing or expired. Please sign in again to reconnect.",
   "verify.checking": "Confirming your email address…",
   "verify.done": "Your email address is confirmed. You can sign in.",
   "verify.failed": "This link is not valid or has expired.",

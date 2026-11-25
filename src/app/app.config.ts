@@ -1,9 +1,4 @@
-import {
-  ApplicationConfig,
-  inject,
-  provideAppInitializer,
-  provideBrowserGlobalErrorListeners,
-} from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import {provideRouter} from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { routes } from './app.routes';
@@ -11,6 +6,7 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { TranslationLoader } from './core/i18n/translation-loader';
 import { HttpTranslationLoader } from './core/i18n/http-translation-loader';
 import { TranslationService } from './services/translation.service';
+import { CrmStateService } from './services/crm-state.service';
 import { MatIconRegistry } from '@angular/material/icon';
 
 export const appConfig: ApplicationConfig = {
@@ -32,6 +28,13 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const translation = inject(TranslationService);
       return translation.init();
+    }),
+    // Eagerly load account info and permissions before rendering the shell or running route
+    // guards so avatar/name/role never flash "?" or "Viewer", and lost/invalid tokens disconnect
+    // immediately instead of letting domain requests fail.
+    provideAppInitializer(() => {
+      const state = inject(CrmStateService);
+      return state.initSession();
     }),
   ],
 };

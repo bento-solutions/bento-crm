@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import { Router } from '@angular/router';
 import { IDENTITY_PALETTE } from '../shared/ui/identity-color';
 import { ToastService } from './toast.service';
@@ -1124,6 +1124,8 @@ export class CrmStateService {
   // Auth
   isAuthenticated = signal<boolean>(this.loadAuthState());
   currentUserId = signal<string>(this.loadCurrentUserId());
+  reconnectRequired = signal<boolean>(false);
+  private userSyncPromise: Promise<void> | null = null;
 
   // Config signals - initialize empty, will be replaced by API data
   organization = signal<Organization>({
@@ -1494,11 +1496,18 @@ export class CrmStateService {
     this.api.getUsers().subscribe({
       next: (users) => {
         if (users && users.length > 0) {
-          this.users.set(users.map(u => this.userFromDto(u)));
+          const mapped = users.map(u => this.userFromDto(u));
+          const meId = this.currentUserId();
+          const existingMe = meId ? this.users().find(u => u.id === meId) : undefined;
+          if (existingMe && !mapped.some(u => u.id === meId)) {
+            mapped.push(existingMe);
+          }
+          this.users.set(mapped);
           this.rehydrateTeamMembership();
         }
       },
       error: (err) => {
+        if (!this.isAuthenticated()) return;
         console.warn('Failed to load users from API, falling back to the user directory:', err);
         this.loadUserDirectory();
       }
@@ -1545,7 +1554,7 @@ export class CrmStateService {
 
   // Lazy-load: Deals
   loadDeals(): void {
-    if (this.dealsLoaded()) return;
+    if (!this.isAuthenticated() || this.dealsLoaded()) return;
     this.dealsLoading.set(true);
     this.dealsError.set(null);
     this.api.getDeals().subscribe({
@@ -1557,9 +1566,10 @@ export class CrmStateService {
         this.dealsLoading.set(false);
       },
       error: (err) => {
+        this.dealsLoading.set(false);
+        if (!this.isAuthenticated()) return;
         console.warn('Failed to load deals from API, using seed data:', err);
         this.dealsLoaded.set(true);
-        this.dealsLoading.set(false);
         this.dealsError.set('Failed to load deals from the server. Showing local data.');
       }
     });
@@ -1567,7 +1577,7 @@ export class CrmStateService {
 
   // Lazy-load: Partners
   loadPartners(): void {
-    if (this.partnersLoaded()) return;
+    if (!this.isAuthenticated() || this.partnersLoaded()) return;
     this.partnersLoading.set(true);
     this.partnersError.set(null);
     this.api.getPartners().subscribe({
@@ -1579,9 +1589,10 @@ export class CrmStateService {
         this.partnersLoading.set(false);
       },
       error: (err) => {
+        this.partnersLoading.set(false);
+        if (!this.isAuthenticated()) return;
         console.warn('Failed to load partners from API, using seed data:', err);
         this.partnersLoaded.set(true);
-        this.partnersLoading.set(false);
         this.partnersError.set('Failed to load partners from the server. Showing local data.');
       }
     });
@@ -2419,6 +2430,13 @@ export class CrmStateService {
     }
   }
 
+  private static readStoredToken(key: 'accessToken' | 'refreshToken'): string | null {
+    if (typeof localStorage === 'undefined') return null;
+    const value = localStorage.getItem(key)?.trim();
+    if (!value || value === 'null' || value === 'undefined') return null;
+    return value;
+  }
+
   private loadAuthState(): boolean {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       // The session is only real if a token still backs it. `bento_auth` on its
@@ -2426,7 +2444,8 @@ export class CrmStateService {
       // and trusting it alone booted the app into the authenticated shell against
       // a 401 wall instead of showing the login screen.
       const hasToken =
-        !!localStorage.getItem('accessToken') || !!localStorage.getItem('refreshToken');
+        !!CrmStateService.readStoredToken('accessToken') ||
+        !!CrmStateService.readStoredToken('refreshToken');
       return hasToken && localStorage.getItem('bento_auth') === 'true';
     }
     return false;
@@ -2444,9 +2463,9 @@ export class CrmStateService {
 
   private loadCurrentUserId(): string {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      return localStorage.getItem('bento_current_user_id') || 'usr_rachid';
+      return localStorage.getItem('bento_current_user_id') || '';
     }
-    return 'usr_rachid';
+    return '';
   }
 
   private saveCurrentUserId(userId: string): void {
@@ -2477,6 +2496,7 @@ export class CrmStateService {
         localStorage.setItem('refreshToken', response.refresh_token);
       }
     }
+    this.reconnectRequired.set(false);
     this.adoptCurrentUser(response.user);
   }
 
@@ -2491,17 +2511,97 @@ export class CrmStateService {
     return false;
   }
 
-  syncCurrentUserFromApi(): void {
-    // Fetch the current user data from the API and update the state
-    if (this.isAuthenticated()) {
-      this.api.getMe().subscribe({
-        next: (user) => this.adoptCurrentUser(user),
-        error: (err) => {
+  /**
+   * Eagerly loads account info and permissions during app bootstrap before the
+   * shell renders or route guards run. If the session lost its tokens or the
+   * backend rejects them, disconnects immediately and flags reconnectRequired.
+   */
+  initSession(): Promise<void> {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (
+        path.startsWith('/pay/') ||
+        path.startsWith('/f/') ||
+        path === '/portal' ||
+        path.startsWith('/portal/') ||
+        path.startsWith('/invite/accept') ||
+        path.startsWith('/verify-email') ||
+        path.startsWith('/reset-password')
+      ) {
+        return Promise.resolve();
+      }
+    }
+
+    if (!this.isAuthenticated()) {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('bento_auth') === 'true') {
+        this.logout({ reason: 'reconnect' });
+      }
+      return Promise.resolve();
+    }
+
+    return this.ensureCurrentUserLoaded();
+  }
+
+  retrySessionInit(): void {
+    void this.ensureCurrentUserLoaded();
+  }
+
+  ensureCurrentUserLoaded(): Promise<void> {
+    if (!this.isAuthenticated()) {
+      return Promise.resolve();
+    }
+
+    const meId = this.currentUserId();
+    if (this.currentUserStatus() === 'loaded' && meId && this.users().some(u => u.id === meId)) {
+      return Promise.resolve();
+    }
+
+    if (this.userSyncPromise) {
+      return this.userSyncPromise;
+    }
+
+    const hasAccess = !!CrmStateService.readStoredToken('accessToken');
+    const hasRefresh = !!CrmStateService.readStoredToken('refreshToken');
+    if (!hasAccess && !hasRefresh) {
+      this.logout({ reason: 'reconnect' });
+      return Promise.resolve();
+    }
+
+    this.currentUserStatus.set('pending');
+    const promise = (async () => {
+      try {
+        const user = await firstValueFrom(this.api.getMe());
+        if (!user?.id || user.is_active === false) {
+          this.logout({ reason: 'reconnect' });
+          return;
+        }
+        this.adoptCurrentUser(user);
+      } catch (err) {
+        const status = (err as { status?: number })?.status;
+        if (
+          status === 401 ||
+          status === 403 ||
+          status === 404 ||
+          !CrmStateService.readStoredToken('accessToken')
+        ) {
+          this.logout({ reason: 'reconnect' });
+        } else {
           this.currentUserStatus.set('failed');
           console.error('Failed to sync current user from API:', err);
         }
-      });
-    }
+      }
+    })().finally(() => {
+      if (this.userSyncPromise === promise) {
+        this.userSyncPromise = null;
+      }
+    });
+
+    this.userSyncPromise = promise;
+    return promise;
+  }
+
+  syncCurrentUserFromApi(): void {
+    void this.ensureCurrentUserLoaded();
   }
 
   private adoptCurrentUser(user: CurrentUser): void {
@@ -2541,6 +2641,7 @@ export class CrmStateService {
     // The token is the identity: adopt the server-side user id so a stale
     // bento_current_user_id (e.g. a seed id from an older session) can
     // never point the profile at the wrong user after a refresh.
+    this.reconnectRequired.set(false);
     this.setCurrentUser(user.id);
 
     // Update the current user in the users list. This MUST produce a new
@@ -2560,10 +2661,43 @@ export class CrmStateService {
     this.currentUserStatus.set('loaded');
   }
 
-  logout(): void {
+  logout(options?: { reason?: 'reconnect' }): void {
     this.isAuthenticated.set(false);
     this.currentUserStatus.set('pending');
-    this.currentUserId.set('usr_rachid');
+    this.currentUserId.set('');
+    this.userSyncPromise = null;
+    this.reconnectRequired.set(options?.reason === 'reconnect');
+    this.users.set([]);
+    this.teams.set([]);
+    this.groups.set([]);
+    this.invitations.set([]);
+    this.invitationsLoaded.set(false);
+    this.dealsLoaded.set(false);
+    this.dealsLoading.set(false);
+    this.dealsError.set(null);
+    this.partnersLoaded.set(false);
+    this.partnersLoading.set(false);
+    this.partnersError.set(null);
+    this.leadsLoaded.set(false);
+    this.leadDetailsLoaded.clear();
+    this.leadKpi.set(null);
+    this.brandsLoaded.set(false);
+    this.businessTypesLoaded.set(false);
+    this.proposalsLoaded.set(false);
+    this.proposalsLoading.set(false);
+    this.proposalsError.set(null);
+    this.invoicesLoaded.set(false);
+    this.invoicesLoading.set(false);
+    this.invoicesError.set(null);
+    this.purchaseOrdersLoaded.set(false);
+    this.purchaseOrdersLoading.set(false);
+    this.purchaseOrdersError.set(null);
+    this.campaignsLoaded.set(false);
+    this.campaignsLoading.set(false);
+    this.campaignsError.set(null);
+    this.notificationsLoaded.set(false);
+    this.notificationsLoading.set(false);
+    this.notificationsError.set(null);
     this.saveAuthState(false);
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('accessToken');
@@ -2588,7 +2722,8 @@ export class CrmStateService {
 
       const signedIn = this.loadAuthState();
       if (!signedIn && this.isAuthenticated()) {
-        this.logout();
+        const hadSession = localStorage.getItem('bento_auth') === 'true';
+        this.logout(hadSession ? { reason: 'reconnect' } : undefined);
       } else if (signedIn && !this.isAuthenticated()) {
         // Signed in from another tab: boot fresh into that session rather than
         // patching it into a page that was built for the login screen.
@@ -5029,17 +5164,16 @@ export class CrmStateService {
     this.syncSessionAcrossTabs();
 
     // Eager data (organization, users, teams, groups, notifications) is
-    // protected — fetching it while logged out just produces a wall of 401s.
-    // Load it once whenever isAuthenticated() becomes true (on boot with a
-    // persisted session, or right after an interactive login), and skip it
-    // entirely while logged out.
+    // protected — fetching it before /auth/me resolves causes race conditions
+    // (user directory falling back to Viewer) and 401 errors when tokens are stale.
+    // Load it once both isAuthenticated() is true AND currentUserStatus() is 'loaded'.
     effect(() => {
-      const authenticated = this.isAuthenticated();
-      if (authenticated && this.eagerDataLoadedFor !== authenticated) {
-        this.eagerDataLoadedFor = authenticated;
+      const ready = this.isAuthenticated() && this.currentUserStatus() === 'loaded';
+      if (ready && !this.eagerDataLoadedFor) {
+        this.eagerDataLoadedFor = true;
         this.loadEagerDataFromApi();
-      } else if (!authenticated) {
-        this.eagerDataLoadedFor = authenticated;
+      } else if (!this.isAuthenticated()) {
+        this.eagerDataLoadedFor = false;
       }
     });
 

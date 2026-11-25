@@ -589,6 +589,13 @@ import { TranslationService } from '../services/translation.service';
             <p>{{ 'login.subtitle' | translate }}</p>
           </div>
 
+          @if (reconnectRequired() && !error() && !info() && !notVerifiedEmail()) {
+            <div class="info-msg" role="alert">
+              <strong>{{ 'login.sessionExpiredTitle' | translate }}</strong>
+              <div>{{ 'login.sessionExpired' | translate }}</div>
+            </div>
+          }
+
           @if (error()) {
             <div class="error-msg">{{ error() }}</div>
           }
@@ -682,6 +689,8 @@ export class LoginComponent {
   selectedOrgId = signal<string | null>(null);
   loading = signal(false);
   error = signal('');
+  /** Shown when a previous session was automatically disconnected because its token was missing or expired. */
+  reconnectRequired = this.state.reconnectRequired;
   /** 'forgot' shows the form that emails a link to choose a new password. */
   mode = signal<'signin' | 'forgot'>('signin');
   /** Neutral notices, such as "a link is on its way". */

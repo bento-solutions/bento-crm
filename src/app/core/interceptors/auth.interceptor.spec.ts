@@ -119,14 +119,50 @@ describe('AuthInterceptor token refresh', () => {
     expect(localStorage.getItem('refreshToken')).toBe('refresh-1');
   });
 
-  it('logs out when the backend rejects the refresh token', async () => {
+  it('logs out with reconnect reason when the backend rejects the refresh token', async () => {
     http.get('/api/a').subscribe({ error: () => undefined });
     backend.expectOne('/api/a').flush(null, { status: 401, statusText: 'Unauthorized' });
     await settle();
     backend.expectOne(REFRESH_URL).flush(null, { status: 401, statusText: 'Unauthorized' });
     await settle();
 
-    expect(logout).toHaveBeenCalledTimes(1);
+    expect(logout).toHaveBeenCalledWith({ reason: 'reconnect' });
+  });
+
+  it('refreshes immediately when authenticated but accessToken is missing and refreshToken exists', async () => {
+    localStorage.removeItem('accessToken');
+    const state = TestBed.inject(CrmStateService) as unknown as { isAuthenticated?: () => boolean };
+    state.isAuthenticated = () => true;
+
+    let result: unknown;
+    http.get('/api/a').subscribe(r => (result = r));
+    await settle();
+
+    const refresh = backend.expectOne(REFRESH_URL);
+    expect(refresh.request.body).toEqual({ refresh_token: 'refresh-1' });
+    refresh.flush({ access_token: 'access-2', refresh_token: 'refresh-2', user });
+    await settle();
+
+    const retry = backend.expectOne('/api/a');
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer access-2');
+    retry.flush({ ok: true });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('disconnects immediately when authenticated but both accessToken and refreshToken are missing', async () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    const state = TestBed.inject(CrmStateService) as unknown as { isAuthenticated?: () => boolean };
+    state.isAuthenticated = () => true;
+
+    let errStatus: number | undefined;
+    http.get('/api/a').subscribe({ error: err => (errStatus = err.status) });
+    await settle();
+
+    backend.expectNone('/api/a');
+    backend.expectNone(REFRESH_URL);
+    expect(errStatus).toBe(401);
+    expect(logout).toHaveBeenCalledWith({ reason: 'reconnect' });
   });
 
   it('does not log out when another tab stored a newer refresh token while this one failed', async () => {

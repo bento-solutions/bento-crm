@@ -2,6 +2,7 @@ import {DeferBlockBehavior, DeferBlockState, TestBed} from '@angular/core/testin
 import {By} from '@angular/platform-browser';
 import {provideRouter} from '@angular/router';
 import {App} from './app';
+import {CrmStateService} from './services/crm-state.service';
 import {SupportModalComponent} from './shared/support-modal.component';
 import {NotificationInboxDrawerComponent} from './shared/notification-inbox-drawer.component';
 
@@ -25,6 +26,30 @@ describe('App', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-login')).not.toBeNull();
+  });
+
+  it('prompts the user to reconnect on the login screen when disconnected', async () => {
+    const state = TestBed.inject(CrmStateService);
+    state.logout({ reason: 'reconnect' });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const login = fixture.nativeElement.querySelector('app-login');
+    expect(login).not.toBeNull();
+    expect(login.textContent).toContain('login.sessionExpired');
+  });
+
+  it('shows a retry/sign-in recovery screen instead of "?" or Viewer when account sync fails', () => {
+    localStorage.setItem('accessToken', 'test-token');
+    localStorage.setItem('bento_auth', 'true');
+    const state = TestBed.inject(CrmStateService);
+    state.currentUserStatus.set('failed');
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.app-sidebar')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Unable to load your account');
+    localStorage.clear();
   });
 });
 
